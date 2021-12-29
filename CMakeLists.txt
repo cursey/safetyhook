@@ -48,9 +48,9 @@ list(APPEND safetyhook_SOURCES
 	"src/SafetyHook.cpp"
 	"src/SafetyHookFactory.cpp"
 	"src/ThreadFreezer.cpp"
-	"src/ThreadFreezer.hpp"
 	"include/SafetyHook.hpp"
 	"include/SafetyHookFactory.hpp"
+	"include/ThreadFreezer.hpp"
 )
 
 list(APPEND safetyhook_SOURCES

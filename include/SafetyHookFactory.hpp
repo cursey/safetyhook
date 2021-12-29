@@ -5,21 +5,25 @@
 #include <mutex>
 #include <vector>
 
+#include "ThreadFreezer.hpp"
 #include "SafetyHook.hpp"
 
 class SafetyHookFactory : public std::enable_shared_from_this<SafetyHookFactory> {
 public:
+    struct Lock {
+        std::shared_ptr<SafetyHookFactory> factory{};
+        std::scoped_lock<std::mutex> mux_lock;
+        ThreadFreezer threads{};
+
+        Lock(std::shared_ptr<SafetyHookFactory> f) : factory{f}, mux_lock{factory->m_mux} { factory->m_lock = this; }
+        ~Lock() { factory->m_lock = nullptr; }
+    };
+
     static auto init() { return std::shared_ptr<SafetyHookFactory>{new SafetyHookFactory}; }
 
-    auto create(void* target, void* destination) {
-        return std::unique_ptr<SafetyHook>{
-            new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
-    }
-
-    auto create_shared(void* target, void* destination) {
-        return std::shared_ptr<SafetyHook>{
-            new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
-    }
+    Lock acquire();
+    std::unique_ptr<SafetyHook> create(void* target, void* destination);
+    std::shared_ptr<SafetyHook> create_shared(void* target, void* destination);
 
 private:
     friend SafetyHook;
@@ -40,6 +44,7 @@ private:
 
     std::vector<std::unique_ptr<MemoryAllocation>> m_allocations{};
     std::mutex m_mux{};
+    Lock* m_lock{};
 
     SafetyHookFactory() = default;
 

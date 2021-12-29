@@ -4,6 +4,8 @@
 
 #include <Windows.h>
 
+#include "ThreadFreezer.hpp"
+
 #include "SafetyHookFactory.hpp"
 
 constexpr auto align_up(uintptr_t address, size_t align) {
@@ -14,13 +16,33 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
+SafetyHookFactory::Lock SafetyHookFactory::acquire() {
+    return Lock{shared_from_this()};
+}
+
+std::unique_ptr<SafetyHook> SafetyHookFactory::create(void* target, void* destination) {
+    if (m_lock == nullptr) {
+        return nullptr;
+    }
+
+    return std::unique_ptr<SafetyHook>{new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+}
+
+std::shared_ptr<SafetyHook> SafetyHookFactory::create_shared(void* target, void* destination) {
+    if (m_lock == nullptr) {
+        return nullptr;
+    }
+
+    return std::shared_ptr<SafetyHook>{new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+}
+
 uintptr_t SafetyHookFactory::allocate(size_t size) {
     return allocate_near({}, size, 0xFFFF'FFFF'FFFF'FFFF);
 }
 
 uintptr_t SafetyHookFactory::allocate_near(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
-    std::scoped_lock _{m_mux};
+    //std::scoped_lock _{m_mux};
 
     // First search through our list of allocations for a free block that is large enough.
     for (auto& allocation : m_allocations) {
@@ -71,7 +93,7 @@ uintptr_t SafetyHookFactory::allocate_near(
 }
 
 void SafetyHookFactory::free(uintptr_t address, size_t size) {
-    std::scoped_lock _{m_mux};
+    //std::scoped_lock _{m_mux};
 
     for (auto& allocation : m_allocations) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
@@ -161,7 +183,7 @@ uintptr_t SafetyHookFactory::allocate_nearby_memory(
     auto search_end = std::max(desired_address, desired_address + max_distance);
     search_start = std::max(search_start, (uintptr_t)si.lpMinimumApplicationAddress);
     search_end = std::min(search_end, (uintptr_t)si.lpMaximumApplicationAddress);
-    desired_address = std::clamp(align_up(desired_address, si.dwAllocationGranularity), search_start, search_end);
+    desired_address = align_up(desired_address, si.dwAllocationGranularity);
     MEMORY_BASIC_INFORMATION mbi{};
 
     // Search backwards from the desired_address.
