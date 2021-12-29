@@ -4,7 +4,7 @@
 
 std::unique_ptr<SafetyHook> hook0, hook1, hook2, hook3;
 
-void say_hi(const std::string& name) {
+__declspec(noinline) void say_hi(const std::string& name) {
     std::cout << "hello " << name << "\n";
 }
 
