@@ -19,22 +19,22 @@ uintptr_t SafetyHookFactory::allocate_near(uintptr_t desired_address, size_t siz
             continue;
         }
 
-        for (auto node = allocation->free_list.get(); node != nullptr; node = node->next.get()) {
-            if (node->size < size) {
+        for (auto node = allocation->freelist.get(); node != nullptr; node = node->next.get()) {
+            // Enough room?
+            if (node->end - node->start < size) {
                 continue;
             }
 
-            auto address = node->address;
-
-            // Make sure this node is close enough.
+            auto address = node->start;
             auto delta = (desired_address > address) ? desired_address - address : address - desired_address;
 
+            // Close enough?
             if (delta > max_distance) {
                 continue;
             }
 
-            node->address += size;
-            node->size -= size;
+            node->start += size;
+            //node->size -= size;
 
             return address;
         }
@@ -59,9 +59,9 @@ uintptr_t SafetyHookFactory::allocate_near(uintptr_t desired_address, size_t siz
 
     allocation->address = allocation_address;
     allocation->size = allocation_size;
-    allocation->free_list = std::make_unique<FreeListNode>();
-    allocation->free_list->address = allocation_address + size;
-    allocation->free_list->size = allocation_size - size;
+    allocation->freelist = std::make_unique<FreeNode>();
+    allocation->freelist->start = allocation_address + size;
+    allocation->freelist->end = allocation_address + allocation_size;
 
     return allocation_address;
 }
@@ -79,40 +79,36 @@ void SafetyHookFactory::free(uintptr_t address, size_t size) {
             ~OnExit() { fn(); }
         } on_exit{[&allocation, this] { combine_adjacent_freenodes(*allocation); }};
 
-        for (auto node = allocation->free_list.get(), prev = (FreeListNode*)0; node != nullptr;
+        for (auto node = allocation->freelist.get(), prev = (FreeNode*)0; node != nullptr;
              node = node->next.get()) {
             // Expand adjacent freenode (coming after).
-            if (node->address == address + size) {
-                node->address -= size;
-                node->size += size;
+            if (node->start == address + size) {
+                node->start -= size;
                 return;
             }
 
             // Expand adjacent freenode (coming before).
-            if (node->address + node->size == address) {
-                node->size += size;
+            if (node->end == address) {
+                node->end += size;
                 return;
             }
 
             // Expand containing freenode.
-            if (node->address == address) {
-                if (node->size < size) {
-                    node->size = size;
-                }
-
+            if (node->start == address) {
+                node->end = std::max(node->end, address + size);
                 return;
             }
 
             // Add new freenode.
-            if (node->address > address) {
-                auto free_node = std::make_unique<FreeListNode>();
+            if (node->start > address) {
+                auto free_node = std::make_unique<FreeNode>();
 
-                free_node->address = address;
-                free_node->size = size;
+                free_node->start = address;
+                free_node->end = address + size;
 
                 if (prev == nullptr) {
-                    free_node->next.swap(allocation->free_list);
-                    allocation->free_list.swap(free_node);
+                    free_node->next.swap(allocation->freelist);
+                    allocation->freelist.swap(free_node);
                 } else {
                     free_node->next.swap(prev->next);
                     prev->next.swap(free_node);
@@ -127,9 +123,9 @@ void SafetyHookFactory::free(uintptr_t address, size_t size) {
 }
 
 void SafetyHookFactory::combine_adjacent_freenodes(MemoryAllocation& allocation) {
-    for (auto prev = allocation.free_list.get(), node = prev; node != nullptr; node = node->next.get()) {
-        if (prev->address + prev->size == node->address) {
-            prev->size += node->size;
+    for (auto prev = allocation.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
+        if (prev->end == node->start) {
+            prev->end = node->end;
             prev->next.swap(node->next);
             node->next.reset();
             node = prev;

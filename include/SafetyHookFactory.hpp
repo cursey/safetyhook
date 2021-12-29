@@ -24,16 +24,16 @@ public:
 private:
     friend SafetyHook;
 
-    struct FreeListNode {
-        std::unique_ptr<FreeListNode> next{};
-        uintptr_t address{};
-        size_t size{};
+    struct FreeNode {
+        std::unique_ptr<FreeNode> next{};
+        uintptr_t start{};
+        uintptr_t end{};
     };
 
     struct MemoryAllocation {
         uintptr_t address{};
         size_t size{};
-        std::unique_ptr<FreeListNode> free_list{};
+        std::unique_ptr<FreeNode> freelist{};
 
         ~MemoryAllocation();
     };
