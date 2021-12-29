@@ -66,8 +66,8 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     constexpr uint8_t defcode = ND_CODE_64;
     constexpr uint8_t defdata = ND_DATA_64;
 #else
-    constexpr uint8_t defcode = ND_CODE_64;
-    constexpr uint8_t defdata = ND_DATA_64;
+    constexpr uint8_t defcode = ND_CODE_32;
+    constexpr uint8_t defdata = ND_DATA_32;
 #endif
 
     auto status = NdDecode(ix, (const uint8_t*)ip, defcode, defdata);
