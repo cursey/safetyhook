@@ -106,6 +106,9 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     m_target = follow_jmps(target);
     m_destination = follow_jmps(destination);
     auto ip = m_target;
+    std::vector<uintptr_t> desired_addresses{};
+
+    desired_addresses.emplace_back(m_target);
 
     while (m_trampoline_size < sizeof(Jmp)) {
         INSTRUX ix{};
@@ -114,20 +117,41 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
             return;
         }
 
-        // TODO: ensure any instructions that become part of the trampoline will function properly when moved to the
-        // trampoline.
+        if (ix.HasDisp && ix.DispLength == 4) {
+            auto target_address = ip + ix.Length + ix.Displacement;
+            desired_addresses.emplace_back(target_address);
+        }
 
         m_trampoline_size += ix.Length;
         ip += ix.Length;
     }
 
-    m_trampoline = m_manager->allocate(m_trampoline_size + sizeof(Jmp) + sizeof(uintptr_t));
-    m_trampoline_data = m_manager->allocate_near(m_target, sizeof(uintptr_t));
+    m_trampoline_allocation_size = m_trampoline_size + sizeof(Jmp) + sizeof(uintptr_t) * 2;
+    m_trampoline = m_manager->allocate_near(desired_addresses, m_trampoline_allocation_size);
 
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
+
+    for (size_t i = 0; i < m_trampoline_size;) {
+        INSTRUX ix{};
+
+        if (!decode(&ix, m_target + i)) {
+            m_manager->free(m_trampoline, m_trampoline_allocation_size);
+            return; 
+        }
+
+        if (ix.HasDisp && ix.DispLength == 4) {
+            auto target_address = m_target + i + ix.Length + ix.Displacement;
+            auto new_disp = (int32_t)(target_address - (m_trampoline + i + ix.Length));
+            *(uint32_t*)(m_trampoline + i + ix.DispOffset) = new_disp;
+        }
+
+        i += ix.Length;
+    }
+
     emit_jmp(m_trampoline + m_trampoline_size, ip, m_trampoline + m_trampoline_size + sizeof(Jmp));
-    emit_jmp(m_target, (uintptr_t)m_destination, m_trampoline_data, m_trampoline_size);
+    emit_jmp(m_target, (uintptr_t)m_destination, m_trampoline + m_trampoline_size + sizeof(Jmp) + sizeof(uintptr_t),
+        m_trampoline_size);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
         threads.fix_ip(m_target + i, m_trampoline + i);
@@ -150,7 +174,5 @@ SafetyHook::~SafetyHook() {
 
     // If the IP is on the trampolines jmp.
     threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-
-    m_manager->free(m_trampoline_data, sizeof(uintptr_t));
-    m_manager->free(m_trampoline, m_trampoline_size + sizeof(Jmp) + sizeof(uintptr_t));
+    m_manager->free(m_trampoline, m_trampoline_allocation_size);
 }
