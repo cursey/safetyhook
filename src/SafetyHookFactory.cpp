@@ -41,14 +41,7 @@ uintptr_t SafetyHookFactory::allocate_near(uintptr_t desired_address, size_t siz
 
     // If we didn't find a free block, we need to allocate a new one.
     auto allocation_size = ((size + 0x1000 - 1) / 0x1000) * 0x1000;
-    auto nearby_address = find_memory_near(desired_address, allocation_size, max_distance);
-
-    if (nearby_address == 0) {
-        return 0;
-    }
-
-    auto allocation_address = (uintptr_t)VirtualAlloc(
-        (LPVOID)nearby_address, allocation_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    auto allocation_address = allocate_nearby_memory(desired_address, allocation_size, max_distance);
 
     if (allocation_address == 0) {
         return 0;
@@ -78,8 +71,7 @@ void SafetyHookFactory::free(uintptr_t address, size_t size) {
             ~OnExit() { fn(); }
         } on_exit{[&allocation, this] { combine_adjacent_freenodes(*allocation); }};
 
-        for (auto node = allocation->freelist.get(), prev = (FreeNode*)0; node != nullptr;
-             node = node->next.get()) {
+        for (auto node = allocation->freelist.get(), prev = (FreeNode*)0; node != nullptr; node = node->next.get()) {
             // Expand adjacent freenode (coming after).
             if (node->start == address + size) {
                 node->start -= size;
@@ -134,7 +126,7 @@ void SafetyHookFactory::combine_adjacent_freenodes(MemoryAllocation& allocation)
     }
 }
 
-uintptr_t SafetyHookFactory::find_memory_near(uintptr_t desired_address, size_t size, size_t max_distance) {
+uintptr_t SafetyHookFactory::allocate_nearby_memory(uintptr_t desired_address, size_t size, size_t max_distance) {
     SYSTEM_INFO si{};
 
     GetSystemInfo(&si);
@@ -153,9 +145,18 @@ uintptr_t SafetyHookFactory::find_memory_near(uintptr_t desired_address, size_t 
             break;
         }
 
-        if (mbi.State == MEM_FREE) {
-            return p;
+        if (mbi.State != MEM_FREE) {
+            continue;
         }
+
+        auto allocation_address =
+            (uintptr_t)VirtualAlloc((LPVOID)p, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+        if (allocation_address == 0) {
+            continue;
+        }
+
+        return p;
     }
 
     // Search forwards from the desired_address.
@@ -164,9 +165,18 @@ uintptr_t SafetyHookFactory::find_memory_near(uintptr_t desired_address, size_t 
             break;
         }
 
-        if (mbi.State == MEM_FREE) {
-            return p;
+        if (mbi.State != MEM_FREE) {
+            continue;
         }
+
+        auto allocation_address =
+            (uintptr_t)VirtualAlloc((LPVOID)p, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+        if (allocation_address == 0) {
+            continue;
+        }
+
+        return p;
     }
 
     return 0;

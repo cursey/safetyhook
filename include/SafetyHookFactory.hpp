@@ -48,5 +48,5 @@ private:
     void free(uintptr_t address, size_t size);
 
     void combine_adjacent_freenodes(MemoryAllocation& allocation);
-    uintptr_t find_memory_near(uintptr_t desired_address, size_t size, size_t max_distance);
+    uintptr_t allocate_nearby_memory(uintptr_t desired_address, size_t size, size_t max_distance);
 };
