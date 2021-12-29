@@ -15,7 +15,7 @@ version = "2021.12.01"
 packages = ["bddisasm"]
 
 [find-package]
-bddisasm = {}
+bddisasm = { required = false }
 
 [target.safetyhook]
 type = "static"

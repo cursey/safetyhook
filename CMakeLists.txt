@@ -38,7 +38,7 @@ if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
 endif()
 
 # Packages
-find_package(bddisasm REQUIRED)
+find_package(bddisasm)
 
 # Target safetyhook
 set(CMKR_TARGET safetyhook)
