@@ -19,7 +19,7 @@ bddisasm = {}
 
 [target.safetyhook]
 type = "static"
-sources = ["src/**.cpp", "include/**.hpp"]
+sources = ["src/**.cpp", "src/**.hpp", "include/**.hpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
 compile-definitions = ["NOMINMAX"]

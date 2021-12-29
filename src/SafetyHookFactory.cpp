@@ -34,7 +34,6 @@ uintptr_t SafetyHookFactory::allocate_near(uintptr_t desired_address, size_t siz
             }
 
             node->start += size;
-            //node->size -= size;
 
             return address;
         }

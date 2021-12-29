@@ -7,6 +7,7 @@
 #include <bddisasm.h>
 
 #include "SafetyHookFactory.hpp"
+#include "ThreadFreezer.hpp"
 
 #include "SafetyHook.hpp"
 
@@ -100,7 +101,11 @@ static uintptr_t follow_jmps(uintptr_t ip) {
 }
 
 SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t target, uintptr_t destination)
-    : m_manager{manager}, m_target{follow_jmps(target)}, m_destination{follow_jmps(destination)} {
+    : m_manager{manager} {
+    ThreadFreezer threads{};
+    m_target = follow_jmps(target);
+    m_destination = follow_jmps(destination);
+    std::vector<uintptr_t> ips_to_fixup{};
     auto ip = m_target;
 
     while (m_trampoline_size < sizeof(Jmp)) {
@@ -113,6 +118,8 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
         // TODO: ensure any instructions that become part of the trampoline will function properly when moved to the
         // trampoline.
 
+        ips_to_fixup.emplace_back(ip);
+
         m_trampoline_size += ix.Length;
         ip += ix.Length;
     }
@@ -124,6 +131,11 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
     emit_jmp(m_trampoline + m_trampoline_size, ip, m_trampoline + m_trampoline_size + sizeof(Jmp));
     emit_jmp(m_target, (uintptr_t)m_destination, m_trampoline_data, m_trampoline_size);
+
+    for (const auto& old_ip : ips_to_fixup) {
+        auto delta = old_ip - m_target;
+        threads.fix_ip(old_ip, m_trampoline + delta);
+    }
 }
 
 SafetyHook::~SafetyHook() {
