@@ -105,7 +105,6 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     ThreadFreezer threads{};
     m_target = follow_jmps(target);
     m_destination = follow_jmps(destination);
-    std::vector<uintptr_t> ips_to_fixup{};
     auto ip = m_target;
 
     while (m_trampoline_size < sizeof(Jmp)) {
@@ -117,8 +116,6 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
 
         // TODO: ensure any instructions that become part of the trampoline will function properly when moved to the
         // trampoline.
-
-        ips_to_fixup.emplace_back(ip);
 
         m_trampoline_size += ix.Length;
         ip += ix.Length;
@@ -132,9 +129,8 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     emit_jmp(m_trampoline + m_trampoline_size, ip, m_trampoline + m_trampoline_size + sizeof(Jmp));
     emit_jmp(m_target, (uintptr_t)m_destination, m_trampoline_data, m_trampoline_size);
 
-    for (const auto& old_ip : ips_to_fixup) {
-        auto delta = old_ip - m_target;
-        threads.fix_ip(old_ip, m_trampoline + delta);
+    for (auto i = 0; i < m_trampoline_size; ++i) {
+        threads.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
@@ -143,9 +139,18 @@ SafetyHook::~SafetyHook() {
         return;
     }
 
+    ThreadFreezer threads{};
     UnprotectMemory _{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
+
+    for (auto i = 0; i < m_trampoline_size; ++i) {
+        threads.fix_ip(m_trampoline + i, m_target + i);
+    }
+
+    // If the IP is on the trampolines jmp.
+    threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+
     m_manager->free(m_trampoline_data, sizeof(uintptr_t));
     m_manager->free(m_trampoline, m_trampoline_size + sizeof(Jmp) + sizeof(uintptr_t));
 }
