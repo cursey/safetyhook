@@ -1,0 +1,32 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[project]
+name = "safetyhook"
+
+# TODO: define a target for each of your executables/libraries like this:
+#[target.myexecutable]
+#type = "executable" # static, shared
+#sources = ["src/safetyhook/*.cpp", "include/safetyhook/*.hpp"]
+#include-directories = ["include"]
+#compile-features = ["cxx_std_11"]
+#link-libraries = ["target-or-library"]
+
+[vcpkg]
+version = "2021.12.01"
+packages = ["bddisasm"]
+
+[find-package]
+bddisasm = {}
+
+[target.safetyhook]
+type = "static"
+sources = ["src/**.cpp", "include/**.hpp"]
+include-directories = ["include/"]
+compile-features = ["cxx_std_17"]
+compile-definitions = ["NOMINMAX"]
+link-libraries = ["bddisasm::bddisasm"]
+alias = "safetyhook::safetyhook"
+
+[target.test0]
+type = "executable"
+sources = ["tests/test0.cpp"]
+link-libraries = ["safetyhook::safetyhook"]
