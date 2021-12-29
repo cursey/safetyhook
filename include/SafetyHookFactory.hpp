@@ -44,7 +44,7 @@ private:
     SafetyHookFactory() = default;
 
     uintptr_t allocate(size_t size);
-    uintptr_t allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0xFFFF'FFFF);
+    uintptr_t allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void free(uintptr_t address, size_t size);
 
     void combine_adjacent_freenodes(MemoryAllocation& allocation);

@@ -118,7 +118,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
         }
 
         if (ix.HasDisp && ix.DispLength == 4) {
-            auto target_address = ip + ix.Length + ix.Displacement;
+            auto target_address = ip + ix.Length + (int32_t)ix.Displacement;
             desired_addresses.emplace_back(target_address);
         }
 
@@ -141,7 +141,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
         }
 
         if (ix.HasDisp && ix.DispLength == 4) {
-            auto target_address = m_target + i + ix.Length + ix.Displacement;
+            auto target_address = m_target + i + ix.Length + (int32_t)ix.Displacement;
             auto new_disp = (int32_t)(target_address - (m_trampoline + i + ix.Length));
             *(uint32_t*)(m_trampoline + i + ix.DispOffset) = new_disp;
         }
