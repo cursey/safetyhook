@@ -1,0 +1,76 @@
+# SafetyHook
+
+SafetyHook is simple procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of it's implementation. To that end it currently does:
+
+* Stops all other threads when creating or deleting hooks
+* Fixes the IP of threads that may be affected by the creation or deletion of hooks
+* Fixes IP relative displacements of relocated instructions (eg. `lea rax, [rip + 0x1234]`)
+* Fixes relative offsets of relocated instructions (eg. `jmp 0x1234`)
+* Uses a modern disassembler engine that supports the latest instructions
+
+Much of this safety comes by carefully designing the API so that it's hard to misuse.
+
+## Installation
+
+SafetyHook depends on [bddisasm](https://github.com/bitdefender/bddisasm) so your project must also include it as well. Both libraries can be added via CMake's `FetchContent`, git submodules, or copied directly into your project.
+
+### FetchContent
+
+```
+include(FetchContent)
+
+# Bddisasm
+FetchContent_Declare(
+    bddisasm
+    GIT_REPOSITORY "https://github.com/bitdefender/bddisasm.git"
+    GIT_TAG "origin/master"
+)
+FetchContent_MakeAvailable(bddisasm)
+
+# Safetyhook
+FetchContent_Declare(
+    safetyhook
+    GIT_REPOSITORY "https://github.com/cursey/sdkgenny.git"
+    GIT_TAG "origin/master"
+)
+FetchContent_MakeAvailable(safetyhook)
+
+```
+
+## Usage
+
+```
+#include <iostream>
+
+#include <SafetyHook.hpp>
+
+int add(int x, int y) {
+    return x + y;
+}
+
+std::unique_ptr<SafetyHook> g_add_hook{};
+
+int hook_add(int x, int y) {
+    return g_add_hook->call<int>(x * 2, y * 2);
+}
+
+int main(int argc, char* argv[]) {
+    std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
+
+    auto factory = SafetyHookFactory::init();
+
+    {
+        // Builder keeps all threads frozen until it goes out of scope.
+        auto builder = factory->acquire(); 
+        g_add_hook = builder.create(add, hook_add);
+    }
+
+    std::cout << "hooked add(2, 3) = " << add(2, 3) << "\n";
+
+    g_add_hook.reset();
+
+    std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
+
+    return 0;
+}
+```

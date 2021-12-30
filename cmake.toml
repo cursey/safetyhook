@@ -30,3 +30,8 @@ alias = "safetyhook::safetyhook"
 type = "executable"
 sources = ["tests/test0.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
+
+[target.test1]
+type = "executable"
+sources = ["tests/test1.cpp"]
+link-libraries = ["safetyhook::safetyhook"]
