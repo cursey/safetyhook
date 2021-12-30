@@ -2,7 +2,7 @@
 
 #include <SafetyHook.hpp>
 
-int add(int x, int y) {
+__declspec(noinline) int add(int x, int y) {
     return x + y;
 }
 
