@@ -61,11 +61,11 @@ int main(int argc, char* argv[]) {
         // Create a factory that will create hooks for us.
         auto factory = SafetyHookFactory::init();
 
-        // Acquire the factories builder which will freeze all threads and give
+        // Acquire the factory's builder which will freeze all threads and give
         // us access to the hook creation methods.
         auto builder = factory->acquire(); 
 
-        // Create a hook on add
+        // Create a hook on add.
         g_add_hook = builder.create(add, hook_add);
 
         // Once we leave this scope, builder will unfreeze all threads and our
