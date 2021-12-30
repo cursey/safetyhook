@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <SafetyHookFactory.hpp>
+#include <SafetyHook.hpp>
 
 std::unique_ptr<SafetyHook> hook0, hook1, hook2, hook3;
 

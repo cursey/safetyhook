@@ -5,36 +5,35 @@
 #include <mutex>
 #include <vector>
 
-#include "SafetyHook.hpp"
+#include "Hook.hpp"
 #include "ThreadFreezer.hpp"
 
-class SafetyHookFactory : public std::enable_shared_from_this<SafetyHookFactory> {
+namespace safetyhook {
+class Factory : public std::enable_shared_from_this<Factory> {
 public:
     struct ActiveFactory {
-        std::shared_ptr<SafetyHookFactory> factory{};
+        std::shared_ptr<Factory> factory{};
         std::scoped_lock<std::mutex> mux_lock;
         ThreadFreezer threads{};
 
-        ActiveFactory(std::shared_ptr<SafetyHookFactory> f) : factory{f}, mux_lock{factory->m_mux} {
+        ActiveFactory(std::shared_ptr<Factory> f) : factory{f}, mux_lock{factory->m_mux} {
             factory->m_active_factory = this;
         }
         ~ActiveFactory() { factory->m_active_factory = nullptr; }
 
-        std::unique_ptr<SafetyHook> create(void* target, void* destination) {
-            return factory->create(target, destination);
-        }
+        std::unique_ptr<Hook> create(void* target, void* destination) { return factory->create(target, destination); }
 
-        std::shared_ptr<SafetyHook> create_shared(void* target, void* destination) {
+        std::shared_ptr<Hook> create_shared(void* target, void* destination) {
             return factory->create_shared(target, destination);
         }
     };
 
-    static auto init() { return std::shared_ptr<SafetyHookFactory>{new SafetyHookFactory}; }
+    static auto init() { return std::shared_ptr<Factory>{new Factory}; }
 
     ActiveFactory acquire();
 
 private:
-    friend SafetyHook;
+    friend Hook;
 
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
@@ -54,10 +53,10 @@ private:
     std::mutex m_mux{};
     ActiveFactory* m_active_factory{};
 
-    SafetyHookFactory() = default;
+    Factory() = default;
 
-    std::unique_ptr<SafetyHook> create(void* target, void* destination);
-    std::shared_ptr<SafetyHook> create_shared(void* target, void* destination);
+    std::unique_ptr<Hook> create(void* target, void* destination);
+    std::shared_ptr<Hook> create_shared(void* target, void* destination);
 
     uintptr_t allocate(size_t size);
     uintptr_t allocate_near(
@@ -68,3 +67,4 @@ private:
     uintptr_t allocate_nearby_memory(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
     bool in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
 };
+} // namespace safetyhook

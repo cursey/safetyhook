@@ -4,6 +4,7 @@
 
 #include <Windows.h>
 
+namespace safetyhook {
 class ThreadFreezer {
 public:
     ThreadFreezer();
@@ -21,3 +22,4 @@ private:
 
     std::vector<FrozenThread> m_frozen_threads{};
 };
+}

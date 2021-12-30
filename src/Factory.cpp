@@ -4,10 +4,11 @@
 
 #include <Windows.h>
 
-#include "ThreadFreezer.hpp"
+#include "safetyhook/ThreadFreezer.hpp"
 
-#include "SafetyHookFactory.hpp"
+#include "safetyhook/Factory.hpp"
 
+namespace safetyhook {
 constexpr auto align_up(uintptr_t address, size_t align) {
     return (address + align - 1) & ~(align - 1);
 }
@@ -16,33 +17,33 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-SafetyHookFactory::ActiveFactory SafetyHookFactory::acquire() {
+Factory::ActiveFactory Factory::acquire() {
     return ActiveFactory{shared_from_this()};
 }
 
-std::unique_ptr<SafetyHook> SafetyHookFactory::create(void* target, void* destination) {
+std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
     if (m_active_factory == nullptr) {
         return nullptr;
     }
 
-    return std::unique_ptr<SafetyHook>{new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    return std::unique_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
 }
 
-std::shared_ptr<SafetyHook> SafetyHookFactory::create_shared(void* target, void* destination) {
+std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
     if (m_active_factory == nullptr) {
         return nullptr;
     }
 
-    return std::shared_ptr<SafetyHook>{new SafetyHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    return std::shared_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
 }
 
-uintptr_t SafetyHookFactory::allocate(size_t size) {
+uintptr_t Factory::allocate(size_t size) {
     return allocate_near({}, size, 0xFFFF'FFFF'FFFF'FFFF);
 }
 
-uintptr_t SafetyHookFactory::allocate_near(
+uintptr_t Factory::allocate_near(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
-    //std::scoped_lock _{m_mux};
+    // std::scoped_lock _{m_mux};
 
     // First search through our list of allocations for a free block that is large enough.
     for (auto& allocation : m_allocations) {
@@ -92,8 +93,8 @@ uintptr_t SafetyHookFactory::allocate_near(
     return allocation_address;
 }
 
-void SafetyHookFactory::free(uintptr_t address, size_t size) {
-    //std::scoped_lock _{m_mux};
+void Factory::free(uintptr_t address, size_t size) {
+    // std::scoped_lock _{m_mux};
 
     for (auto& allocation : m_allocations) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
@@ -147,7 +148,7 @@ void SafetyHookFactory::free(uintptr_t address, size_t size) {
     }
 }
 
-void SafetyHookFactory::combine_adjacent_freenodes(MemoryAllocation& allocation) {
+void Factory::combine_adjacent_freenodes(MemoryAllocation& allocation) {
     for (auto prev = allocation.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
         if (prev->end == node->start) {
             prev->end = node->end;
@@ -160,7 +161,7 @@ void SafetyHookFactory::combine_adjacent_freenodes(MemoryAllocation& allocation)
     }
 }
 
-uintptr_t SafetyHookFactory::allocate_nearby_memory(
+uintptr_t Factory::allocate_nearby_memory(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     if (desired_addresses.empty()) {
         return (uintptr_t)VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -220,7 +221,7 @@ uintptr_t SafetyHookFactory::allocate_nearby_memory(
     return 0;
 }
 
-bool SafetyHookFactory::in_range(
+bool Factory::in_range(
     uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance) {
     auto is_in_range = true;
 
@@ -235,6 +236,7 @@ bool SafetyHookFactory::in_range(
     return is_in_range;
 }
 
-SafetyHookFactory::MemoryAllocation::~MemoryAllocation() {
+Factory::MemoryAllocation::~MemoryAllocation() {
     VirtualFree((LPVOID)address, 0, MEM_RELEASE);
+}
 }

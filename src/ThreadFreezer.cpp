@@ -1,8 +1,10 @@
 #include <Windows.h>
+
 #include <TlHelp32.h>
 
-#include "ThreadFreezer.hpp"
+#include "safetyhook/ThreadFreezer.hpp"
 
+namespace safetyhook {
 ThreadFreezer::ThreadFreezer() {
     auto snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
 
@@ -15,7 +17,7 @@ ThreadFreezer::ThreadFreezer() {
     THREADENTRY32 te{};
 
     te.dwSize = sizeof(te);
-    
+
     if (Thread32First(snapshot, &te) != FALSE) {
         do {
             if (te.th32OwnerProcessID != pid || te.th32ThreadID == tid) {
@@ -25,8 +27,9 @@ ThreadFreezer::ThreadFreezer() {
             FrozenThread thread{};
 
             thread.thread_id = te.th32ThreadID;
-            thread.handle = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, FALSE, te.th32ThreadID);
-            
+            thread.handle =
+                OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, FALSE, te.th32ThreadID);
+
             if (thread.handle == NULL) {
                 continue;
             }
@@ -71,4 +74,5 @@ void ThreadFreezer::fix_ip(uintptr_t old_ip, uintptr_t new_ip) {
         thread.ctx.Eip = ip;
 #endif
     }
+}
 }

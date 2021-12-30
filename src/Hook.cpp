@@ -6,11 +6,12 @@
 
 #include <bddisasm.h>
 
-#include "SafetyHookFactory.hpp"
-#include "ThreadFreezer.hpp"
+#include "safetyhook/Factory.hpp"
+#include "safetyhook/ThreadFreezer.hpp"
 
-#include "SafetyHook.hpp"
+#include "safetyhook/Hook.hpp"
 
+namespace safetyhook {
 class UnprotectMemory {
 public:
     UnprotectMemory(uintptr_t address, size_t size) : m_address{address}, m_size{size} {
@@ -69,7 +70,7 @@ constexpr auto make_jmp_e9(uintptr_t src, uintptr_t dst) {
     return jmp;
 }
 
-constexpr void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9)) {
+static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9)) {
     if (size < sizeof(JmpE9)) {
         return;
     }
@@ -97,7 +98,7 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     return ND_SUCCESS(status);
 }
 
-SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t target, uintptr_t destination)
+Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
     : m_factory{factory}, m_target{target}, m_destination{destination} {
     auto active_factory = factory->m_active_factory;
     auto ip = m_target;
@@ -135,7 +136,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t tar
 
         if (!decode(&ix, m_target + i)) {
             active_factory->factory->free(m_trampoline, m_trampoline_allocation_size);
-            return; 
+            return;
         }
 
         if (ix.IsRipRelative && ix.HasDisp && ix.DispLength == 4) {
@@ -172,7 +173,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t tar
     }
 }
 
-SafetyHook::~SafetyHook() {
+Hook::~Hook() {
     if (!ok()) {
         return;
     }
@@ -189,4 +190,5 @@ SafetyHook::~SafetyHook() {
     // If the IP is on the trampolines jmp.
     active_factory.threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
     active_factory.factory->free(m_trampoline, m_trampoline_allocation_size);
+}
 }
