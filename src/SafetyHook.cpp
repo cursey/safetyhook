@@ -83,12 +83,6 @@ constexpr void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(Jm
     *(JmpE9*)src = make_jmp_e9(src, dst);
 }
 
-constexpr auto follow_offset_at(uintptr_t address) {
-    auto offset = *(int*)address;
-    auto rip = address + 4;
-    return rip + offset;
-}
-
 static bool decode(INSTRUX* ix, uintptr_t ip) {
 #ifdef _M_X64
     constexpr uint8_t defcode = ND_CODE_64;
@@ -101,30 +95,6 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     auto status = NdDecode(ix, (const uint8_t*)ip, defcode, defdata);
 
     return ND_SUCCESS(status);
-}
-
-static uintptr_t follow_jmps(uintptr_t ip) {
-    auto followed_jmp = false;
-
-    do {
-        followed_jmp = false;
-
-        INSTRUX ix{};
-
-        if (!decode(&ix, ip)) {
-            return 0;
-        }
-
-        if (ix.InstructionBytes[0] == 0xE9) {
-            ip = follow_offset_at(ip + 1);
-            followed_jmp = true;
-        } else if (ix.InstructionBytes[0] == 0xFF && ix.InstructionBytes[1] == 0x25) {
-            ip = *(uintptr_t*)follow_offset_at(ip + 2);
-            followed_jmp = true;
-        }
-    } while (followed_jmp);
-
-    return ip;
 }
 
 SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t target, uintptr_t destination)
