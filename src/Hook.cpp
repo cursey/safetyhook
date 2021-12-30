@@ -39,7 +39,7 @@ struct JmpFF {
 };
 #include <poppack.h>
 
-constexpr auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
+static auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
     JmpFF jmp{};
 
     jmp.offset = data - src - sizeof(jmp);
