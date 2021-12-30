@@ -5,25 +5,33 @@
 #include <mutex>
 #include <vector>
 
-#include "ThreadFreezer.hpp"
 #include "SafetyHook.hpp"
+#include "ThreadFreezer.hpp"
 
 class SafetyHookFactory : public std::enable_shared_from_this<SafetyHookFactory> {
 public:
-    struct Lock {
+    struct ActiveFactory {
         std::shared_ptr<SafetyHookFactory> factory{};
         std::scoped_lock<std::mutex> mux_lock;
         ThreadFreezer threads{};
 
-        Lock(std::shared_ptr<SafetyHookFactory> f) : factory{f}, mux_lock{factory->m_mux} { factory->m_lock = this; }
-        ~Lock() { factory->m_lock = nullptr; }
+        ActiveFactory(std::shared_ptr<SafetyHookFactory> f) : factory{f}, mux_lock{factory->m_mux} {
+            factory->m_active_factory = this;
+        }
+        ~ActiveFactory() { factory->m_active_factory = nullptr; }
+
+        std::unique_ptr<SafetyHook> create(void* target, void* destination) {
+            return factory->create(target, destination);
+        }
+
+        std::shared_ptr<SafetyHook> create_shared(void* target, void* destination) {
+            return factory->create_shared(target, destination);
+        }
     };
 
     static auto init() { return std::shared_ptr<SafetyHookFactory>{new SafetyHookFactory}; }
 
-    Lock acquire();
-    std::unique_ptr<SafetyHook> create(void* target, void* destination);
-    std::shared_ptr<SafetyHook> create_shared(void* target, void* destination);
+    ActiveFactory acquire();
 
 private:
     friend SafetyHook;
@@ -44,12 +52,16 @@ private:
 
     std::vector<std::unique_ptr<MemoryAllocation>> m_allocations{};
     std::mutex m_mux{};
-    Lock* m_lock{};
+    ActiveFactory* m_active_factory{};
 
     SafetyHookFactory() = default;
 
+    std::unique_ptr<SafetyHook> create(void* target, void* destination);
+    std::shared_ptr<SafetyHook> create_shared(void* target, void* destination);
+
     uintptr_t allocate(size_t size);
-    uintptr_t allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
+    uintptr_t allocate_near(
+        const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void free(uintptr_t address, size_t size);
 
     void combine_adjacent_freenodes(MemoryAllocation& allocation);

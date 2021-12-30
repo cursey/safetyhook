@@ -16,12 +16,12 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-SafetyHookFactory::Lock SafetyHookFactory::acquire() {
-    return Lock{shared_from_this()};
+SafetyHookFactory::ActiveFactory SafetyHookFactory::acquire() {
+    return ActiveFactory{shared_from_this()};
 }
 
 std::unique_ptr<SafetyHook> SafetyHookFactory::create(void* target, void* destination) {
-    if (m_lock == nullptr) {
+    if (m_active_factory == nullptr) {
         return nullptr;
     }
 
@@ -29,7 +29,7 @@ std::unique_ptr<SafetyHook> SafetyHookFactory::create(void* target, void* destin
 }
 
 std::shared_ptr<SafetyHook> SafetyHookFactory::create_shared(void* target, void* destination) {
-    if (m_lock == nullptr) {
+    if (m_active_factory == nullptr) {
         return nullptr;
     }
 
