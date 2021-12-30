@@ -11,26 +11,27 @@
 namespace safetyhook {
 class Factory : public std::enable_shared_from_this<Factory> {
 public:
-    struct ActiveFactory {
-        std::shared_ptr<Factory> factory{};
-        std::scoped_lock<std::mutex> mux_lock;
-        ThreadFreezer threads{};
+    class Builder {
+    public:
+        ~Builder();
 
-        ActiveFactory(std::shared_ptr<Factory> f) : factory{f}, mux_lock{factory->m_mux} {
-            factory->m_active_factory = this;
-        }
-        ~ActiveFactory() { factory->m_active_factory = nullptr; }
+        std::unique_ptr<Hook> create(void* target, void* destination);
+        std::shared_ptr<Hook> create_shared(void* target, void* destination);
+        
+    private:
+        friend Hook;
+        friend Factory;
 
-        std::unique_ptr<Hook> create(void* target, void* destination) { return factory->create(target, destination); }
+        std::shared_ptr<Factory> m_factory{};
+        std::scoped_lock<std::mutex> m_lock;
+        ThreadFreezer m_threads{};
 
-        std::shared_ptr<Hook> create_shared(void* target, void* destination) {
-            return factory->create_shared(target, destination);
-        }
+        Builder(std::shared_ptr<Factory> f);
     };
 
     static auto init() { return std::shared_ptr<Factory>{new Factory}; }
 
-    ActiveFactory acquire();
+    Builder acquire();
 
 private:
     friend Hook;
@@ -51,7 +52,7 @@ private:
 
     std::vector<std::unique_ptr<MemoryAllocation>> m_allocations{};
     std::mutex m_mux{};
-    ActiveFactory* m_active_factory{};
+    Builder* m_builder{};
 
     Factory() = default;
 

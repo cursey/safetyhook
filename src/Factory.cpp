@@ -17,12 +17,29 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-Factory::ActiveFactory Factory::acquire() {
-    return ActiveFactory{shared_from_this()};
+Factory::Builder::~Builder() {
+    m_factory->m_builder = nullptr;
+}
+
+std::unique_ptr<Hook> Factory::Builder::create(void* target, void* destination) {
+    return m_factory->create(target, destination);
+}
+
+std::shared_ptr<Hook> Factory::Builder::create_shared(void* target, void* destination) {
+    return m_factory->create_shared(target, destination);
+}
+
+Factory::Builder::Builder(std::shared_ptr<Factory> factory) 
+    : m_factory{factory}, m_lock {factory->m_mux} {
+    m_factory->m_builder = this;
+}
+
+Factory::Builder Factory::acquire() {
+    return Builder{shared_from_this()};
 }
 
 std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
-    if (m_active_factory == nullptr) {
+    if (m_builder == nullptr) {
         return nullptr;
     }
 
@@ -36,7 +53,7 @@ std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
 }
 
 std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
-    if (m_active_factory == nullptr) {
+    if (m_builder == nullptr) {
         return nullptr;
     }
 

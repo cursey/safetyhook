@@ -98,7 +98,7 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
 
 Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
     : m_factory{factory}, m_target{target}, m_destination{destination} {
-    auto active_factory = factory->m_active_factory;
+    auto builder = factory->m_builder;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
 
@@ -129,7 +129,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpE9);
 #endif
 
-    m_trampoline = active_factory->factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
+    m_trampoline = builder->m_factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
 
     if (m_trampoline == 0) {
         return;
@@ -142,7 +142,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
         INSTRUX ix{};
 
         if (!decode(&ix, m_target + i)) {
-            active_factory->factory->free(m_trampoline, m_trampoline_allocation_size);
+            builder->m_factory->free(m_trampoline, m_trampoline_allocation_size);
             return;
         }
 
@@ -182,7 +182,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
 
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        active_factory->threads.fix_ip(m_target + i, m_trampoline + i);
+        builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
@@ -191,17 +191,17 @@ Hook::~Hook() {
         return;
     }
 
-    auto active_factory = m_factory->acquire();
+    auto builder = m_factory->acquire();
     UnprotectMemory _{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        active_factory.threads.fix_ip(m_trampoline + i, m_target + i);
+        builder.m_threads.fix_ip(m_trampoline + i, m_target + i);
     }
 
     // If the IP is on the trampolines jmp.
-    active_factory.threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    active_factory.factory->free(m_trampoline, m_trampoline_allocation_size);
+    builder.m_threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    builder.m_factory->free(m_trampoline, m_trampoline_allocation_size);
 }
 }
