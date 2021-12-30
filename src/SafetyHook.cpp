@@ -127,11 +127,9 @@ static uintptr_t follow_jmps(uintptr_t ip) {
     return ip;
 }
 
-SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t target, uintptr_t destination)
-    : m_manager{manager} {
-    ThreadFreezer threads{};
-    m_target = target; // follow_jmps(target);
-    m_destination = destination; // follow_jmps(destination);
+SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t target, uintptr_t destination)
+    : m_factory{factory}, m_target{target}, m_destination{destination} {
+    auto active_factory = factory->m_active_factory;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
 
@@ -157,7 +155,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     }
 
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpFF) + sizeof(uintptr_t);
-    m_trampoline = m_manager->allocate_near(desired_addresses, m_trampoline_allocation_size);
+    m_trampoline = active_factory->factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
 
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
@@ -166,7 +164,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
         INSTRUX ix{};
 
         if (!decode(&ix, m_target + i)) {
-            m_manager->free(m_trampoline, m_trampoline_allocation_size);
+            active_factory->factory->free(m_trampoline, m_trampoline_allocation_size);
             return; 
         }
 
@@ -200,7 +198,7 @@ SafetyHook::SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t tar
     emit_jmp_ff(src, dst, data);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        threads.fix_ip(m_target + i, m_trampoline + i);
+        active_factory->threads.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
@@ -209,16 +207,16 @@ SafetyHook::~SafetyHook() {
         return;
     }
 
-    ThreadFreezer threads{};
+    auto active_factory = m_factory->acquire();
     UnprotectMemory _{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        threads.fix_ip(m_trampoline + i, m_target + i);
+        active_factory.threads.fix_ip(m_trampoline + i, m_target + i);
     }
 
     // If the IP is on the trampolines jmp.
-    threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    m_manager->free(m_trampoline, m_trampoline_allocation_size);
+    active_factory.threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    active_factory.factory->free(m_trampoline, m_trampoline_allocation_size);
 }

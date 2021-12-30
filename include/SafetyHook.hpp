@@ -30,7 +30,7 @@ public:
 private:
     friend SafetyHookFactory;
 
-    std::shared_ptr<SafetyHookFactory> m_manager;
+    std::shared_ptr<SafetyHookFactory> m_factory;
     uintptr_t m_target{};
     uintptr_t m_destination{};
     uintptr_t m_trampoline{};
@@ -41,5 +41,5 @@ private:
     SafetyHook() = delete;
     SafetyHook(const SafetyHook&) = delete;
     SafetyHook(SafetyHook&&) = delete;
-    SafetyHook(std::shared_ptr<SafetyHookFactory> manager, uintptr_t target, uintptr_t destination);
+    SafetyHook(std::shared_ptr<SafetyHookFactory> factory, uintptr_t target, uintptr_t destination);
 };
