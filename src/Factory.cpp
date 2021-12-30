@@ -26,7 +26,13 @@ std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
         return nullptr;
     }
 
-    return std::unique_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    auto hook = std::unique_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+
+    if (hook->m_trampoline == 0) {
+        return nullptr;
+    }
+
+    return hook;
 }
 
 std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
@@ -34,7 +40,13 @@ std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
         return nullptr;
     }
 
-    return std::shared_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    auto hook = std::shared_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+
+    if (hook->m_trampoline == 0) {
+        return nullptr;
+    }
+
+    return hook;
 }
 
 uintptr_t Factory::allocate(size_t size) {

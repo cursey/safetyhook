@@ -93,9 +93,7 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     constexpr uint8_t defdata = ND_DATA_32;
 #endif
 
-    auto status = NdDecode(ix, (const uint8_t*)ip, defcode, defdata);
-
-    return ND_SUCCESS(status);
+    return ND_SUCCESS(NdDecode(ix, (const uint8_t*)ip, defcode, defdata));
 }
 
 Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
@@ -125,8 +123,17 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
         ip += ix.Length;
     }
 
+#ifdef _M_X64
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpFF) + sizeof(uintptr_t);
+#else
+    m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpE9);
+#endif
+
     m_trampoline = active_factory->factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
+
+    if (m_trampoline == 0) {
+        return;
+    }
 
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
@@ -165,8 +172,14 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
     // jmp from trampoline to destination.
     src = m_trampoline + m_trampoline_size + sizeof(JmpE9);
     dst = m_destination;
+
+#ifdef _M_X64
     auto data = src + sizeof(JmpFF);
     emit_jmp_ff(src, dst, data);
+#else
+    emit_jmp_e9(src, dst);
+#endif
+
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
         active_factory->threads.fix_ip(m_target + i, m_trampoline + i);
@@ -174,7 +187,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
 }
 
 Hook::~Hook() {
-    if (!ok()) {
+    if (m_trampoline == 0) {
         return;
     }
 

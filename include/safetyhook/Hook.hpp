@@ -14,7 +14,6 @@ public:
     auto target() const { return m_target; }
     auto destination() const { return m_destination; }
     auto trampoline() const { return m_trampoline; }
-    auto ok() const { return m_trampoline != 0; }
 
     template <typename T> T* original() const { return (T*)m_trampoline; }
 
