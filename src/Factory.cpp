@@ -94,57 +94,36 @@ uintptr_t Factory::allocate_near(
 }
 
 void Factory::free(uintptr_t address, size_t size) {
-    // std::scoped_lock _{m_mux};
-
     for (auto& allocation : m_allocations) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
             continue;
         }
 
-        struct OnExit {
-            std::function<void()> fn{};
-            ~OnExit() { fn(); }
-        } on_exit{[&allocation, this] { combine_adjacent_freenodes(*allocation); }};
+        // Find the right place for our new freenode.
+        FreeNode* prev{};
 
-        for (auto node = allocation->freelist.get(), prev = (FreeNode*)0; node != nullptr; node = node->next.get()) {
-            // Expand adjacent freenode (coming after).
-            if (node->start == address + size) {
-                node->start -= size;
-                return;
-            }
-
-            // Expand adjacent freenode (coming before).
-            if (node->end == address) {
-                node->end += size;
-                return;
-            }
-
-            // Expand containing freenode.
-            if (node->start == address) {
-                node->end = std::max(node->end, address + size);
-                return;
-            }
-
-            // Add new freenode.
+        for (auto node = allocation->freelist.get(); node != nullptr; prev = node, node = node->next.get()) {
             if (node->start > address) {
-                auto free_node = std::make_unique<FreeNode>();
-
-                free_node->start = address;
-                free_node->end = address + size;
-
-                if (prev == nullptr) {
-                    free_node->next.swap(allocation->freelist);
-                    allocation->freelist.swap(free_node);
-                } else {
-                    free_node->next.swap(prev->next);
-                    prev->next.swap(free_node);
-                }
-
-                return;
+                break;
             }
         }
 
-        assert(0);
+        // Add new freenode.
+        auto free_node = std::make_unique<FreeNode>();
+
+        free_node->start = address;
+        free_node->end = address + size;
+
+        if (prev == nullptr) {
+            free_node->next.swap(allocation->freelist);
+            allocation->freelist.swap(free_node);
+        } else {
+            free_node->next.swap(prev->next);
+            prev->next.swap(free_node);
+        }
+
+        combine_adjacent_freenodes(*allocation);
+        break;
     }
 }
 
