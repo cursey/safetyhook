@@ -7,8 +7,7 @@ SafetyHook is simple procedure hooking library for Windows x86 and x86_64 system
 * Fixes IP relative displacements of relocated instructions (eg. `lea rax, [rip + 0x1234]`)
 * Fixes relative offsets of relocated instructions (eg. `jmp 0x1234`)
 * Uses a modern disassembler engine that supports the latest instructions
-
-Much of this safety comes by carefully designing the API so that it's hard to misuse.
+* Has a carefully designed API that is hard to misuse
 
 ## Installation
 
