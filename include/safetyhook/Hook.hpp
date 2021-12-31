@@ -44,5 +44,8 @@ private:
     Hook(const Hook&) = delete;
     Hook(Hook&&) = delete;
     Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
+
+    void e9_hook();
+    void ff_hook();
 };
 } // namespace safetyhook

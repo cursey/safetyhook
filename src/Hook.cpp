@@ -96,9 +96,38 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     return ND_SUCCESS(NdDecode(ix, (const uint8_t*)ip, defcode, defdata));
 }
 
+Hook::~Hook() {
+    if (m_trampoline == 0) {
+        return;
+    }
+
+    auto builder = m_factory->acquire();
+    UnprotectMemory _{m_target, m_trampoline_size};
+
+    std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
+
+    for (auto i = 0; i < m_trampoline_size; ++i) {
+        builder.m_threads.fix_ip(m_trampoline + i, m_target + i);
+    }
+
+    // If the IP is on the trampolines jmp.
+    builder.m_threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    builder.m_factory->free(m_trampoline, m_trampoline_allocation_size);
+}
+
 Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
     : m_factory{factory}, m_target{target}, m_destination{destination} {
-    auto builder = factory->m_builder;
+    e9_hook();
+
+#ifdef _M_X64
+    if (m_trampoline == 0) {
+        ff_hook();
+    }
+#endif
+}
+
+void Hook::e9_hook() { 
+    auto builder = m_factory->m_builder;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
 
@@ -180,28 +209,59 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
     emit_jmp_e9(src, dst);
 #endif
 
-
     for (auto i = 0; i < m_trampoline_size; ++i) {
         builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
-Hook::~Hook() {
+void Hook::ff_hook() {
+    auto builder = m_factory->m_builder;
+    auto ip = m_target;
+    std::vector<uintptr_t> desired_addresses{};
+
+    desired_addresses.emplace_back(m_target);
+
+    while (m_trampoline_size < sizeof(JmpFF) + sizeof(uintptr_t)) {
+        INSTRUX ix{};
+
+        if (!decode(&ix, ip)) {
+            return;
+        }
+
+        if (ix.IsRipRelative && ix.HasDisp && ix.DispLength == 4) {
+            return;
+        } else if (ix.HasRelOffs && ix.RelOffsLength == 4) {
+            return;
+        }
+
+        m_trampoline_size += ix.Length;
+        ip += ix.Length;
+    }
+
+    m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpFF) + sizeof(uintptr_t) * 2;
+    m_trampoline = builder->m_factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
+
     if (m_trampoline == 0) {
         return;
     }
 
-    auto builder = m_factory->acquire();
-    UnprotectMemory _{m_target, m_trampoline_size};
+    std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
+    std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
 
-    std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
+     // jmp from trampoline to original.
+    auto src = m_trampoline + m_trampoline_size;
+    auto dst = ip;
+    auto data = src + sizeof(JmpFF);
+    emit_jmp_ff(src, dst, data);
+
+    // jmp from original to trampoline.
+    src = m_target;
+    dst = m_destination;
+    data += sizeof(uintptr_t);
+    emit_jmp_ff(src, dst, data, m_trampoline_size);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        builder.m_threads.fix_ip(m_trampoline + i, m_target + i);
+        builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
     }
-
-    // If the IP is on the trampolines jmp.
-    builder.m_threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    builder.m_factory->free(m_trampoline, m_trampoline_allocation_size);
 }
 }
