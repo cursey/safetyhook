@@ -30,11 +30,11 @@ int main(int argc, char* argv[]) {
         // factory will be kept alive by g_add_hook.
     }
 
-    std::cout << "hooked add(2, 3) = " << add(2, 3) << "\n";
+    std::cout << "hooked add(3, 4) = " << add(3, 4) << "\n";
 
     g_add_hook.reset();
 
-    std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
+    std::cout << "unhooked add(5, 6) = " << add(5, 6) << "\n";
 
     return 0;
 }
