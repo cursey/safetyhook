@@ -217,9 +217,6 @@ void Hook::e9_hook() {
 void Hook::ff_hook() {
     auto builder = m_factory->m_builder;
     auto ip = m_target;
-    std::vector<uintptr_t> desired_addresses{};
-
-    desired_addresses.emplace_back(m_target);
 
     while (m_trampoline_size < sizeof(JmpFF) + sizeof(uintptr_t)) {
         INSTRUX ix{};
@@ -239,7 +236,7 @@ void Hook::ff_hook() {
     }
 
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpFF) + sizeof(uintptr_t) * 2;
-    m_trampoline = builder->m_factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
+    m_trampoline = builder->m_factory->allocate(m_trampoline_allocation_size);
 
     if (m_trampoline == 0) {
         return;
