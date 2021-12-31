@@ -254,7 +254,7 @@ void Hook::ff_hook() {
     // jmp from original to trampoline.
     src = m_target;
     dst = m_destination;
-    data += sizeof(uintptr_t);
+    data = src + sizeof(JmpFF);
     emit_jmp_ff(src, dst, data, m_trampoline_size);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
