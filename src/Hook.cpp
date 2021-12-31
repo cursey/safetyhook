@@ -127,6 +127,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
 }
 
 void Hook::e9_hook() { 
+    m_trampoline_size = 0;
     auto builder = m_factory->m_builder;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
@@ -215,6 +216,7 @@ void Hook::e9_hook() {
 }
 
 void Hook::ff_hook() {
+    m_trampoline_size = 0;
     auto builder = m_factory->m_builder;
     auto ip = m_target;
 
