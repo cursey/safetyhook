@@ -27,6 +27,9 @@ if(CMKR_ROOT_PROJECT)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
+# Options
+option(SAFETYHOOK_BUILD_TESTS OFF)
+
 project(safetyhook)
 
 if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
@@ -88,68 +91,72 @@ unset(CMKR_TARGET)
 unset(CMKR_SOURCES)
 
 # Target test0
-set(CMKR_TARGET test0)
-set(test0_SOURCES "")
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(CMKR_TARGET test0)
+	set(test0_SOURCES "")
 
-list(APPEND test0_SOURCES
-	"tests/test0.cpp"
-)
+	list(APPEND test0_SOURCES
+		"tests/test0.cpp"
+	)
 
-list(APPEND test0_SOURCES
-	cmake.toml
-)
+	list(APPEND test0_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${test0_SOURCES})
-add_executable(test0)
+	set(CMKR_SOURCES ${test0_SOURCES})
+	add_executable(test0)
 
-if(test0_SOURCES)
-	target_sources(test0 PRIVATE ${test0_SOURCES})
+	if(test0_SOURCES)
+		target_sources(test0 PRIVATE ${test0_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test0)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test0_SOURCES})
+
+	target_link_libraries(test0 PRIVATE
+		safetyhook::safetyhook
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test0)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test0_SOURCES})
-
-target_link_libraries(test0 PRIVATE
-	safetyhook::safetyhook
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target test1
-set(CMKR_TARGET test1)
-set(test1_SOURCES "")
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(CMKR_TARGET test1)
+	set(test1_SOURCES "")
 
-list(APPEND test1_SOURCES
-	"tests/test1.cpp"
-)
+	list(APPEND test1_SOURCES
+		"tests/test1.cpp"
+	)
 
-list(APPEND test1_SOURCES
-	cmake.toml
-)
+	list(APPEND test1_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${test1_SOURCES})
-add_executable(test1)
+	set(CMKR_SOURCES ${test1_SOURCES})
+	add_executable(test1)
 
-if(test1_SOURCES)
-	target_sources(test1 PRIVATE ${test1_SOURCES})
+	if(test1_SOURCES)
+		target_sources(test1 PRIVATE ${test1_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test1)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test1_SOURCES})
+
+	target_link_libraries(test1 PRIVATE
+		safetyhook::safetyhook
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test1)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test1_SOURCES})
-
-target_link_libraries(test1 PRIVATE
-	safetyhook::safetyhook
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 

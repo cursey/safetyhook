@@ -2,13 +2,11 @@
 [project]
 name = "safetyhook"
 
-# TODO: define a target for each of your executables/libraries like this:
-#[target.myexecutable]
-#type = "executable" # static, shared
-#sources = ["src/safetyhook/*.cpp", "include/safetyhook/*.hpp"]
-#include-directories = ["include"]
-#compile-features = ["cxx_std_11"]
-#link-libraries = ["target-or-library"]
+[options]
+SAFETYHOOK_BUILD_TESTS = false
+
+[conditions]
+build-tests = "SAFETYHOOK_BUILD_TESTS"
 
 [vcpkg]
 version = "2021.12.01"
@@ -27,11 +25,13 @@ link-libraries = ["bddisasm::bddisasm"]
 alias = "safetyhook::safetyhook"
 
 [target.test0]
+condition = "build-tests"
 type = "executable"
 sources = ["tests/test0.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
 
 [target.test1]
+condition = "build-tests"
 type = "executable"
 sources = ["tests/test1.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
