@@ -28,10 +28,10 @@ int main(int argc, char* argv[]) {
     {
         auto hooks = SafetyHookFactory::init();
         auto factory = hooks->acquire();
-        hook0 = factory.create(say_hi, hook0_fn);
-        hook1 = factory.create(say_hi, hook1_fn);
-        hook2 = factory.create(say_hi, hook2_fn);
-        hook3 = factory.create(say_hi, hook3_fn);
+        hook0 = factory.create((void*)say_hi, (void*)hook0_fn);
+        hook1 = factory.create((void*)say_hi, (void*)hook1_fn);
+        hook2 = factory.create((void*)say_hi, (void*)hook2_fn);
+        hook3 = factory.create((void*)say_hi, (void*)hook3_fn);
     }
 
     say_hi("world");

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <limits>
 
 #include <Windows.h>
 
@@ -67,7 +68,7 @@ std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
 }
 
 uintptr_t Factory::allocate(size_t size) {
-    return allocate_near({}, size, 0xFFFF'FFFF'FFFF'FFFF);
+    return allocate_near({}, size, std::numeric_limits<size_t>::max());
 }
 
 uintptr_t Factory::allocate_near(

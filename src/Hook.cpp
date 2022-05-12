@@ -26,7 +26,7 @@ private:
     DWORD m_protect{};
 };
 
-#include <pshpack1.h>
+#pragma pack(push, 1)
 struct JmpE9 {
     uint8_t opcode{0xE9};
     uint32_t offset{0};
@@ -37,7 +37,7 @@ struct JmpFF {
     uint8_t opcode1{0x25};
     uint32_t offset{0};
 };
-#include <poppack.h>
+#pragma pack(pop)
 
 static auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
     JmpFF jmp{};

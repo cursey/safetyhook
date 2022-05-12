@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
         auto builder = factory->acquire();
 
         // Create a hook on add.
-        g_add_hook = builder.create(add, hook_add);
+        g_add_hook = builder.create((void*)add, (void*)hook_add);
 
         // Once we leave this scope, builder will unfreeze all threads and our
         // factory will be kept alive by g_add_hook.
