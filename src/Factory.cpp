@@ -189,8 +189,17 @@ uintptr_t Factory::allocate_nearby_memory(
     GetSystemInfo(&si);
 
     auto desired_address = desired_addresses[0];
-    auto search_start = std::min(desired_address, desired_address - max_distance);
-    auto search_end = std::max(desired_address, desired_address + max_distance);
+    auto search_start = std::numeric_limits<uintptr_t>::min();
+    auto search_end = std::numeric_limits<uintptr_t>::max();
+
+    if (desired_address > max_distance) {
+        search_start = desired_address - max_distance;
+    }
+
+    if (std::numeric_limits<uintptr_t>::max() - desired_address > max_distance) {
+        search_end = desired_address + max_distance;
+    }
+
     search_start = std::max(search_start, (uintptr_t)si.lpMinimumApplicationAddress);
     search_end = std::min(search_end, (uintptr_t)si.lpMaximumApplicationAddress);
     desired_address = align_up(desired_address, si.dwAllocationGranularity);
