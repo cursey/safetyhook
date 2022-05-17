@@ -7,7 +7,6 @@
 #include <bddisasm.h>
 
 #include "safetyhook/Factory.hpp"
-#include "safetyhook/ThreadFreezer.hpp"
 
 #include "safetyhook/Hook.hpp"
 
@@ -116,7 +115,7 @@ Hook::~Hook() {
 }
 
 Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
-    : m_factory{factory}, m_target{target}, m_destination{destination} {
+    : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
     e9_hook();
 
 #ifdef _M_X64

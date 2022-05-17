@@ -26,7 +26,7 @@ public:
         std::scoped_lock<std::mutex> m_lock;
         ThreadFreezer m_threads{};
 
-        Builder(std::shared_ptr<Factory> f);
+        explicit Builder(std::shared_ptr<Factory> f);
     };
 
     static auto init() { return std::shared_ptr<Factory>{new Factory}; }

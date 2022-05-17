@@ -41,7 +41,7 @@ ThreadFreezer::ThreadFreezer() {
                 continue;
             }
 
-            m_frozen_threads.emplace_back(std::move(thread));
+            m_frozen_threads.emplace_back(thread);
         } while (Thread32Next(snapshot, &te));
     }
 

@@ -31,7 +31,7 @@ std::shared_ptr<Hook> Factory::Builder::create_shared(void* target, void* destin
 }
 
 Factory::Builder::Builder(std::shared_ptr<Factory> factory) 
-    : m_factory{factory}, m_lock {factory->m_mux} {
+    : m_factory{std::move(factory)}, m_lock{m_factory->m_mux} {
     m_factory->m_builder = this;
 }
 
