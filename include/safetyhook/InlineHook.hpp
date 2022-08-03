@@ -7,12 +7,12 @@
 namespace safetyhook {
 class Factory;
 
-class Hook final {
+class InlineHook final {
 public:
-    Hook() = delete;
-    Hook(const Hook&) = delete;
-    Hook(Hook&&) = delete;
-    ~Hook();
+    InlineHook() = delete;
+    InlineHook(const InlineHook&) = delete;
+    InlineHook(InlineHook&&) = delete;
+    ~InlineHook();
 
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
@@ -43,7 +43,7 @@ private:
     size_t m_trampoline_allocation_size{};
     std::vector<uint8_t> m_original_bytes{};
 
-    Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
+    InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
 
     void e9_hook();
     void ff_hook();

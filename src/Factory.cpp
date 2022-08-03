@@ -22,12 +22,12 @@ Factory::Builder::~Builder() {
     m_factory->m_builder = nullptr;
 }
 
-std::unique_ptr<Hook> Factory::Builder::create(void* target, void* destination) {
-    return m_factory->create(target, destination);
+std::unique_ptr<InlineHook> Factory::Builder::create_inline(void* target, void* destination) {
+    return m_factory->create_inline(target, destination);
 }
 
-std::shared_ptr<Hook> Factory::Builder::create_shared(void* target, void* destination) {
-    return m_factory->create_shared(target, destination);
+std::unique_ptr<MidHook> Factory::Builder::create_mid(void* target, MidHookFn destination) {
+    return m_factory->create_mid(target, destination);
 }
 
 Factory::Builder::Builder(std::shared_ptr<Factory> factory) 
@@ -39,12 +39,12 @@ Factory::Builder Factory::acquire() {
     return Builder{shared_from_this()};
 }
 
-std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
+std::unique_ptr<InlineHook> Factory::create_inline(void* target, void* destination) {
     if (m_builder == nullptr) {
         return nullptr;
     }
 
-    auto hook = std::unique_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    auto hook = std::unique_ptr<InlineHook>{new InlineHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
 
     if (hook->m_trampoline == 0) {
         return nullptr;
@@ -53,14 +53,14 @@ std::unique_ptr<Hook> Factory::create(void* target, void* destination) {
     return hook;
 }
 
-std::shared_ptr<Hook> Factory::create_shared(void* target, void* destination) {
+std::unique_ptr<MidHook> Factory::create_mid(void* target, MidHookFn destination) {
     if (m_builder == nullptr) {
         return nullptr;
     }
 
-    auto hook = std::shared_ptr<Hook>{new Hook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
+    auto hook = std::unique_ptr<MidHook>{new MidHook{shared_from_this(), (uintptr_t)target, destination}};
 
-    if (hook->m_trampoline == 0) {
+    if (hook->m_stub == 0) {
         return nullptr;
     }
 
