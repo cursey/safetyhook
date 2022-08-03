@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <bddisasm.h>
 #include <SafetyHook.hpp>
 
 __declspec(noinline) int add_42(int a) {
@@ -16,21 +17,24 @@ int main(int argc, char* argv[]) {
     std::cout << add_42(2) << "\n";
 
     {
-        // Lets hook the RET.
-        auto addr = (uintptr_t)add_42;
+        // Lets disassemble add_42 and hook its RET.
+        auto ip = (uintptr_t)add_42;
 
-        while (*(uint8_t*)addr != 0xC3) {
-            if (*(uint8_t*)addr == 0xE9) {
-                // Follow the jmp.
-                addr += *(int32_t*)(addr + 1) + 5;
+        while (*(uint8_t*)ip != 0xC3) {
+            INSTRUX ix{};
+            NdDecode(&ix, (const uint8_t*)ip, ND_CODE_64, ND_DATA_64);
+
+            // Follow JMPs
+            if (ix.OpCodeBytes[0] == 0xE9) {
+                ip += ix.Length + (int32_t)ix.RelativeOffset;
             } else {
-                addr += 1;
+                ip += ix.Length;
             }
         }
 
         auto factory = SafetyHookFactory::init();
         auto builder = factory->acquire();
-        g_hook = builder.create_mid((void*)addr, hooked_add_42);
+        g_hook = builder.create_mid((void*)ip, hooked_add_42);
     }
 
     std::cout << add_42(3) << "\n";
