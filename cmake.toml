@@ -9,7 +9,7 @@ SAFETYHOOK_BUILD_TESTS = false
 build-tests = "SAFETYHOOK_BUILD_TESTS"
 
 [vcpkg]
-version = "2021.12.01"
+version = "2022.07.25"
 packages = ["bddisasm"]
 
 [find-package]
