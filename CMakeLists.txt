@@ -28,16 +28,19 @@ if(CMKR_ROOT_PROJECT)
 endif()
 
 # Options
-option(SAFETYHOOK_BUILD_TESTS OFF)
+option(SAFETYHOOK_BUILD_TESTS "" OFF)
 
 project(safetyhook)
 
 if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
 	include(FetchContent)
-	message(STATUS "Fetching vcpkg...")
-	FetchContent_Declare(vcpkg URL "https://github.com/microsoft/vcpkg/archive/refs/tags/2021.12.01.tar.gz")
-	FetchContent_MakeAvailable(vcpkg)
-	include("${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake")
+	message(STATUS "Fetching vcpkg (2022.07.25)...")
+	FetchContent_Declare(vcpkg URL "https://github.com/microsoft/vcpkg/archive/refs/tags/2022.07.25.tar.gz")
+	FetchContent_GetProperties(vcpkg)
+	if(NOT vcpkg_POPULATED)
+		FetchContent_Populate(vcpkg)
+		include("${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake")
+	endif()
 endif()
 
 # Packages
