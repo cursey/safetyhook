@@ -6,11 +6,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64, Win32]
-        include:
-          - arch: x64
-            triplet: x64-windows-static
-          - arch: Win32
-            triplet: x86-windows-static
+        build_type: [Debug, Release]
 
     steps:
       - name: Checkout
@@ -18,18 +14,10 @@ jobs:
 
       - name: Build
         run: |
-          cmake -B build-${{matrix.arch}} -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=Release -DCMAKE_UNITY_BUILD=ON -DVCPKG_TARGET_TRIPLET=${{matrix.triplet}} -DSAFETYHOOK_BUILD_TESTS=On
-          cmake --build build-${{matrix.arch}} --config Release --parallel
-          cmake --install build-${{matrix.arch}} --prefix ./install-${{matrix.arch}} --config Release
+          cmake -B build-${{matrix.arch}}-${{matrix.build_type}} -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DCMAKE_UNITY_BUILD=ON -DSAFETYHOOK_BUILD_TESTS=ON
+          cmake --build build-${{matrix.arch}}-${{matrix.build_type}} --config ${{matrix.build_type}} --parallel
           
       - name: Test
         run: |
-          ./install-${{matrix.arch}}/bin/test0.exe
-          ./install-${{matrix.arch}}/bin/test1.exe
-          ./install-${{matrix.arch}}/bin/test2.exe
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{github.event.repository.name}}-${{matrix.arch}}
-          path: install-${{matrix.arch}}/bin/*
+          ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test0.exe
+          ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test1.exe
