@@ -29,6 +29,9 @@ public:
     MidHook(MidHook&&) = delete;
     ~MidHook();
 
+    [[nodiscard]] auto target() const { return m_target; }
+    [[nodiscard]] auto destination() const { return m_destination; }
+
 private:
     friend Factory;
 

@@ -25,16 +25,16 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
     std::copy_n(asm_data, sizeof(asm_data), (uint8_t*)m_stub);
 
 #ifdef _M_X64
-    *(MidHookFn*)(m_stub + sizeof(asm_data) - 16) = destination;
+    *(MidHookFn*)(m_stub + sizeof(asm_data) - 16) = m_destination;
 #else
-    *(MidHookFn*)(m_stub + sizeof(asm_data) - 8) = destination;
+    *(MidHookFn*)(m_stub + sizeof(asm_data) - 8) = m_destination;
 
     // 32-bit has some relocations we need to fix up as well.
     *(uintptr_t*)(m_stub + 0xA + 2) = m_stub + sizeof(asm_data) - 8;
     *(uintptr_t*)(m_stub + 0x1C + 2) = m_stub + sizeof(asm_data) - 4;
 #endif
 
-    m_hook = m_factory->m_builder->create_inline((void*)target, (void*)m_stub);
+    m_hook = m_factory->m_builder->create_inline((void*)m_target, (void*)m_stub);
 
     if (m_hook == nullptr) {
         m_factory->free(m_stub, sizeof(asm_data));
