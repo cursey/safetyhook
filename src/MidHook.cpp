@@ -15,8 +15,6 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x41
 
 MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
-    constexpr auto x = sizeof(Context);
-
     m_stub = m_factory->allocate(sizeof(asm_data));
 
     std::copy_n(asm_data, sizeof(asm_data), (uint8_t*)m_stub);
