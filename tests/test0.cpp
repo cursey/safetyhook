@@ -2,7 +2,7 @@
 
 #include <SafetyHook.hpp>
 
-std::unique_ptr<SafetyHook> hook0, hook1, hook2, hook3;
+SafetyInlineHook hook0, hook1, hook2, hook3;
 
 __declspec(noinline) void say_hi(const std::string& name) {
     std::cout << "hello " << name << "\n";
@@ -28,10 +28,10 @@ int main(int argc, char* argv[]) {
     {
         auto hooks = SafetyHookFactory::init();
         auto factory = hooks->acquire();
-        hook0 = factory.create((void*)say_hi, (void*)hook0_fn);
-        hook1 = factory.create((void*)say_hi, (void*)hook1_fn);
-        hook2 = factory.create((void*)say_hi, (void*)hook2_fn);
-        hook3 = factory.create((void*)say_hi, (void*)hook3_fn);
+        hook0 = factory.create_inline((void*)say_hi, (void*)hook0_fn);
+        hook1 = factory.create_inline((void*)say_hi, (void*)hook1_fn);
+        hook2 = factory.create_inline((void*)say_hi, (void*)hook2_fn);
+        hook3 = factory.create_inline((void*)say_hi, (void*)hook3_fn);
     }
 
     say_hi("world");

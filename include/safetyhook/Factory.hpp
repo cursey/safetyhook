@@ -5,7 +5,8 @@
 #include <mutex>
 #include <vector>
 
-#include "Hook.hpp"
+#include "MidHook.hpp"
+#include "InlineHook.hpp"
 #include "ThreadFreezer.hpp"
 
 namespace safetyhook {
@@ -15,11 +16,11 @@ public:
     public:
         ~Builder();
 
-        std::unique_ptr<Hook> create(void* target, void* destination);
-        std::shared_ptr<Hook> create_shared(void* target, void* destination);
+        std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
+        std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
         
     private:
-        friend Hook;
+        friend InlineHook;
         friend Factory;
 
         std::shared_ptr<Factory> m_factory{};
@@ -34,7 +35,8 @@ public:
     Builder acquire();
 
 private:
-    friend Hook;
+    friend InlineHook;
+    friend MidHook;
 
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
@@ -56,8 +58,8 @@ private:
 
     Factory() = default;
 
-    std::unique_ptr<Hook> create(void* target, void* destination);
-    std::shared_ptr<Hook> create_shared(void* target, void* destination);
+    std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
+    std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
 
     uintptr_t allocate(size_t size);
     uintptr_t allocate_near(

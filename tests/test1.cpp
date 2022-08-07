@@ -6,7 +6,7 @@ __declspec(noinline) int add(int x, int y) {
     return x + y;
 }
 
-std::unique_ptr<SafetyHook> g_add_hook{};
+SafetyInlineHook g_add_hook{};
 
 int hook_add(int x, int y) {
     return g_add_hook->call<int>(x * 2, y * 2);
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
         auto builder = factory->acquire();
 
         // Create a hook on add.
-        g_add_hook = builder.create((void*)add, (void*)hook_add);
+        g_add_hook = builder.create_inline((void*)add, (void*)hook_add);
 
         // Once we leave this scope, builder will unfreeze all threads and our
         // factory will be kept alive by g_add_hook.

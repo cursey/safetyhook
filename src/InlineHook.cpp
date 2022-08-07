@@ -8,7 +8,7 @@
 
 #include "safetyhook/Factory.hpp"
 
-#include "safetyhook/Hook.hpp"
+#include "safetyhook/InlineHook.hpp"
 
 namespace safetyhook {
 class UnprotectMemory {
@@ -95,7 +95,7 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     return ND_SUCCESS(NdDecode(ix, (const uint8_t*)ip, defcode, defdata));
 }
 
-Hook::~Hook() {
+InlineHook::~InlineHook() {
     if (m_trampoline == 0) {
         return;
     }
@@ -114,7 +114,7 @@ Hook::~Hook() {
     builder.m_factory->free(m_trampoline, m_trampoline_allocation_size);
 }
 
-Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
+InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
     e9_hook();
 
@@ -125,7 +125,7 @@ Hook::Hook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destina
 #endif
 }
 
-void Hook::e9_hook() { 
+void InlineHook::e9_hook() { 
     m_trampoline_size = 0;
     auto builder = m_factory->m_builder;
     auto ip = m_target;
@@ -214,7 +214,7 @@ void Hook::e9_hook() {
     }
 }
 
-void Hook::ff_hook() {
+void InlineHook::ff_hook() {
     m_trampoline_size = 0;
     auto builder = m_factory->m_builder;
     auto ip = m_target;

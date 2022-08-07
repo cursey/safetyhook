@@ -52,11 +52,13 @@ set(safetyhook_SOURCES "")
 
 list(APPEND safetyhook_SOURCES
 	"src/Factory.cpp"
-	"src/Hook.cpp"
+	"src/InlineHook.cpp"
+	"src/MidHook.cpp"
 	"src/ThreadFreezer.cpp"
 	"include/SafetyHook.hpp"
 	"include/safetyhook/Factory.hpp"
-	"include/safetyhook/Hook.hpp"
+	"include/safetyhook/InlineHook.hpp"
+	"include/safetyhook/MidHook.hpp"
 	"include/safetyhook/ThreadFreezer.hpp"
 )
 
@@ -156,6 +158,41 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test1_SOURCES})
 
 	target_link_libraries(test1 PRIVATE
+		safetyhook::safetyhook
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+
+# Target test2
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(CMKR_TARGET test2)
+	set(test2_SOURCES "")
+
+	list(APPEND test2_SOURCES
+		"tests/test2.cpp"
+	)
+
+	list(APPEND test2_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${test2_SOURCES})
+	add_executable(test2)
+
+	if(test2_SOURCES)
+		target_sources(test2 PRIVATE ${test2_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test2)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test2_SOURCES})
+
+	target_link_libraries(test2 PRIVATE
 		safetyhook::safetyhook
 	)
 

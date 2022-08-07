@@ -1,6 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include "safetyhook/Factory.hpp"
+#include "safetyhook/InlineHook.hpp"
+#include "safetyhook/MidHook.hpp"
 
 using SafetyHookFactory = safetyhook::Factory;
-using SafetyHook = safetyhook::Hook;
+using SafetyInlineHook = std::unique_ptr<safetyhook::InlineHook>;
+using SafetyMidHook = std::unique_ptr<safetyhook::MidHook>;
