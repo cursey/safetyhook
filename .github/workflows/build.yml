@@ -21,3 +21,4 @@ jobs:
         run: |
           ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test0.exe
           ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test1.exe
+          ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test2.exe
