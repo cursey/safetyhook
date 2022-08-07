@@ -18,7 +18,7 @@ push r15
 pushfq
 
 ; set destination parameter
-lea rcx, [rsp-136]
+lea rcx, [rsp]
 
 ; fix stack (store stack change in rbx)
 sub rsp, 40
