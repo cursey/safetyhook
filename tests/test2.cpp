@@ -8,7 +8,11 @@ __declspec(noinline) int add_42(int a) {
 }
 
 void hooked_add_42(safetyhook::Context& ctx) {
+#ifdef _M_X64
     ctx.rax = 1337;
+#else
+    ctx.eax = 1337;
+#endif
 }
 
 SafetyMidHook g_hook{};
