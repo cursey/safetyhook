@@ -1,0 +1,23 @@
+on: [push, pull_request]
+jobs:
+  build:
+    if: ${{github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)}}
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, Win32]
+        build_type: [Debug, Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: |
+          cmake -B build-${{matrix.arch}}-${{matrix.build_type}} -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DCMAKE_UNITY_BUILD=ON -DSAFETYHOOK_BUILD_TESTS=ON
+          cmake --build build-${{matrix.arch}}-${{matrix.build_type}} --config ${{matrix.build_type}} --parallel
+          
+      - name: Test
+        run: |
+          ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test0.exe
+          ./build-${{matrix.arch}}-${{matrix.build_type}}/${{matrix.build_type}}/test1.exe
