@@ -9,5 +9,5 @@
 using SafetyHookFactory = safetyhook::Factory;
 using SafetyInlineHook = std::unique_ptr<safetyhook::InlineHook>;
 using SafetyMidHook = std::unique_ptr<safetyhook::MidHook>;
-using SafetyContext = safetyhook::Context;
+using SafetyHookContext = safetyhook::Context;
 

@@ -7,7 +7,7 @@ __declspec(noinline) int add_42(int a) {
     return a + 42;
 }
 
-void hooked_add_42(safetyhook::Context& ctx) {
+void hooked_add_42(SafetyHookContext& ctx) {
 #ifdef _M_X64
     ctx.rax = 1337;
 #else
