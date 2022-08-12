@@ -125,7 +125,7 @@ InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintp
 #endif
 }
 
-void InlineHook::e9_hook() { 
+void InlineHook::e9_hook() {
     m_trampoline_size = 0;
     auto builder = m_factory->m_builder;
     auto ip = m_target;
@@ -246,7 +246,7 @@ void InlineHook::ff_hook() {
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
 
-     // jmp from trampoline to original.
+    // jmp from trampoline to original.
     auto src = m_trampoline + m_trampoline_size;
     auto dst = ip;
     auto data = src + sizeof(JmpFF);
@@ -262,4 +262,4 @@ void InlineHook::ff_hook() {
         builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
     }
 }
-}
+} // namespace safetyhook

@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include <bddisasm.h>
 #include <SafetyHook.hpp>
+#include <bddisasm.h>
 
 __declspec(noinline) int add_42(int a) {
     return a + 42;

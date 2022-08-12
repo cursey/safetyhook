@@ -10,7 +10,8 @@ public:
     ThreadFreezer();
     ~ThreadFreezer();
 
-    // Goes through all the threads looking for any that are currently on `old_ip` and sets them to `new_ip`.
+    // Goes through all the threads looking for any that are currently on `old_ip`
+    // and sets them to `new_ip`.
     void fix_ip(uintptr_t old_ip, uintptr_t new_ip);
 
 private:
@@ -22,4 +23,4 @@ private:
 
     std::vector<FrozenThread> m_frozen_threads{};
 };
-}
+} // namespace safetyhook

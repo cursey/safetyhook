@@ -5,8 +5,8 @@
 #include <mutex>
 #include <vector>
 
-#include "MidHook.hpp"
 #include "InlineHook.hpp"
+#include "MidHook.hpp"
 #include "ThreadFreezer.hpp"
 
 namespace safetyhook {
@@ -18,7 +18,7 @@ public:
 
         std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
         std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
-        
+
     private:
         friend InlineHook;
         friend Factory;

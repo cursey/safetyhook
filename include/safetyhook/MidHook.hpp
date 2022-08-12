@@ -11,7 +11,7 @@ struct Context64 {
 };
 
 struct Context32 {
-     uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp;
+    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp;
 };
 
 #ifdef _M_X64

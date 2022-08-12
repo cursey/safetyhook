@@ -75,4 +75,4 @@ void ThreadFreezer::fix_ip(uintptr_t old_ip, uintptr_t new_ip) {
 #endif
     }
 }
-}
+} // namespace safetyhook
