@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iterator>
 
 #include <Windows.h>
