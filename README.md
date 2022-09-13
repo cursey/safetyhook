@@ -29,7 +29,7 @@ FetchContent_MakeAvailable(bddisasm)
 # Safetyhook
 FetchContent_Declare(
     safetyhook
-    GIT_REPOSITORY "https://github.com/cursey/sdkgenny.git"
+    GIT_REPOSITORY "https://github.com/cursey/safetyhook.git"
     GIT_TAG "origin/master"
 )
 FetchContent_MakeAvailable(safetyhook)
