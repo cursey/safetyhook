@@ -141,6 +141,13 @@ void InlineHook::e9_hook() {
             return;
         }
 
+        // TODO: Add support for expanding short jumps here. Until then, short 
+        // jumps within the trampoline are problematic so we just return for
+        // now.
+        if (ix.HasRelOffs && ix.RelOffsLength != 4) {
+            return; 
+        }
+
         if (ix.IsRipRelative && ix.HasDisp && ix.DispLength == 4) {
             auto target_address = ip + ix.Length + (int32_t)ix.Displacement;
             desired_addresses.emplace_back(target_address);
@@ -227,11 +234,12 @@ void InlineHook::ff_hook() {
             return;
         }
 
-        if (ix.IsRipRelative && ix.HasDisp && ix.DispLength == 4) {
+        // We can't support any instruction that is IP relative here because 
+        // ff_hook should only be called if e9_hook failed indicating that
+        // we're likely outside the +- 2GB range.
+        if (ix.IsRipRelative || ix.HasRelOffs) {
             return;
-        } else if (ix.HasRelOffs && ix.RelOffsLength == 4) {
-            return;
-        }
+        } 
 
         m_trampoline_size += ix.Length;
         ip += ix.Length;
