@@ -23,6 +23,8 @@ compile-features = ["cxx_std_17"]
 compile-definitions = ["NOMINMAX"]
 link-libraries = ["bddisasm::bddisasm"]
 alias = "safetyhook::safetyhook"
+msvc.compile-options = ["/permissive-", "/W4", "/w14640"]
+clang.compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 
 [target.test0]
 condition = "build-tests"

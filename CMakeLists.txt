@@ -87,6 +87,24 @@ target_compile_features(safetyhook PUBLIC
 	cxx_std_17
 )
 
+if(MSVC) # msvc
+	target_compile_options(safetyhook PUBLIC
+		"/permissive-"
+		"/W4"
+		"/w14640"
+	)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "Clang") # clang
+	target_compile_options(safetyhook PUBLIC
+		-Wall
+		-Wextra
+		-Wshadow
+		-Wnon-virtual-dtor
+		-pedantic
+	)
+endif()
+
 target_include_directories(safetyhook PUBLIC
 	"include/"
 )
