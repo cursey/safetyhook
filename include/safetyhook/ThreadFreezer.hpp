@@ -8,6 +8,11 @@
 namespace safetyhook {
 class ThreadFreezer final {
 public:
+    ThreadFreezer(ThreadFreezer&) = delete;
+    ThreadFreezer(ThreadFreezer&&) noexcept = default;
+    ThreadFreezer& operator=(ThreadFreezer&) = delete;
+    ThreadFreezer& operator=(ThreadFreezer&&) noexcept = default;
+
     ThreadFreezer();
     ~ThreadFreezer();
 

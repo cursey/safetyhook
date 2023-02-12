@@ -26,7 +26,10 @@ class MidHook final {
 public:
     MidHook() = delete;
     MidHook(const MidHook&) = delete;
-    MidHook(MidHook&&) = delete;
+    MidHook(MidHook&&) noexcept = delete;
+    MidHook& operator=(const MidHook&) = delete;
+    MidHook& operator=(MidHook&&) noexcept = delete;
+
     ~MidHook();
 
     [[nodiscard]] auto target() const { return m_target; }

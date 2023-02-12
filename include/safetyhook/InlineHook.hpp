@@ -11,7 +11,10 @@ class InlineHook final {
 public:
     InlineHook() = delete;
     InlineHook(const InlineHook&) = delete;
-    InlineHook(InlineHook&&) = delete;
+    InlineHook(InlineHook&&) noexcept = delete;
+    InlineHook& operator=(const InlineHook&) = delete;
+    InlineHook& operator=(InlineHook&&) noexcept = delete;
+
     ~InlineHook();
 
     [[nodiscard]] auto target() const { return m_target; }

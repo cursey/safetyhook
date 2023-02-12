@@ -43,6 +43,11 @@ public:
 
     [[nodiscard]] static Builder acquire();
 
+    Factory(const Factory&) = delete;
+    Factory(Factory&&) noexcept = delete;
+    Factory& operator=(const Factory&) = delete;
+    Factory& operator=(Factory&&) noexcept = delete;
+
     ~Factory();
 
 private:
