@@ -200,3 +200,38 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	unset(CMKR_SOURCES)
 endif()
 
+# Target test3
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(CMKR_TARGET test3)
+	set(test3_SOURCES "")
+
+	list(APPEND test3_SOURCES
+		"tests/test3.cpp"
+	)
+
+	list(APPEND test3_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${test3_SOURCES})
+	add_executable(test3)
+
+	if(test3_SOURCES)
+		target_sources(test3 PRIVATE ${test3_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test3)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test3_SOURCES})
+
+	target_link_libraries(test3 PRIVATE
+		safetyhook::safetyhook
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+

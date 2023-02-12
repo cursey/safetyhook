@@ -18,7 +18,7 @@ public:
     [[nodiscard]] auto destination() const { return m_destination; }
     [[nodiscard]] auto trampoline() const { return m_trampoline; }
 
-    template <typename T> T* original() const { return (T*)m_trampoline; }
+    template <typename T> [[nodiscard]] T* original() const { return (T*)m_trampoline; }
 
     template <typename RetT = void, typename... Args> auto call(Args... args) {
         return ((RetT(*)(Args...))m_trampoline)(args...);

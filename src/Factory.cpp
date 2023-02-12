@@ -26,15 +26,52 @@ Factory::Builder::~Builder() {
 }
 
 std::unique_ptr<InlineHook> Factory::Builder::create_inline(void* target, void* destination) {
-    return m_factory->create_inline(target, destination);
+    auto hook = std::unique_ptr<InlineHook>{new InlineHook{m_factory, (uintptr_t)target, (uintptr_t)destination}};
+
+    if (hook->m_trampoline == 0) {
+        return nullptr;
+    }
+
+    return hook;
 }
 
 std::unique_ptr<MidHook> Factory::Builder::create_mid(void* target, MidHookFn destination) {
-    return m_factory->create_mid(target, destination);
+    auto hook = std::unique_ptr<MidHook>{new MidHook{m_factory, (uintptr_t)target, destination}};
+
+    if (hook->m_stub == 0) {
+        return nullptr;
+    }
+
+    return hook;
 }
 
-Factory::Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)}, m_lock{m_factory->m_mux} {
-    m_factory->m_builder = this;
+Factory::Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)} {
+    if (m_factory->m_builder == nullptr) {
+        m_factory->m_builder = this;
+        m_threads = std::make_shared<ThreadFreezer>();
+    } else {
+        m_threads = m_factory->m_builder->m_threads;
+    }
+}
+
+void Factory::Builder::fix_ip(uintptr_t old_ip, uintptr_t new_ip) {
+    m_threads->fix_ip(old_ip, new_ip);
+}
+
+uintptr_t Factory::Builder::allocate(size_t size) {
+    std::scoped_lock _{m_factory->m_mux};
+    return m_factory->allocate(size);
+}
+
+uintptr_t Factory::Builder::allocate_near(
+    const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
+    std::scoped_lock _{m_factory->m_mux};
+    return m_factory->allocate_near(desired_addresses, size, max_distance);
+}
+
+void Factory::Builder::free(uintptr_t address, size_t size) {
+    std::scoped_lock _{m_factory->m_mux};
+    m_factory->free(address, size);
 }
 
 Factory::Builder Factory::acquire() {
@@ -55,42 +92,11 @@ Factory::~Factory() {
     g_factory = nullptr;
 }
 
-std::unique_ptr<InlineHook> Factory::create_inline(void* target, void* destination) {
-    if (m_builder == nullptr) {
-        return nullptr;
-    }
-
-    auto hook =
-        std::unique_ptr<InlineHook>{new InlineHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
-
-    if (hook->m_trampoline == 0) {
-        return nullptr;
-    }
-
-    return hook;
-}
-
-std::unique_ptr<MidHook> Factory::create_mid(void* target, MidHookFn destination) {
-    if (m_builder == nullptr) {
-        return nullptr;
-    }
-
-    auto hook = std::unique_ptr<MidHook>{new MidHook{shared_from_this(), (uintptr_t)target, destination}};
-
-    if (hook->m_stub == 0) {
-        return nullptr;
-    }
-
-    return hook;
-}
-
 uintptr_t Factory::allocate(size_t size) {
     return allocate_near({}, size, std::numeric_limits<size_t>::max());
 }
 
 uintptr_t Factory::allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
-    // std::scoped_lock _{m_mux};
-
     // First search through our list of allocations for a free block that is large
     // enough.
     for (auto& allocation : m_allocations) {

@@ -14,30 +14,38 @@ class Factory final : public std::enable_shared_from_this<Factory> {
 public:
     class Builder final {
     public:
+        Builder(const Builder&) = delete;
+        Builder(Builder&&) noexcept = delete;
+        Builder& operator=(const Builder&) = delete;
+        Builder& operator=(Builder&&) noexcept = delete;
+
         ~Builder();
 
-        std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
-        std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
+        [[nodiscard]] std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
+        [[nodiscard]] std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
 
     private:
-        friend InlineHook;
         friend Factory;
+        friend InlineHook;
+        friend MidHook;
 
         std::shared_ptr<Factory> m_factory{};
-        std::scoped_lock<std::mutex> m_lock;
-        ThreadFreezer m_threads{};
+        std::shared_ptr<ThreadFreezer> m_threads{};
 
         explicit Builder(std::shared_ptr<Factory> f);
+
+        void fix_ip(uintptr_t old_ip, uintptr_t new_ip);
+        [[nodiscard]] uintptr_t allocate(size_t size);
+        [[nodiscard]] uintptr_t allocate_near(
+            const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
+        void free(uintptr_t address, size_t size);
     };
 
-    static Builder acquire();
+    [[nodiscard]] static Builder acquire();
 
     ~Factory();
 
 private:
-    friend InlineHook;
-    friend MidHook;
-
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
         uintptr_t start{};
@@ -58,16 +66,15 @@ private:
 
     Factory();
 
-    std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
-    std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
-
-    uintptr_t allocate(size_t size);
-    uintptr_t allocate_near(
+    [[nodiscard]] uintptr_t allocate(size_t size);
+    [[nodiscard]] uintptr_t allocate_near(
         const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void free(uintptr_t address, size_t size);
 
     void combine_adjacent_freenodes(MemoryAllocation& allocation);
-    uintptr_t allocate_nearby_memory(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
-    bool in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
+    [[nodiscard]] uintptr_t allocate_nearby_memory(
+        const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
+    [[nodiscard]] bool in_range(
+        uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
 };
 } // namespace safetyhook
