@@ -24,7 +24,7 @@ void hook3_fn(const std::string& name) {
     hook3->call<void, const std::string&>(name + " and carol");
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     {
         auto builder = SafetyHookFactory::acquire();
         hook0 = builder.create_inline((void*)say_hi, (void*)hook0_fn);

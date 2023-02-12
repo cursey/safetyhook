@@ -25,7 +25,7 @@ void hook3_fn(const std::string& name) {
     hook3->call<void, const std::string&>(name + " and carol");
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     {
         // Don't do this, it's just for testing. Try to just use one builder to create all your hooks.
         hook0 = SafetyHookFactory::acquire().create_inline((void*)say_hi, (void*)hook0_fn);
