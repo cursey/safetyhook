@@ -10,6 +10,9 @@
 #include "safetyhook/Factory.hpp"
 
 namespace safetyhook {
+Factory* g_factory{};
+std::mutex g_factory_mux{};
+
 constexpr auto align_up(uintptr_t address, size_t align) {
     return (address + align - 1) & ~(align - 1);
 }
@@ -35,7 +38,21 @@ Factory::Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::mov
 }
 
 Factory::Builder Factory::acquire() {
-    return Builder{shared_from_this()};
+    std::scoped_lock _{g_factory_mux};
+
+    if (g_factory == nullptr) {
+        return Builder{std::shared_ptr<Factory>{new Factory}};
+    } else {
+        return Builder{g_factory->shared_from_this()};
+    }
+}
+
+Factory::Factory() {
+    g_factory = this;
+}
+
+Factory::~Factory() {
+    g_factory = nullptr;
 }
 
 std::unique_ptr<InlineHook> Factory::create_inline(void* target, void* destination) {

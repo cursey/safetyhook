@@ -26,12 +26,11 @@ void hook3_fn(const std::string& name) {
 
 int main(int argc, char* argv[]) {
     {
-        auto hooks = SafetyHookFactory::init();
-        auto factory = hooks->acquire();
-        hook0 = factory.create_inline((void*)say_hi, (void*)hook0_fn);
-        hook1 = factory.create_inline((void*)say_hi, (void*)hook1_fn);
-        hook2 = factory.create_inline((void*)say_hi, (void*)hook2_fn);
-        hook3 = factory.create_inline((void*)say_hi, (void*)hook3_fn);
+        auto builder = SafetyHookFactory::acquire();
+        hook0 = builder.create_inline((void*)say_hi, (void*)hook0_fn);
+        hook1 = builder.create_inline((void*)say_hi, (void*)hook1_fn);
+        hook2 = builder.create_inline((void*)say_hi, (void*)hook2_fn);
+        hook3 = builder.create_inline((void*)say_hi, (void*)hook3_fn);
     }
 
     say_hi("world");

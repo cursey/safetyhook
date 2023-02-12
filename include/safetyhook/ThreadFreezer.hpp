@@ -6,7 +6,7 @@
 #include <Windows.h>
 
 namespace safetyhook {
-class ThreadFreezer {
+class ThreadFreezer final {
 public:
     ThreadFreezer();
     ~ThreadFreezer();

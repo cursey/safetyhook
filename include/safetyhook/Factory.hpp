@@ -10,9 +10,9 @@
 #include "ThreadFreezer.hpp"
 
 namespace safetyhook {
-class Factory : public std::enable_shared_from_this<Factory> {
+class Factory final : public std::enable_shared_from_this<Factory> {
 public:
-    class Builder {
+    class Builder final {
     public:
         ~Builder();
 
@@ -30,9 +30,9 @@ public:
         explicit Builder(std::shared_ptr<Factory> f);
     };
 
-    static auto init() { return std::shared_ptr<Factory>{new Factory}; }
+    static Builder acquire();
 
-    Builder acquire();
+    ~Factory();
 
 private:
     friend InlineHook;
@@ -56,7 +56,7 @@ private:
     std::mutex m_mux{};
     Builder* m_builder{};
 
-    Factory() = default;
+    Factory();
 
     std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
     std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
