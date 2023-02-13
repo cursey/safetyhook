@@ -101,7 +101,7 @@ InlineHook::~InlineHook() {
         return;
     }
 
-    auto builder = m_factory->acquire();
+    auto builder = Factory::acquire();
     UnprotectMemory _{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
@@ -165,7 +165,7 @@ void InlineHook::e9_hook() {
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpE9);
 #endif
 
-    auto builder = m_factory->acquire();
+    auto builder = Factory::acquire();
     m_trampoline = builder.allocate_near(desired_addresses, m_trampoline_allocation_size);
 
     if (m_trampoline == 0) {
@@ -244,7 +244,7 @@ void InlineHook::ff_hook() {
         ip += ix.Length;
     }
 
-    auto builder = m_factory->acquire();
+    auto builder = Factory::acquire();
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpFF) + sizeof(uintptr_t) * 2;
     m_trampoline = builder.allocate(m_trampoline_allocation_size);
 

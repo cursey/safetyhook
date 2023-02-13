@@ -23,7 +23,7 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x9C
 
 MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
-    auto builder = m_factory->acquire();
+    auto builder = Factory::acquire();
     m_stub = builder.allocate(sizeof(asm_data));
 
     std::copy_n(asm_data, sizeof(asm_data), (uint8_t*)m_stub);
@@ -55,7 +55,7 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
 
 MidHook::~MidHook() {
     if (m_stub != 0) {
-        auto builder = m_factory->acquire();
+        auto builder = Factory::acquire();
         builder.free(m_stub, sizeof(asm_data));
     }
 
