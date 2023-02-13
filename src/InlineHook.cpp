@@ -42,7 +42,7 @@ struct JmpFF {
 static auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
     JmpFF jmp{};
 
-    jmp.offset = data - src - sizeof(jmp);
+    jmp.offset = static_cast<uint32_t>(data - src - sizeof(jmp));
     *(uintptr_t*)data = dst;
 
     return jmp;
@@ -65,7 +65,7 @@ static void emit_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data, size_t siz
 constexpr auto make_jmp_e9(uintptr_t src, uintptr_t dst) {
     JmpE9 jmp{};
 
-    jmp.offset = dst - src - sizeof(jmp);
+    jmp.offset = static_cast<uint32_t>(dst - src - sizeof(jmp));
 
     return jmp;
 }
@@ -106,7 +106,7 @@ InlineHook::~InlineHook() {
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
-    for (auto i = 0; i < m_trampoline_size; ++i) {
+    for (size_t i = 0; i < m_trampoline_size; ++i) {
         builder.fix_ip(m_trampoline + i, m_target + i);
     }
 
@@ -217,7 +217,7 @@ void InlineHook::e9_hook() {
     emit_jmp_e9(src, dst);
 #endif
 
-    for (auto i = 0; i < m_trampoline_size; ++i) {
+    for (size_t i = 0; i < m_trampoline_size; ++i) {
         builder.fix_ip(m_target + i, m_trampoline + i);
     }
 }
@@ -267,7 +267,7 @@ void InlineHook::ff_hook() {
     data = src + sizeof(JmpFF);
     emit_jmp_ff(src, dst, data, m_trampoline_size);
 
-    for (auto i = 0; i < m_trampoline_size; ++i) {
+    for (size_t i = 0; i < m_trampoline_size; ++i) {
         builder.fix_ip(m_target + i, m_trampoline + i);
     }
 }
