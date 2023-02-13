@@ -3,7 +3,7 @@
 
 #include <SafetyHook.hpp>
 
-SafetyInlineHook hook0, hook1, hook2, hook3;
+SafetyHookInline hook0, hook1, hook2, hook3;
 
 __declspec(noinline) void say_hi(const std::string& name) {
     std::cout << "hello " << name << "\n";

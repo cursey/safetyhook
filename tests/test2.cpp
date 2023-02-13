@@ -15,7 +15,7 @@ void hooked_add_42(SafetyHookContext& ctx) {
 #endif
 }
 
-SafetyMidHook g_hook{};
+SafetyHookMid g_hook{};
 
 int main() {
     std::cout << add_42(2) << "\n";
