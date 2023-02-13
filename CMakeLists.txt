@@ -88,7 +88,7 @@ target_compile_features(safetyhook PUBLIC
 )
 
 if(MSVC) # msvc
-	target_compile_options(safetyhook PUBLIC
+	target_compile_options(safetyhook PRIVATE
 		"/WX"
 		"/permissive-"
 		"/W4"
@@ -97,7 +97,7 @@ if(MSVC) # msvc
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "Clang") # clang
-	target_compile_options(safetyhook PUBLIC
+	target_compile_options(safetyhook PRIVATE
 		-Werror
 		-Wall
 		-Wextra
@@ -108,7 +108,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-	target_compile_options(safetyhook PUBLIC
+	target_compile_options(safetyhook PRIVATE
 		-Werror
 		-Wall
 		-Wextra
