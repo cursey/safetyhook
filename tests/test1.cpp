@@ -6,7 +6,7 @@ __declspec(noinline) int add(int x, int y) {
     return x + y;
 }
 
-SafetyInlineHook g_add_hook{};
+SafetyHookInline g_add_hook{};
 
 int hook_add(int x, int y) {
     return g_add_hook->call<int>(x * 2, y * 2);

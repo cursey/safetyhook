@@ -9,6 +9,8 @@
 
 using SafetyHookBuilder = safetyhook::Builder;
 using SafetyHookFactory = safetyhook::Factory;
-using SafetyInlineHook = std::unique_ptr<safetyhook::InlineHook>;
-using SafetyMidHook = std::unique_ptr<safetyhook::MidHook>;
 using SafetyHookContext = safetyhook::Context;
+using SafetyHookInline = std::unique_ptr<safetyhook::InlineHook>;
+using SafetyHookMid = std::unique_ptr<safetyhook::MidHook>;
+using SafetyInlineHook [[deprecated("Use SafetyHookInline instead.")]] = std::unique_ptr<safetyhook::InlineHook>;
+using SafetyMidHook [[deprecated("Use SafetyHookMid instead.")]] = std::unique_ptr<safetyhook::MidHook>;
