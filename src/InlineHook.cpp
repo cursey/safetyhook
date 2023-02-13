@@ -56,7 +56,7 @@ static void emit_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data, size_t siz
     UnprotectMemory _{src, size};
 
     if (size > sizeof(JmpFF)) {
-        std::fill_n((uint8_t*)src, size, 0x90);
+        std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
     }
 
     *(JmpFF*)src = make_jmp_ff(src, dst, data);
@@ -78,7 +78,7 @@ static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9
     UnprotectMemory _{src, size};
 
     if (size > sizeof(JmpE9)) {
-        std::fill_n((uint8_t*)src, size, 0x90);
+        std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
     }
 
     *(JmpE9*)src = make_jmp_e9(src, dst);
