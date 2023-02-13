@@ -31,6 +31,8 @@ std::unique_ptr<MidHook> Builder::create_mid(void* target, MidHookFn destination
 }
 
 Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)} {
+    std::scoped_lock _{m_factory->m_mux};
+
     if (m_factory->m_builder == nullptr) {
         m_factory->m_builder = this;
         m_threads = std::make_shared<ThreadFreezer>();
