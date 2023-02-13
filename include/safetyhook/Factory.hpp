@@ -5,38 +5,22 @@
 #include <mutex>
 #include <vector>
 
-#include "InlineHook.hpp"
-#include "MidHook.hpp"
-#include "ThreadFreezer.hpp"
+#include "safetyhook/Builder.hpp"
 
 namespace safetyhook {
-class Factory : public std::enable_shared_from_this<Factory> {
+class Factory final : public std::enable_shared_from_this<Factory> {
 public:
-    class Builder {
-    public:
-        ~Builder();
+    [[nodiscard]] static Builder acquire();
 
-        std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
-        std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
+    Factory(const Factory&) = delete;
+    Factory(Factory&&) noexcept = delete;
+    Factory& operator=(const Factory&) = delete;
+    Factory& operator=(Factory&&) noexcept = delete;
 
-    private:
-        friend InlineHook;
-        friend Factory;
-
-        std::shared_ptr<Factory> m_factory{};
-        std::scoped_lock<std::mutex> m_lock;
-        ThreadFreezer m_threads{};
-
-        explicit Builder(std::shared_ptr<Factory> f);
-    };
-
-    static auto init() { return std::shared_ptr<Factory>{new Factory}; }
-
-    Builder acquire();
+    ~Factory();
 
 private:
-    friend InlineHook;
-    friend MidHook;
+    friend Builder;
 
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
@@ -56,18 +40,17 @@ private:
     std::mutex m_mux{};
     Builder* m_builder{};
 
-    Factory() = default;
+    Factory();
 
-    std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
-    std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
-
-    uintptr_t allocate(size_t size);
-    uintptr_t allocate_near(
+    [[nodiscard]] uintptr_t allocate(size_t size);
+    [[nodiscard]] uintptr_t allocate_near(
         const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void free(uintptr_t address, size_t size);
 
     void combine_adjacent_freenodes(MemoryAllocation& allocation);
-    uintptr_t allocate_nearby_memory(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
-    bool in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
+    [[nodiscard]] uintptr_t allocate_nearby_memory(
+        const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
+    [[nodiscard]] bool in_range(
+        uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
 };
 } // namespace safetyhook

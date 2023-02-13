@@ -5,11 +5,14 @@
 
 #include <Windows.h>
 
-#include "safetyhook/ThreadFreezer.hpp"
+#include "safetyhook/Builder.hpp"
 
 #include "safetyhook/Factory.hpp"
 
 namespace safetyhook {
+Factory* g_factory{};
+std::mutex g_factory_mux{};
+
 constexpr auto align_up(uintptr_t address, size_t align) {
     return (address + align - 1) & ~(align - 1);
 }
@@ -18,53 +21,22 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-Factory::Builder::~Builder() {
-    m_factory->m_builder = nullptr;
-}
+Builder Factory::acquire() {
+    std::scoped_lock _{g_factory_mux};
 
-std::unique_ptr<InlineHook> Factory::Builder::create_inline(void* target, void* destination) {
-    return m_factory->create_inline(target, destination);
-}
-
-std::unique_ptr<MidHook> Factory::Builder::create_mid(void* target, MidHookFn destination) {
-    return m_factory->create_mid(target, destination);
-}
-
-Factory::Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)}, m_lock{m_factory->m_mux} {
-    m_factory->m_builder = this;
-}
-
-Factory::Builder Factory::acquire() {
-    return Builder{shared_from_this()};
-}
-
-std::unique_ptr<InlineHook> Factory::create_inline(void* target, void* destination) {
-    if (m_builder == nullptr) {
-        return nullptr;
+    if (g_factory == nullptr) {
+        return Builder{std::shared_ptr<Factory>{new Factory}};
+    } else {
+        return Builder{g_factory->shared_from_this()};
     }
-
-    auto hook =
-        std::unique_ptr<InlineHook>{new InlineHook{shared_from_this(), (uintptr_t)target, (uintptr_t)destination}};
-
-    if (hook->m_trampoline == 0) {
-        return nullptr;
-    }
-
-    return hook;
 }
 
-std::unique_ptr<MidHook> Factory::create_mid(void* target, MidHookFn destination) {
-    if (m_builder == nullptr) {
-        return nullptr;
-    }
+Factory::Factory() {
+    g_factory = this;
+}
 
-    auto hook = std::unique_ptr<MidHook>{new MidHook{shared_from_this(), (uintptr_t)target, destination}};
-
-    if (hook->m_stub == 0) {
-        return nullptr;
-    }
-
-    return hook;
+Factory::~Factory() {
+    g_factory = nullptr;
 }
 
 uintptr_t Factory::allocate(size_t size) {
@@ -72,8 +44,6 @@ uintptr_t Factory::allocate(size_t size) {
 }
 
 uintptr_t Factory::allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
-    // std::scoped_lock _{m_mux};
-
     // First search through our list of allocations for a free block that is large
     // enough.
     for (auto& allocation : m_allocations) {

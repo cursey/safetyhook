@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "safetyhook/Factory.hpp"
+#include "safetyhook/InlineHook.hpp"
 
 #include "safetyhook/MidHook.hpp"
 
@@ -22,7 +23,8 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x9C
 
 MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
-    m_stub = m_factory->allocate(sizeof(asm_data));
+    auto builder = Factory::acquire();
+    m_stub = builder.allocate(sizeof(asm_data));
 
     std::copy_n(asm_data, sizeof(asm_data), (uint8_t*)m_stub);
 
@@ -36,10 +38,10 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
     *(uintptr_t*)(m_stub + 0x1C + 2) = m_stub + sizeof(asm_data) - 4;
 #endif
 
-    m_hook = m_factory->m_builder->create_inline((void*)m_target, (void*)m_stub);
+    m_hook = builder.create_inline((void*)m_target, (void*)m_stub);
 
     if (m_hook == nullptr) {
-        m_factory->free(m_stub, sizeof(asm_data));
+        builder.free(m_stub, sizeof(asm_data));
         m_stub = 0;
         return;
     }
@@ -53,7 +55,8 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
 
 MidHook::~MidHook() {
     if (m_stub != 0) {
-        m_factory->free(m_stub, sizeof(asm_data));
+        auto builder = Factory::acquire();
+        builder.free(m_stub, sizeof(asm_data));
     }
 
     m_hook.reset();

@@ -6,19 +6,23 @@
 
 namespace safetyhook {
 class Factory;
+class Builder;
 
 class InlineHook final {
 public:
     InlineHook() = delete;
     InlineHook(const InlineHook&) = delete;
-    InlineHook(InlineHook&&) = delete;
+    InlineHook(InlineHook&&) noexcept = delete;
+    InlineHook& operator=(const InlineHook&) = delete;
+    InlineHook& operator=(InlineHook&&) noexcept = delete;
+
     ~InlineHook();
 
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
     [[nodiscard]] auto trampoline() const { return m_trampoline; }
 
-    template <typename T> T* original() const { return (T*)m_trampoline; }
+    template <typename T> [[nodiscard]] T* original() const { return (T*)m_trampoline; }
 
     template <typename RetT = void, typename... Args> auto call(Args... args) {
         return ((RetT(*)(Args...))m_trampoline)(args...);
@@ -33,7 +37,7 @@ public:
     }
 
 private:
-    friend Factory;
+    friend Builder;
 
     std::shared_ptr<Factory> m_factory;
     uintptr_t m_target{};

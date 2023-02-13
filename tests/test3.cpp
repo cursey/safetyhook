@@ -1,3 +1,4 @@
+// This is just the same as test0 but using multiple builders (not recommended).
 #include <iostream>
 
 #include <SafetyHook.hpp>
@@ -26,11 +27,11 @@ void hook3_fn(const std::string& name) {
 
 int main(int argc, char* argv[]) {
     {
-        auto builder = SafetyHookFactory::acquire();
-        hook0 = builder.create_inline((void*)say_hi, (void*)hook0_fn);
-        hook1 = builder.create_inline((void*)say_hi, (void*)hook1_fn);
-        hook2 = builder.create_inline((void*)say_hi, (void*)hook2_fn);
-        hook3 = builder.create_inline((void*)say_hi, (void*)hook3_fn);
+        // Don't do this, it's just for testing. Try to just use one builder to create all your hooks.
+        hook0 = SafetyHookFactory::acquire().create_inline((void*)say_hi, (void*)hook0_fn);
+        hook1 = SafetyHookFactory::acquire().create_inline((void*)say_hi, (void*)hook1_fn);
+        hook2 = SafetyHookFactory::acquire().create_inline((void*)say_hi, (void*)hook2_fn);
+        hook3 = SafetyHookFactory::acquire().create_inline((void*)say_hi, (void*)hook3_fn);
     }
 
     say_hi("world");

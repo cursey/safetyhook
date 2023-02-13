@@ -36,8 +36,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        auto factory = SafetyHookFactory::init();
-        auto builder = factory->acquire();
+        auto builder = SafetyHookFactory::acquire();
         g_hook = builder.create_mid((void*)ip, hooked_add_42);
     }
 

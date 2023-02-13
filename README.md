@@ -57,12 +57,9 @@ int main(int argc, char* argv[]) {
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
     {
-        // Create a factory that will create hooks for us.
-        auto factory = SafetyHookFactory::init();
-
         // Acquire the factory's builder which will freeze all threads and give
         // us access to the hook creation methods.
-        auto builder = factory->acquire(); 
+        auto builder = SafetyHookFactory::acquire(); 
 
         // Create a hook on add.
         g_add_hook = builder.create_inline(add, hook_add);

@@ -101,18 +101,18 @@ InlineHook::~InlineHook() {
         return;
     }
 
-    auto builder = m_factory->acquire();
+    auto builder = Factory::acquire();
     UnprotectMemory _{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        builder.m_threads.fix_ip(m_trampoline + i, m_target + i);
+        builder.fix_ip(m_trampoline + i, m_target + i);
     }
 
     // If the IP is on the trampolines jmp.
-    builder.m_threads.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    builder.m_factory->free(m_trampoline, m_trampoline_allocation_size);
+    builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    builder.free(m_trampoline, m_trampoline_allocation_size);
 }
 
 InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
@@ -128,7 +128,6 @@ InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintp
 
 void InlineHook::e9_hook() {
     m_trampoline_size = 0;
-    auto builder = m_factory->m_builder;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
 
@@ -141,11 +140,11 @@ void InlineHook::e9_hook() {
             return;
         }
 
-        // TODO: Add support for expanding short jumps here. Until then, short 
+        // TODO: Add support for expanding short jumps here. Until then, short
         // jumps within the trampoline are problematic so we just return for
         // now.
         if (ix.HasRelOffs && ix.RelOffsLength != 4) {
-            return; 
+            return;
         }
 
         if (ix.IsRipRelative && ix.HasDisp && ix.DispLength == 4) {
@@ -166,7 +165,8 @@ void InlineHook::e9_hook() {
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpE9);
 #endif
 
-    m_trampoline = builder->m_factory->allocate_near(desired_addresses, m_trampoline_allocation_size);
+    auto builder = Factory::acquire();
+    m_trampoline = builder.allocate_near(desired_addresses, m_trampoline_allocation_size);
 
     if (m_trampoline == 0) {
         return;
@@ -179,7 +179,7 @@ void InlineHook::e9_hook() {
         INSTRUX ix{};
 
         if (!decode(&ix, m_target + i)) {
-            builder->m_factory->free(m_trampoline, m_trampoline_allocation_size);
+            builder.free(m_trampoline, m_trampoline_allocation_size);
             return;
         }
 
@@ -218,13 +218,12 @@ void InlineHook::e9_hook() {
 #endif
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
+        builder.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
 void InlineHook::ff_hook() {
     m_trampoline_size = 0;
-    auto builder = m_factory->m_builder;
     auto ip = m_target;
 
     while (m_trampoline_size < sizeof(JmpFF) + sizeof(uintptr_t)) {
@@ -234,19 +233,20 @@ void InlineHook::ff_hook() {
             return;
         }
 
-        // We can't support any instruction that is IP relative here because 
+        // We can't support any instruction that is IP relative here because
         // ff_hook should only be called if e9_hook failed indicating that
         // we're likely outside the +- 2GB range.
         if (ix.IsRipRelative || ix.HasRelOffs) {
             return;
-        } 
+        }
 
         m_trampoline_size += ix.Length;
         ip += ix.Length;
     }
 
+    auto builder = Factory::acquire();
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpFF) + sizeof(uintptr_t) * 2;
-    m_trampoline = builder->m_factory->allocate(m_trampoline_allocation_size);
+    m_trampoline = builder.allocate(m_trampoline_allocation_size);
 
     if (m_trampoline == 0) {
         return;
@@ -268,7 +268,7 @@ void InlineHook::ff_hook() {
     emit_jmp_ff(src, dst, data, m_trampoline_size);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        builder->m_threads.fix_ip(m_target + i, m_trampoline + i);
+        builder.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 } // namespace safetyhook
