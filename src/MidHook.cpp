@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "safetyhook/Factory.hpp"
+#include "safetyhook/InlineHook.hpp"
 
 #include "safetyhook/MidHook.hpp"
 

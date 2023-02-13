@@ -51,11 +51,14 @@ set(CMKR_TARGET safetyhook)
 set(safetyhook_SOURCES "")
 
 list(APPEND safetyhook_SOURCES
+	"src/Builder.cpp"
 	"src/Factory.cpp"
 	"src/InlineHook.cpp"
 	"src/MidHook.cpp"
 	"src/ThreadFreezer.cpp"
 	"include/SafetyHook.hpp"
+	"include/safetyhook/Builder.hpp"
+	"include/safetyhook/Context.hpp"
 	"include/safetyhook/Factory.hpp"
 	"include/safetyhook/InlineHook.hpp"
 	"include/safetyhook/MidHook.hpp"

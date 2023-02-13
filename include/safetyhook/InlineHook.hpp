@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    friend Factory;
+    friend Builder;
 
     std::shared_ptr<Factory> m_factory;
     uintptr_t m_target{};

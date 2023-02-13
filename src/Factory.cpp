@@ -5,7 +5,7 @@
 
 #include <Windows.h>
 
-#include "safetyhook/ThreadFreezer.hpp"
+#include "safetyhook/Builder.hpp"
 
 #include "safetyhook/Factory.hpp"
 
@@ -21,60 +21,7 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-Factory::Builder::~Builder() {
-    m_factory->m_builder = nullptr;
-}
-
-std::unique_ptr<InlineHook> Factory::Builder::create_inline(void* target, void* destination) {
-    auto hook = std::unique_ptr<InlineHook>{new InlineHook{m_factory, (uintptr_t)target, (uintptr_t)destination}};
-
-    if (hook->m_trampoline == 0) {
-        return nullptr;
-    }
-
-    return hook;
-}
-
-std::unique_ptr<MidHook> Factory::Builder::create_mid(void* target, MidHookFn destination) {
-    auto hook = std::unique_ptr<MidHook>{new MidHook{m_factory, (uintptr_t)target, destination}};
-
-    if (hook->m_stub == 0) {
-        return nullptr;
-    }
-
-    return hook;
-}
-
-Factory::Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)} {
-    if (m_factory->m_builder == nullptr) {
-        m_factory->m_builder = this;
-        m_threads = std::make_shared<ThreadFreezer>();
-    } else {
-        m_threads = m_factory->m_builder->m_threads;
-    }
-}
-
-void Factory::Builder::fix_ip(uintptr_t old_ip, uintptr_t new_ip) {
-    m_threads->fix_ip(old_ip, new_ip);
-}
-
-uintptr_t Factory::Builder::allocate(size_t size) {
-    std::scoped_lock _{m_factory->m_mux};
-    return m_factory->allocate(size);
-}
-
-uintptr_t Factory::Builder::allocate_near(
-    const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
-    std::scoped_lock _{m_factory->m_mux};
-    return m_factory->allocate_near(desired_addresses, size, max_distance);
-}
-
-void Factory::Builder::free(uintptr_t address, size_t size) {
-    std::scoped_lock _{m_factory->m_mux};
-    m_factory->free(address, size);
-}
-
-Factory::Builder Factory::acquire() {
+Builder Factory::acquire() {
     std::scoped_lock _{g_factory_mux};
 
     if (g_factory == nullptr) {

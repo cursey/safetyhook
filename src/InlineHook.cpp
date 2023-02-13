@@ -107,7 +107,7 @@ InlineHook::~InlineHook() {
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
     for (auto i = 0; i < m_trampoline_size; ++i) {
-        builder.m_threads->fix_ip(m_trampoline + i, m_target + i);
+        builder.fix_ip(m_trampoline + i, m_target + i);
     }
 
     // If the IP is on the trampolines jmp.
