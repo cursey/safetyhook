@@ -7,6 +7,7 @@
 
 namespace safetyhook {
 class Factory;
+class Builder;
 class InlineHook;
 
 class MidHook final {
