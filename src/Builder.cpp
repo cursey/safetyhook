@@ -10,24 +10,12 @@ Builder::~Builder() {
     m_factory->m_builder = nullptr;
 }
 
-std::unique_ptr<InlineHook> Builder::create_inline(void* target, void* destination) {
-    auto hook = std::unique_ptr<InlineHook>{new InlineHook{m_factory, (uintptr_t)target, (uintptr_t)destination}};
-
-    if (hook->m_trampoline == 0) {
-        return nullptr;
-    }
-
-    return hook;
+InlineHook Builder::create_inline(void* target, void* destination) {
+    return InlineHook{m_factory, (uintptr_t)target, (uintptr_t)destination};
 }
 
-std::unique_ptr<MidHook> Builder::create_mid(void* target, MidHookFn destination) {
-    auto hook = std::unique_ptr<MidHook>{new MidHook{m_factory, (uintptr_t)target, destination}};
-
-    if (hook->m_stub == 0) {
-        return nullptr;
-    }
-
-    return hook;
+MidHook Builder::create_mid(void* target, MidHookFn destination) {
+    return MidHook{m_factory, (uintptr_t)target, destination};
 }
 
 Builder::Builder(std::shared_ptr<Factory> factory) : m_factory{std::move(factory)} {

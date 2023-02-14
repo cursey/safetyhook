@@ -21,6 +21,25 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x9C
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
 
+MidHook::MidHook(MidHook&& other) noexcept
+    : m_factory{std::move(other.m_factory)},
+      m_hook{std::move(other.m_hook)},
+      m_stub{other.m_stub},
+      m_target{other.m_target},
+      m_destination{other.m_destination} {
+    other.m_stub = 0;
+}
+
+MidHook& MidHook::operator=(MidHook&& other) noexcept {
+    m_factory = std::move(other.m_factory);
+    m_hook = std::move(other.m_hook);
+    m_stub = other.m_stub;
+    m_target = other.m_target;
+    m_destination = other.m_destination;
+    other.m_stub = 0;
+    return *this;
+}
+
 MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
     auto builder = Factory::acquire();
@@ -40,16 +59,16 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
 
     m_hook = builder.create_inline((void*)m_target, (void*)m_stub);
 
-    if (m_hook == nullptr) {
+    if (!m_hook) {
         builder.free(m_stub, sizeof(asm_data));
         m_stub = 0;
         return;
     }
 
 #ifdef _M_X64
-    *(uintptr_t*)(m_stub + sizeof(asm_data) - 8) = m_hook->trampoline();
+    *(uintptr_t*)(m_stub + sizeof(asm_data) - 8) = m_hook.trampoline();
 #else
-    *(uintptr_t*)(m_stub + sizeof(asm_data) - 4) = m_hook->trampoline();
+    *(uintptr_t*)(m_stub + sizeof(asm_data) - 4) = m_hook.trampoline();
 #endif
 }
 
@@ -58,8 +77,6 @@ MidHook::~MidHook() {
         auto builder = Factory::acquire();
         builder.free(m_stub, sizeof(asm_data));
     }
-
-    m_hook.reset();
 }
 
 } // namespace safetyhook

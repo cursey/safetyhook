@@ -4,30 +4,31 @@
 #include <memory>
 
 #include "safetyhook/Context.hpp"
+#include "safetyhook/InlineHook.hpp"
 
 namespace safetyhook {
 class Factory;
 class Builder;
-class InlineHook;
 
 class MidHook final {
 public:
-    MidHook() = delete;
+    MidHook() = default;
     MidHook(const MidHook&) = delete;
-    MidHook(MidHook&&) noexcept = delete;
+    MidHook(MidHook&& other) noexcept;
     MidHook& operator=(const MidHook&) = delete;
-    MidHook& operator=(MidHook&&) noexcept = delete;
+    MidHook& operator=(MidHook&& other) noexcept;
 
     ~MidHook();
 
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
+    operator bool() const { return m_stub != 0; }
 
 private:
     friend Builder;
 
     std::shared_ptr<Factory> m_factory{};
-    std::unique_ptr<InlineHook> m_hook{};
+    InlineHook m_hook{};
     uintptr_t m_target{};
     uintptr_t m_stub{};
     MidHookFn m_destination{};

@@ -21,8 +21,8 @@ public:
 
     ~Builder();
 
-    [[nodiscard]] std::unique_ptr<InlineHook> create_inline(void* target, void* destination);
-    [[nodiscard]] std::unique_ptr<MidHook> create_mid(void* target, MidHookFn destination);
+    [[nodiscard]] InlineHook create_inline(void* target, void* destination);
+    [[nodiscard]] MidHook create_mid(void* target, MidHookFn destination);
 
 private:
     friend Factory;

@@ -96,23 +96,35 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     return ND_SUCCESS(NdDecode(ix, (const uint8_t*)ip, defcode, defdata));
 }
 
+InlineHook::InlineHook(InlineHook&& other) noexcept
+    : m_factory{std::move(other.m_factory)},
+      m_target{other.m_target},
+      m_destination{other.m_destination},
+      m_trampoline{other.m_trampoline},
+      m_trampoline_size{other.m_trampoline_size},
+      m_trampoline_allocation_size{other.m_trampoline_allocation_size},
+      m_original_bytes{std::move(other.m_original_bytes)} {
+    other.m_trampoline = 0;
+}
+
+InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
+    destroy();
+
+    m_factory = std::move(other.m_factory);
+    m_target = other.m_target;
+    m_destination = other.m_destination;
+    m_trampoline = other.m_trampoline;
+    m_trampoline_size = other.m_trampoline_size;
+    m_trampoline_allocation_size = other.m_trampoline_allocation_size;
+    m_original_bytes = std::move(other.m_original_bytes);
+
+    other.m_trampoline = 0;
+
+    return *this;
+}
+
 InlineHook::~InlineHook() {
-    if (m_trampoline == 0) {
-        return;
-    }
-
-    auto builder = Factory::acquire();
-    UnprotectMemory _{m_target, m_trampoline_size};
-
-    std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
-
-    for (size_t i = 0; i < m_trampoline_size; ++i) {
-        builder.fix_ip(m_trampoline + i, m_target + i);
-    }
-
-    // If the IP is on the trampolines jmp.
-    builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    builder.free(m_trampoline, m_trampoline_allocation_size);
+    destroy();
 }
 
 InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
@@ -270,5 +282,24 @@ void InlineHook::ff_hook() {
     for (size_t i = 0; i < m_trampoline_size; ++i) {
         builder.fix_ip(m_target + i, m_trampoline + i);
     }
+}
+
+void InlineHook::destroy() {
+    if (m_trampoline == 0) {
+        return;
+    }
+
+    auto builder = Factory::acquire();
+    UnprotectMemory _{m_target, m_trampoline_size};
+
+    std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
+
+    for (size_t i = 0; i < m_trampoline_size; ++i) {
+        builder.fix_ip(m_trampoline + i, m_target + i);
+    }
+
+    // If the IP is on the trampolines jmp.
+    builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    builder.free(m_trampoline, m_trampoline_allocation_size);
 }
 } // namespace safetyhook
