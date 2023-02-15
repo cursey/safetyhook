@@ -53,7 +53,7 @@ static void emit_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data, size_t siz
         return;
     }
 
-    UnprotectMemory _{src, size};
+    UnprotectMemory unprotect{src, size};
 
     if (size > sizeof(JmpFF)) {
         std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
@@ -75,7 +75,7 @@ static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9
         return;
     }
 
-    UnprotectMemory _{src, size};
+    UnprotectMemory unprotect{src, size};
 
     if (size > sizeof(JmpE9)) {
         std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
@@ -96,19 +96,15 @@ static bool decode(INSTRUX* ix, uintptr_t ip) {
     return ND_SUCCESS(NdDecode(ix, (const uint8_t*)ip, defcode, defdata));
 }
 
-InlineHook::InlineHook(InlineHook&& other) noexcept
-    : m_factory{std::move(other.m_factory)},
-      m_target{other.m_target},
-      m_destination{other.m_destination},
-      m_trampoline{other.m_trampoline},
-      m_trampoline_size{other.m_trampoline_size},
-      m_trampoline_allocation_size{other.m_trampoline_allocation_size},
-      m_original_bytes{std::move(other.m_original_bytes)} {
-    other.m_trampoline = 0;
+InlineHook::InlineHook(InlineHook&& other) noexcept {
+    *this = std::move(other);
 }
 
 InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
     destroy();
+
+    std::scoped_lock my_lock{m_mutex};
+    std::scoped_lock other_lock{other.m_mutex};
 
     m_factory = std::move(other.m_factory);
     m_target = other.m_target;
@@ -285,12 +281,14 @@ void InlineHook::ff_hook() {
 }
 
 void InlineHook::destroy() {
+    std::scoped_lock lock{m_mutex};
+
     if (m_trampoline == 0) {
         return;
     }
 
     auto builder = Factory::acquire();
-    UnprotectMemory _{m_target, m_trampoline_size};
+    UnprotectMemory unprotect{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 

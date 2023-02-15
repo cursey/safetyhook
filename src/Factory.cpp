@@ -11,7 +11,7 @@
 
 namespace safetyhook {
 Factory* g_factory{};
-std::mutex g_factory_mux{};
+std::mutex g_factory_mutex{};
 
 constexpr auto align_up(uintptr_t address, size_t align) {
     return (address + align - 1) & ~(align - 1);
@@ -22,7 +22,7 @@ constexpr auto align_down(uintptr_t address, size_t align) {
 }
 
 Builder Factory::acquire() {
-    std::scoped_lock _{g_factory_mux};
+    std::scoped_lock lock{g_factory_mutex};
 
     if (g_factory == nullptr) {
         return Builder{std::shared_ptr<Factory>{new Factory}};

@@ -37,7 +37,7 @@ private:
     };
 
     std::vector<std::unique_ptr<MemoryAllocation>> m_allocations{};
-    std::mutex m_mux{};
+    std::mutex m_mutex{};
     Builder* m_builder{};
 
     Factory();

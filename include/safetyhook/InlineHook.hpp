@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace safetyhook {
@@ -26,6 +27,8 @@ public:
     template <typename T> [[nodiscard]] T* original() const { return (T*)m_trampoline; }
 
     template <typename RetT = void, typename... Args> auto call(Args... args) {
+        std::scoped_lock lock{m_mutex};
+
         if (m_trampoline != 0) {
             return ((RetT(*)(Args...))m_trampoline)(args...);
         } else {
@@ -34,6 +37,8 @@ public:
     }
 
     template <typename RetT = void, typename... Args> auto thiscall(Args... args) {
+        std::scoped_lock lock{m_mutex};
+
         if (m_trampoline != 0) {
             return ((RetT(__thiscall*)(Args...))m_trampoline)(args...);
         } else {
@@ -42,6 +47,8 @@ public:
     }
 
     template <typename RetT = void, typename... Args> auto stdcall(Args... args) {
+        std::scoped_lock lock{m_mutex};
+
         if (m_trampoline != 0) {
             return ((RetT(__stdcall*)(Args...))m_trampoline)(args...);
         } else {
@@ -59,6 +66,7 @@ private:
     size_t m_trampoline_size{};
     size_t m_trampoline_allocation_size{};
     std::vector<uint8_t> m_original_bytes{};
+    std::mutex m_mutex{};
 
     InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
 
