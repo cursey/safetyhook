@@ -4,25 +4,27 @@ name = "safetyhook"
 
 [options]
 SAFETYHOOK_BUILD_TESTS = false
+SAFETYHOOK_BUNDLE_ZYDIS = true
 
 [conditions]
 build-tests = "SAFETYHOOK_BUILD_TESTS"
+bundle-zydis = "SAFETYHOOK_BUNDLE_ZYDIS"
 
-[vcpkg]
-version = "2022.07.25"
-packages = ["bddisasm"]
-
-[find-package]
-bddisasm = { required = false }
+[target.Zydis]
+condition = "bundle-zydis"
+type = "static"
+sources = ["src/Zydis.c"]
+include-directories = ["include/"]
+compile-definitions = ["ZYDIS_STATIC_BUILD"]
 
 [target.safetyhook]
 type = "static"
-sources = ["src/**.cpp", "src/**.hpp", "include/**.hpp"]
+sources = ["src/*.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
 compile-definitions = ["NOMINMAX"]
-link-libraries = ["bddisasm::bddisasm", "ntdll"]
 alias = "safetyhook::safetyhook"
+link-libraries = ["Zydis", "ntdll"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]

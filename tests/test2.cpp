@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <SafetyHook.hpp>
-#include <bddisasm.h>
+#include <Zydis.h>
 
 __declspec(noinline) int add_42(int a) {
     return a + 42;
@@ -22,17 +22,28 @@ int main() {
 
     {
         // Lets disassemble add_42 and hook its RET.
+        ZydisDecoder decoder{};
+
+#if defined(_M_X64)
+        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+#elif defined(_M_IX86)
+        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
+#else
+#error "Unsupported architecture"
+#endif
+
         auto ip = (uintptr_t)add_42;
 
         while (*(uint8_t*)ip != 0xC3) {
-            INSTRUX ix{};
-            NdDecode(&ix, (const uint8_t*)ip, ND_CODE_64, ND_DATA_64);
+            ZydisDecodedInstruction ix{};
+
+            ZydisDecoderDecodeInstruction(&decoder, nullptr, (const void*)ip, 15, &ix);
 
             // Follow JMPs
-            if (ix.OpCodeBytes[0] == 0xE9) {
-                ip += ix.Length + (int32_t)ix.RelativeOffset;
+            if (ix.opcode == 0xE9) {
+                ip += ix.length + (int32_t)ix.raw.imm[0].value.s;
             } else {
-                ip += ix.Length;
+                ip += ix.length;
             }
         }
 

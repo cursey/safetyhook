@@ -26,23 +26,31 @@ endif()
 
 # Options
 option(SAFETYHOOK_BUILD_TESTS "" OFF)
+option(SAFETYHOOK_BUNDLE_ZYDIS "" ON)
 
 project(safetyhook)
 
-if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
-	include(FetchContent)
-	message(STATUS "Fetching vcpkg (2022.07.25)...")
-	FetchContent_Declare(vcpkg URL "https://github.com/microsoft/vcpkg/archive/refs/tags/2022.07.25.tar.gz")
-	FetchContent_GetProperties(vcpkg)
-	if(NOT vcpkg_POPULATED)
-		FetchContent_Populate(vcpkg)
-		include("${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake")
-	endif()
+# Target: Zydis
+if(SAFETYHOOK_BUNDLE_ZYDIS) # bundle-zydis
+	set(Zydis_SOURCES
+		"src/Zydis.c"
+		cmake.toml
+	)
+
+	add_library(Zydis STATIC)
+
+	target_sources(Zydis PRIVATE ${Zydis_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Zydis_SOURCES})
+
+	target_compile_definitions(Zydis PUBLIC
+		ZYDIS_STATIC_BUILD
+	)
+
+	target_include_directories(Zydis PUBLIC
+		"include/"
+	)
+
 endif()
-
-# Packages
-find_package(bddisasm)
-
 # Target: safetyhook
 set(safetyhook_SOURCES
 	"src/Builder.cpp"
@@ -50,13 +58,6 @@ set(safetyhook_SOURCES
 	"src/InlineHook.cpp"
 	"src/MidHook.cpp"
 	"src/ThreadFreezer.cpp"
-	"include/SafetyHook.hpp"
-	"include/safetyhook/Builder.hpp"
-	"include/safetyhook/Context.hpp"
-	"include/safetyhook/Factory.hpp"
-	"include/safetyhook/InlineHook.hpp"
-	"include/safetyhook/MidHook.hpp"
-	"include/safetyhook/ThreadFreezer.hpp"
 	cmake.toml
 )
 
@@ -107,7 +108,7 @@ target_include_directories(safetyhook PUBLIC
 )
 
 target_link_libraries(safetyhook PUBLIC
-	bddisasm::bddisasm
+	Zydis
 	ntdll
 )
 
