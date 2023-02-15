@@ -103,8 +103,7 @@ InlineHook::InlineHook(InlineHook&& other) noexcept {
 InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
     destroy();
 
-    std::scoped_lock my_lock{m_mutex};
-    std::scoped_lock other_lock{other.m_mutex};
+    std::scoped_lock lock{m_mutex, other.m_mutex};
 
     m_factory = std::move(other.m_factory);
     m_target = other.m_target;
