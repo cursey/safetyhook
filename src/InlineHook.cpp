@@ -298,5 +298,7 @@ void InlineHook::destroy() {
     // If the IP is on the trampolines jmp.
     builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
     builder.free(m_trampoline, m_trampoline_allocation_size);
+
+    m_trampoline = 0;
 }
 } // namespace safetyhook
