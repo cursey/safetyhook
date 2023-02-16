@@ -30,36 +30,30 @@ public:
     template <typename T> [[nodiscard]] T* original() const { return (T*)m_trampoline; }
 
     template <typename RetT = void, typename... Args> auto call(Args&&... args) {
-        m_mutex.lock();
-        auto trampoline = m_trampoline;
-        m_mutex.unlock();
+        std::scoped_lock lock{m_mutex};
 
-        if (trampoline != 0) {
-            return ((RetT(*)(Args...))trampoline)(std::forward<Args>(args)...);
+        if (m_trampoline != 0) {
+            return unsafe_call<RetT, Args...>(std::forward<Args>(args)...);
         } else {
             return RetT();
         }
     }
 
     template <typename RetT = void, typename... Args> auto thiscall(Args&&... args) {
-        m_mutex.lock();
-        auto trampoline = m_trampoline;
-        m_mutex.unlock();
+        std::scoped_lock lock{m_mutex};
 
-        if (trampoline != 0) {
-            return ((RetT(__thiscall*)(Args...))trampoline)(std::forward<Args>(args)...);
+        if (m_trampoline != 0) {
+            return unsafe_thiscall<RetT, Args...>(std::forward<Args>(args)...);
         } else {
             return RetT();
         }
     }
 
     template <typename RetT = void, typename... Args> auto stdcall(Args&&... args) {
-        m_mutex.lock();
-        auto trampoline = m_trampoline;
-        m_mutex.unlock();
+        std::scoped_lock lock{m_mutex};
 
-        if (trampoline != 0) {
-            return ((RetT(__stdcall*)(Args...))trampoline)(std::forward<Args>(args)...);
+        if (m_trampoline != 0) {
+            return unsafe_stdcall<RetT, Args...>(std::forward<Args>(args)...);
         } else {
             return RetT();
         }
