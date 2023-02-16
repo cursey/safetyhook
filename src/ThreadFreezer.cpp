@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <winternl.h>
 
 #include <TlHelp32.h>
 
@@ -11,6 +12,17 @@ ThreadFreezer::ThreadFreezer() {
     if (snapshot == INVALID_HANDLE_VALUE) {
         return;
     }
+
+    auto peb = reinterpret_cast<uintptr_t>(NtCurrentTeb()->ProcessEnvironmentBlock);
+
+#if defined(_M_X64)
+    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0x110);
+#elif defined(_M_IX86)
+    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0xA0);
+#else
+#error "Unsupported architecture"
+#endif
+    EnterCriticalSection(loader_lock);
 
     auto pid = GetCurrentProcessId();
     auto tid = GetCurrentThreadId();
@@ -45,6 +57,7 @@ ThreadFreezer::ThreadFreezer() {
         } while (Thread32Next(snapshot, &te));
     }
 
+    LeaveCriticalSection(loader_lock);
     CloseHandle(snapshot);
 }
 
