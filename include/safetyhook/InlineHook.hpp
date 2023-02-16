@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <utility>
 #include <vector>
 
 namespace safetyhook {
@@ -26,34 +27,54 @@ public:
 
     template <typename T> [[nodiscard]] T* original() const { return (T*)m_trampoline; }
 
-    template <typename RetT = void, typename... Args> auto call(Args... args) {
-        std::scoped_lock lock{m_mutex};
+    template <typename RetT = void, typename... Args> auto call(Args&&... args) {
+        m_mutex.lock();
+        auto trampoline = m_trampoline;
+        m_mutex.unlock();
 
-        if (m_trampoline != 0) {
-            return ((RetT(*)(Args...))m_trampoline)(args...);
+        if (trampoline != 0) {
+            return ((RetT(*)(Args...))trampoline)(std::forward<Args>(args)...);
         } else {
-            return RetT{};
+            return RetT();
         }
     }
 
-    template <typename RetT = void, typename... Args> auto thiscall(Args... args) {
-        std::scoped_lock lock{m_mutex};
+    template <typename RetT = void, typename... Args> auto thiscall(Args&&... args) {
+        m_mutex.lock();
+        auto trampoline = m_trampoline;
+        m_mutex.unlock();
 
-        if (m_trampoline != 0) {
-            return ((RetT(__thiscall*)(Args...))m_trampoline)(args...);
+        if (trampoline != 0) {
+            return ((RetT(__thiscall*)(Args...))trampoline)(std::forward<Args>(args)...);
         } else {
-            return RetT{};
+            return RetT();
         }
     }
 
-    template <typename RetT = void, typename... Args> auto stdcall(Args... args) {
-        std::scoped_lock lock{m_mutex};
+    template <typename RetT = void, typename... Args> auto stdcall(Args&&... args) {
+        m_mutex.lock();
+        auto trampoline = m_trampoline;
+        m_mutex.unlock();
 
-        if (m_trampoline != 0) {
-            return ((RetT(__stdcall*)(Args...))m_trampoline)(args...);
+        if (trampoline != 0) {
+            return ((RetT(__stdcall*)(Args...))trampoline)(std::forward<Args>(args)...);
         } else {
-            return RetT{};
+            return RetT();
         }
+    }
+
+    // These functions are unsafe because they don't lock the mutex. Only use these if you don't care about unhook
+    // safety or are worried about the performance cost of locking the mutex.
+    template <typename RetT = void, typename... Args> auto unsafe_call(Args&&... args) {
+        return ((RetT(*)(Args...))m_trampoline)(std::forward<Args>(args)...);
+    }
+
+    template <typename RetT = void, typename... Args> auto unsafe_thiscall(Args&&... args) {
+        return ((RetT(__thiscall*)(Args...))m_trampoline)(std::forward<Args>(args)...);
+    }
+
+    template <typename RetT = void, typename... Args> auto unsafe_stdcall(Args&&... args) {
+        return ((RetT(__stdcall*)(Args...))m_trampoline)(std::forward<Args>(args)...);
     }
 
 private:
