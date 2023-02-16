@@ -3,6 +3,7 @@
 SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of it's implementation. To that end it currently does:
 
 * Stops all other threads when creating or deleting hooks
+* Locks the PEB Loader Lock while freezing threads
 * Fixes the IP of threads that may be affected by the creation or deletion of hooks
 * Fixes IP relative displacements of relocated instructions (eg. `lea rax, [rip + 0x1234]`)
 * Fixes relative offsets of relocated instructions (eg. `jmp 0x1234`)
