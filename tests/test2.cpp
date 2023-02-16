@@ -42,7 +42,7 @@ int main() {
 
     std::cout << add_42(3) << "\n";
 
-    g_hook.unhook();
+    g_hook.reset();
 
     std::cout << add_42(4) << "\n";
 

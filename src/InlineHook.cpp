@@ -122,7 +122,7 @@ InlineHook::~InlineHook() {
     destroy();
 }
 
-void InlineHook::unhook() {
+void InlineHook::reset() {
     *this = {};
 }
 

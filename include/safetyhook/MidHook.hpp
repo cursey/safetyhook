@@ -20,7 +20,7 @@ public:
 
     ~MidHook();
 
-    void unhook();
+    void reset();
 
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }

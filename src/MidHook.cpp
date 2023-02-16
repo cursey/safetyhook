@@ -47,7 +47,7 @@ MidHook::~MidHook() {
     }
 }
 
-void MidHook::unhook() {
+void MidHook::reset() {
     *this = {};
 }
 
