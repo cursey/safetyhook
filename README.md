@@ -12,20 +12,12 @@ SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It
 
 ## Installation
 
-SafetyHook depends on [bddisasm](https://github.com/bitdefender/bddisasm) so your project must also include it as well. Both libraries can be added via CMake's `FetchContent`, git submodules, or copied directly into your project.
+SafetyHook can be added via CMake's `FetchContent`, git submodules, or copied directly into your project. By default it comes bundled with the [Zydis](https://github.com/zyantific/zydis) disassembler. If you already have [Zydis](https://github.com/zyantific/zydis) integrated into your project you can disable SafetyHook's bundling by using the CMake option `-DSAFETYHOOK_BUNDLE_ZYDIS=OFF`.
 
 ### FetchContent
 
 ```CMake
 include(FetchContent)
-
-# Bddisasm
-FetchContent_Declare(
-    bddisasm
-    GIT_REPOSITORY "https://github.com/bitdefender/bddisasm.git"
-    GIT_TAG "origin/master"
-)
-FetchContent_MakeAvailable(bddisasm)
 
 # Safetyhook
 FetchContent_Declare(
