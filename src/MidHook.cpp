@@ -40,6 +40,17 @@ MidHook& MidHook::operator=(MidHook&& other) noexcept {
     return *this;
 }
 
+MidHook::~MidHook() {
+    if (m_stub != 0) {
+        auto builder = Factory::acquire();
+        builder.free(m_stub, sizeof(asm_data));
+    }
+}
+
+void MidHook::unhook() {
+    *this = {};
+}
+
 MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
     auto builder = Factory::acquire();
@@ -71,12 +82,4 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
     *(uintptr_t*)(m_stub + sizeof(asm_data) - 4) = m_hook.trampoline();
 #endif
 }
-
-MidHook::~MidHook() {
-    if (m_stub != 0) {
-        auto builder = Factory::acquire();
-        builder.free(m_stub, sizeof(asm_data));
-    }
-}
-
 } // namespace safetyhook

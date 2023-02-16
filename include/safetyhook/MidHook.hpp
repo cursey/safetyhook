@@ -20,6 +20,8 @@ public:
 
     ~MidHook();
 
+    void unhook();
+
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
     operator bool() const { return m_stub != 0; }
