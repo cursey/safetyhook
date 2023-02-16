@@ -32,7 +32,7 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    g_hook = {};
+    g_hook.unhook();
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 

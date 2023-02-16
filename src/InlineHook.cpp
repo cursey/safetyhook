@@ -122,6 +122,10 @@ InlineHook::~InlineHook() {
     destroy();
 }
 
+void InlineHook::unhook() {
+    *this = {};
+}
+
 InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
     : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
     e9_hook();

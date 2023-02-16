@@ -20,6 +20,8 @@ public:
 
     ~InlineHook();
 
+    void unhook();
+
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
     [[nodiscard]] auto trampoline() const { return m_trampoline; }
