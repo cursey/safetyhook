@@ -50,3 +50,9 @@ condition = "build-tests"
 type = "executable"
 sources = ["tests/test3.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
+
+[target.test4]
+condition = "build-tests"
+type = "executable"
+sources = ["tests/test4.cpp"]
+link-libraries = ["safetyhook::safetyhook"]

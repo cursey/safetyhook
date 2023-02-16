@@ -50,7 +50,7 @@ int add(int x, int y) {
 SafetyHookInline g_add_hook{};
 
 int hook_add(int x, int y) {
-    return g_add_hook->call<int>(x * 2, y * 2);
+    return g_add_hook.call<int>(x * 2, y * 2);
 }
 
 int main(int argc, char* argv[]) {
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "hooked add(2, 3) = " << add(2, 3) << "\n";
 
-    g_add_hook.reset();
+    g_add_hook = {};
 
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
