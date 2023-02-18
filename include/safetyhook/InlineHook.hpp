@@ -9,6 +9,7 @@
 namespace safetyhook {
 class Factory;
 class Builder;
+class MidHook;
 
 class InlineHook final {
 public:
@@ -75,8 +76,9 @@ public:
 
 private:
     friend Builder;
+    friend MidHook;
 
-    std::shared_ptr<Factory> m_factory;
+    std::shared_ptr<Factory> m_factory{};
     uintptr_t m_target{};
     uintptr_t m_destination{};
     uintptr_t m_trampoline{};

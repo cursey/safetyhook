@@ -26,18 +26,28 @@ MidHook::MidHook(MidHook&& other) noexcept {
 }
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
+    auto builder = Factory::acquire();
+
+    builder.notify_hook_moved(this, nullptr);
+
     m_factory = std::move(other.m_factory);
     m_hook = std::move(other.m_hook);
     m_target = other.m_target;
     m_stub = other.m_stub;
     m_destination = other.m_destination;
     other.m_stub = 0;
+
+    builder.notify_hook_moved(&other, this);
+
     return *this;
 }
 
 MidHook::~MidHook() {
+    auto builder = Factory::acquire();
+
+    builder.notify_hook_moved(this, nullptr);
+
     if (m_stub != 0) {
-        auto builder = Factory::acquire();
         builder.free(m_stub, sizeof(asm_data));
     }
 }
@@ -63,7 +73,7 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
     *(uintptr_t*)(m_stub + 0x1C + 2) = m_stub + sizeof(asm_data) - 4;
 #endif
 
-    m_hook = builder.create_inline((void*)m_target, (void*)m_stub);
+    m_hook = InlineHook{m_factory, m_target, m_stub}; // builder.create_inline((void*)m_target, (void*)m_stub);
 
     if (!m_hook) {
         builder.free(m_stub, sizeof(asm_data));

@@ -115,6 +115,8 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
 
     other.m_trampoline = 0;
 
+    Factory::acquire().notify_hook_moved(&other, this);
+
     return *this;
 }
 
@@ -302,6 +304,7 @@ void InlineHook::destroy() {
     // If the IP is on the trampolines jmp.
     builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
     builder.free(m_trampoline, m_trampoline_allocation_size);
+    builder.notify_hook_moved(this, nullptr);
 
     m_trampoline = 0;
 }
