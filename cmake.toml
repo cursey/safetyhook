@@ -7,6 +7,7 @@ SAFETYHOOK_BUILD_TESTS = false
 
 [conditions]
 build-tests = "SAFETYHOOK_BUILD_TESTS"
+clang = "CMAKE_CXX_COMPILER_ID MATCHES \"Clang\" AND NOT CMAKE_CXX_SIMULATE_ID"
 
 [vcpkg]
 version = "2022.07.25"
@@ -23,9 +24,9 @@ compile-features = ["cxx_std_17"]
 compile-definitions = ["NOMINMAX"]
 link-libraries = ["bddisasm::bddisasm"]
 alias = "safetyhook::safetyhook"
-msvc.private-compile-options = ["/WX", "/permissive-", "/W4", "/w14640"]
-clang.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
-gcc.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
+clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 
 [target.test0]
 condition = "build-tests"
