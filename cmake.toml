@@ -7,7 +7,6 @@ SAFETYHOOK_BUILD_TESTS = false
 
 [conditions]
 build-tests = "SAFETYHOOK_BUILD_TESTS"
-clang = "CMAKE_CXX_COMPILER_ID MATCHES \"Clang\" AND NOT CMAKE_CXX_SIMULATE_ID"
 
 [vcpkg]
 version = "2022.07.25"
