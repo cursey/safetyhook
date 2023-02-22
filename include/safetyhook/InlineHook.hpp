@@ -83,7 +83,7 @@ private:
     size_t m_trampoline_size{};
     size_t m_trampoline_allocation_size{};
     std::vector<uint8_t> m_original_bytes{};
-    std::mutex m_mutex{};
+    std::recursive_mutex m_mutex{};
 
     InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
 
