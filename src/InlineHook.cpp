@@ -212,11 +212,6 @@ void InlineHook::e9_hook() {
     auto dst = ip;
     emit_jmp_e9(src, dst);
 
-    // jmp from original to trampoline.
-    src = m_target;
-    dst = m_trampoline + m_trampoline_size + sizeof(JmpE9);
-    emit_jmp_e9(src, dst, m_trampoline_size);
-
     // jmp from trampoline to destination.
     src = m_trampoline + m_trampoline_size + sizeof(JmpE9);
     dst = m_destination;
@@ -227,6 +222,11 @@ void InlineHook::e9_hook() {
 #else
     emit_jmp_e9(src, dst);
 #endif
+
+    // jmp from original to trampoline.
+    src = m_target;
+    dst = m_trampoline + m_trampoline_size + sizeof(JmpE9);
+    emit_jmp_e9(src, dst, m_trampoline_size);
 
     for (size_t i = 0; i < m_trampoline_size; ++i) {
         builder.fix_ip(m_target + i, m_trampoline + i);
