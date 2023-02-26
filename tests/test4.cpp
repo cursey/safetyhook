@@ -27,7 +27,7 @@ int main() {
 
     {
         auto builder = SafetyHookFactory::acquire();
-        g_hook = builder.create_inline(SayHello, Hooked_SayHello);
+        g_hook = builder.create_inline((void*)SayHello, (void*)Hooked_SayHello);
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(1));

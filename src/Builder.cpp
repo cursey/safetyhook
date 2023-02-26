@@ -7,7 +7,9 @@
 
 namespace safetyhook {
 Builder::~Builder() {
-    m_factory->m_builder = nullptr;
+    if (m_factory->m_builder == this) {
+        m_factory->m_builder = nullptr;
+    }
 }
 
 InlineHook Builder::create_inline(void* target, void* destination) {

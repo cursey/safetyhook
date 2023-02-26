@@ -108,6 +108,7 @@ target_include_directories(safetyhook PUBLIC
 
 target_link_libraries(safetyhook PUBLIC
 	bddisasm::bddisasm
+	ntdll
 )
 
 # Target: test0

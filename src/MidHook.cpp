@@ -21,20 +21,15 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x9C
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
 
-MidHook::MidHook(MidHook&& other) noexcept
-    : m_factory{std::move(other.m_factory)},
-      m_hook{std::move(other.m_hook)},
-      m_stub{other.m_stub},
-      m_target{other.m_target},
-      m_destination{other.m_destination} {
-    other.m_stub = 0;
+MidHook::MidHook(MidHook&& other) noexcept {
+    *this = std::move(other);
 }
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
     m_factory = std::move(other.m_factory);
     m_hook = std::move(other.m_hook);
-    m_stub = other.m_stub;
     m_target = other.m_target;
+    m_stub = other.m_stub;
     m_destination = other.m_destination;
     other.m_stub = 0;
     return *this;
