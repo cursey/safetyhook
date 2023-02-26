@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <Windows.h>
 #include <winternl.h>
 
@@ -23,33 +25,48 @@ ThreadFreezer::ThreadFreezer() {
 #endif
     EnterCriticalSection(loader_lock);
 
-    HANDLE thread_handle{};
+    size_t num_threads_frozen{};
 
-    while (true) {
-        auto status = NtGetNextThread(GetCurrentProcess(), thread_handle,
-            THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0, 0, &thread_handle);
+    do {
+        num_threads_frozen = m_frozen_threads.size();
+        HANDLE thread_handle{};
 
-        if (status != 0) {
-            break;
+        while (true) {
+            auto status = NtGetNextThread(GetCurrentProcess(), thread_handle,
+                THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
+                0, &thread_handle);
+
+            if (status != 0) {
+                break;
+            }
+
+            auto thread_id = GetThreadId(thread_handle);
+
+            // Don't freeze ourselves.
+            if (thread_id == 0 || thread_id == GetCurrentThreadId()) {
+                continue;
+            }
+
+            // Did we already freeze this one?
+            auto already_frozen = std::any_of(m_frozen_threads.begin(), m_frozen_threads.end(),
+                [=](const auto& thread) { return thread.thread_id == thread_id; });
+
+            if (already_frozen) {
+                continue;
+            }
+
+            auto thread_ctx = CONTEXT{};
+
+            thread_ctx.ContextFlags = CONTEXT_FULL;
+
+            if (!GetThreadContext(thread_handle, &thread_ctx)) {
+                continue;
+            }
+
+            SuspendThread(thread_handle);
+            m_frozen_threads.push_back({thread_id, thread_handle, thread_ctx});
         }
-
-        auto thread_id = GetThreadId(thread_handle);
-
-        if (thread_id == 0 || thread_id == GetCurrentThreadId()) {
-            continue;
-        }
-
-        auto thread_ctx = CONTEXT{};
-
-        thread_ctx.ContextFlags = CONTEXT_FULL;
-
-        if (!GetThreadContext(thread_handle, &thread_ctx)) {
-            continue;
-        }
-
-        SuspendThread(thread_handle);
-        m_frozen_threads.push_back({thread_id, thread_handle, thread_ctx});
-    }
+    } while (num_threads_frozen != m_frozen_threads.size());
 
     LeaveCriticalSection(loader_lock);
 }
