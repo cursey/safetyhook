@@ -29,29 +29,24 @@ ThreadFreezer::ThreadFreezer() {
 
     do {
         num_threads_frozen = m_frozen_threads.size();
-        HANDLE thread_handle{};
+        HANDLE thread{};
 
         while (true) {
-            auto status = NtGetNextThread(GetCurrentProcess(), thread_handle,
+            const auto status = NtGetNextThread(GetCurrentProcess(), thread,
                 THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
-                0, &thread_handle);
+                0, &thread);
 
             if (status != 0) {
                 break;
             }
 
-            auto thread_id = GetThreadId(thread_handle);
-
-            // Don't freeze ourselves.
-            if (thread_id == 0 || thread_id == GetCurrentThreadId()) {
-                continue;
-            }
-
-            // Did we already freeze this one?
-            auto already_frozen = std::any_of(m_frozen_threads.begin(), m_frozen_threads.end(),
+            const auto thread_id = GetThreadId(thread);
+            const auto already_frozen = std::any_of(m_frozen_threads.begin(), m_frozen_threads.end(),
                 [=](const auto& thread) { return thread.thread_id == thread_id; });
 
-            if (already_frozen) {
+            // Don't freeze ourselves or threads we already froze.
+            if (thread_id == 0 || thread_id == GetCurrentThreadId() || already_frozen) {
+                CloseHandle(thread);
                 continue;
             }
 
@@ -59,12 +54,12 @@ ThreadFreezer::ThreadFreezer() {
 
             thread_ctx.ContextFlags = CONTEXT_FULL;
 
-            if (!GetThreadContext(thread_handle, &thread_ctx)) {
+            if (SuspendThread(thread) == (DWORD)-1 || GetThreadContext(thread, &thread_ctx) == FALSE) {
+                CloseHandle(thread);
                 continue;
             }
 
-            SuspendThread(thread_handle);
-            m_frozen_threads.push_back({thread_id, thread_handle, thread_ctx});
+            m_frozen_threads.push_back({thread_id, thread, thread_ctx});
         }
     } while (num_threads_frozen != m_frozen_threads.size());
 
