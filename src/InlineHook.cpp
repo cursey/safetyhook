@@ -8,6 +8,7 @@
 #include <bddisasm.h>
 
 #include "safetyhook/Factory.hpp"
+#include "safetyhook/ThreadFreezer.hpp"
 
 #include "safetyhook/InlineHook.hpp"
 
@@ -224,12 +225,14 @@ void InlineHook::e9_hook() {
 #endif
 
     // jmp from original to trampoline.
+    ThreadFreezer freezer{};
+
     src = m_target;
     dst = m_trampoline + m_trampoline_size + sizeof(JmpE9);
     emit_jmp_e9(src, dst, m_trampoline_size);
 
     for (size_t i = 0; i < m_trampoline_size; ++i) {
-        builder.fix_ip(m_target + i, m_trampoline + i);
+        freezer.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
@@ -273,13 +276,15 @@ void InlineHook::ff_hook() {
     emit_jmp_ff(src, dst, data);
 
     // jmp from original to trampoline.
+    ThreadFreezer freezer{};
+
     src = m_target;
     dst = m_destination;
     data = src + sizeof(JmpFF);
     emit_jmp_ff(src, dst, data, m_trampoline_size);
 
     for (size_t i = 0; i < m_trampoline_size; ++i) {
-        builder.fix_ip(m_target + i, m_trampoline + i);
+        freezer.fix_ip(m_target + i, m_trampoline + i);
     }
 }
 
@@ -291,16 +296,17 @@ void InlineHook::destroy() {
     }
 
     auto builder = Factory::acquire();
+    ThreadFreezer freezer{};
     UnprotectMemory unprotect{m_target, m_trampoline_size};
 
     std::copy_n(m_original_bytes.data(), m_original_bytes.size(), (uint8_t*)m_target);
 
     for (size_t i = 0; i < m_trampoline_size; ++i) {
-        builder.fix_ip(m_trampoline + i, m_target + i);
+        freezer.fix_ip(m_trampoline + i, m_target + i);
     }
 
     // If the IP is on the trampolines jmp.
-    builder.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
+    freezer.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
     builder.free(m_trampoline, m_trampoline_allocation_size);
 
     m_trampoline = 0;
