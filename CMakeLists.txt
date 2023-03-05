@@ -30,6 +30,21 @@ option(SAFETYHOOK_BUNDLE_ZYDIS "" ON)
 
 project(safetyhook)
 
+include(FetchContent)
+
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	message(STATUS "Fetching Catch2 (v3.3.2)...")
+	FetchContent_Declare(Catch2
+		GIT_REPOSITORY
+			"https://github.com/catchorg/Catch2.git"
+		GIT_TAG
+			v3.3.2
+		GIT_SHALLOW
+			ON
+	)
+	FetchContent_MakeAvailable(Catch2)
+
+endif()
 # Target: Zydis
 if(SAFETYHOOK_BUNDLE_ZYDIS) # bundle-zydis
 	set(Zydis_SOURCES
@@ -196,6 +211,31 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 	if(NOT CMKR_VS_STARTUP_PROJECT)
 		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test3)
+	endif()
+
+endif()
+# Target: unittest
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(unittest_SOURCES
+		"unittest/allocator.cpp"
+		"unittest/inline_hook.cpp"
+		"unittest/mid_hook.cpp"
+		cmake.toml
+	)
+
+	add_executable(unittest)
+
+	target_sources(unittest PRIVATE ${unittest_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${unittest_SOURCES})
+
+	target_link_libraries(unittest PRIVATE
+		Catch2::Catch2WithMain
+		safetyhook::safetyhook
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT unittest)
 	endif()
 
 endif()

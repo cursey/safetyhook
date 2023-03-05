@@ -10,6 +10,12 @@ SAFETYHOOK_BUNDLE_ZYDIS = true
 build-tests = "SAFETYHOOK_BUILD_TESTS"
 bundle-zydis = "SAFETYHOOK_BUNDLE_ZYDIS"
 
+[fetch-content.Catch2]
+condition = "build-tests"
+git = "https://github.com/catchorg/Catch2.git"
+tag = "v3.3.2"
+shallow = true
+
 [target.Zydis]
 condition = "bundle-zydis"
 type = "static"
@@ -52,3 +58,9 @@ condition = "build-tests"
 type = "executable"
 sources = ["tests/test3.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
+
+[target.unittest]
+condition = "build-tests"
+type = "executable"
+sources = ["unittest/*.cpp"]
+link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook"]
