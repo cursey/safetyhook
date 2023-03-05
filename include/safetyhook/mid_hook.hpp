@@ -38,31 +38,30 @@ public:
     [[nodiscard]] static std::expected<MidHook, Error> create(void* target, MidHookFn destination);
     [[nodiscard]] static std::expected<MidHook, Error> create(uintptr_t target, MidHookFn destination);
     [[nodiscard]] static std::expected<MidHook, Error> create(
-        std::shared_ptr<Allocator> allocator, void* target, MidHookFn destination);
+        const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination);
     [[nodiscard]] static std::expected<MidHook, Error> create(
-        std::shared_ptr<Allocator> allocator, uintptr_t target, MidHookFn destination);
+        const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination);
 
     MidHook() = default;
     MidHook(const MidHook&) = delete;
     MidHook(MidHook&& other) noexcept;
     MidHook& operator=(const MidHook&) = delete;
     MidHook& operator=(MidHook&& other) noexcept;
-
-    ~MidHook();
+    ~MidHook() = default;
 
     void reset();
 
     [[nodiscard]] auto target() const { return m_target; }
     [[nodiscard]] auto destination() const { return m_destination; }
-    operator bool() const { return m_stub != 0; }
+    explicit operator bool() const { return static_cast<bool>(m_stub); }
 
 private:
-    std::shared_ptr<Allocator> m_allocator{};
     InlineHook m_hook{};
     uintptr_t m_target{};
-    uintptr_t m_stub{};
+    Allocation m_stub{};
     MidHookFn m_destination{};
 
-    std::expected<void, Error> setup();
+    std::expected<void, Error> setup(
+        const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination);
 };
 } // namespace safetyhook

@@ -16,6 +16,41 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
+Allocation::Allocation(Allocation&& other) noexcept {
+    *this = std::move(other);
+}
+
+Allocation& Allocation::operator=(Allocation&& other) noexcept {
+    if (this != &other) {
+        free();
+
+        m_allocator = std::move(other.m_allocator);
+        m_address = other.m_address;
+        m_size = other.m_size;
+
+        other.m_address = 0;
+        other.m_size = 0;
+    }
+
+    return *this;
+}
+
+Allocation::~Allocation() {
+    free();
+}
+
+void Allocation::free() {
+    if (m_allocator && m_address != 0 && m_size != 0) {
+        m_allocator->free(m_address, m_size);
+        m_address = 0;
+        m_size = 0;
+    }
+}
+
+Allocation::Allocation(std::shared_ptr<Allocator> allocator, uintptr_t address, size_t size) noexcept
+    : m_allocator{std::move(allocator)}, m_address{address}, m_size{size} {
+}
+
 std::shared_ptr<Allocator> Allocator::global() {
     static std::weak_ptr<Allocator> global_allocator{};
     static std::mutex global_allocator_mutex{};
@@ -26,22 +61,37 @@ std::shared_ptr<Allocator> Allocator::global() {
         return allocator;
     }
 
-    auto allocator = std::make_shared<Allocator>();
+    auto allocator = Allocator::create();
 
     global_allocator = allocator;
 
     return allocator;
 }
 
-std::expected<uintptr_t, Allocator::Error> Allocator::allocate(size_t size) {
+std::shared_ptr<Allocator> Allocator::create() {
+    return std::shared_ptr<Allocator>{new Allocator{}};
+}
+
+std::expected<Allocation, Allocator::Error> Allocator::allocate(size_t size) {
     return allocate_near({}, size, std::numeric_limits<size_t>::max());
 }
 
-std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
+std::expected<Allocation, Allocator::Error> Allocator::allocate_near(
+    const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
+    std::scoped_lock lock{m_mutex};
+    return internal_allocate_near(desired_addresses, size, max_distance);
+}
+
+void Allocator::free(uintptr_t address, size_t size) {
+    std::scoped_lock lock{m_mutex};
+    return internal_free(address, size);
+}
+
+std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     // First search through our list of allocations for a free block that is large
     // enough.
-    for (auto& allocation : m_allocations) {
+    for (auto& allocation : m_memory) {
         if (allocation->size < size) {
             continue;
         }
@@ -52,7 +102,7 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
                 continue;
             }
 
-            auto address = node->start;
+            const auto address = node->start;
 
             // Close enough?
             if (!in_range(address, desired_addresses, max_distance)) {
@@ -61,7 +111,7 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
 
             node->start += size;
 
-            return address;
+            return Allocation{shared_from_this(), address, size};
         }
     }
 
@@ -74,10 +124,10 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
     auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
     if (!allocation_address) {
-        return allocation_address;
+        return std::unexpected{allocation_address.error()};
     }
 
-    auto& allocation = m_allocations.emplace_back(new MemoryAllocation);
+    auto& allocation = m_memory.emplace_back(new Memory);
 
     allocation->address = *allocation_address;
     allocation->size = allocation_size;
@@ -85,11 +135,11 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
     allocation->freelist->start = *allocation_address + size;
     allocation->freelist->end = *allocation_address + allocation_size;
 
-    return allocation_address;
+    return Allocation{shared_from_this(), *allocation_address, size};
 }
 
-void Allocator::free(uintptr_t address, size_t size) {
-    for (auto& allocation : m_allocations) {
+void Allocator::internal_free(uintptr_t address, size_t size) {
+    for (auto& allocation : m_memory) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
             continue;
         }
@@ -122,8 +172,8 @@ void Allocator::free(uintptr_t address, size_t size) {
     }
 }
 
-void Allocator::combine_adjacent_freenodes(MemoryAllocation& allocation) {
-    for (auto prev = allocation.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
+void Allocator::combine_adjacent_freenodes(Memory& memory) {
+    for (auto prev = memory.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
         if (prev->end == node->start) {
             prev->end = node->end;
             prev->next.swap(node->next);
@@ -224,7 +274,7 @@ bool Allocator::in_range(uintptr_t address, const std::vector<uintptr_t>& desire
     return is_in_range;
 }
 
-Allocator::MemoryAllocation::~MemoryAllocation() {
+Allocator::Memory::~Memory() {
     VirtualFree((LPVOID)address, 0, MEM_RELEASE);
 }
 } // namespace safetyhook

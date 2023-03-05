@@ -30,19 +30,15 @@ std::expected<MidHook, MidHook::Error> MidHook::create(uintptr_t target, MidHook
 }
 
 std::expected<MidHook, MidHook::Error> MidHook::create(
-    std::shared_ptr<Allocator> allocator, void* target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination) {
     return create(std::move(allocator), reinterpret_cast<uintptr_t>(target), destination);
 }
 
 std::expected<MidHook, MidHook::Error> MidHook::create(
-    std::shared_ptr<Allocator> allocator, uintptr_t target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
     MidHook hook{};
 
-    hook.m_allocator = std::move(allocator);
-    hook.m_target = target;
-    hook.m_destination = destination;
-
-    if (const auto setup_result = hook.setup(); !setup_result) {
+    if (const auto setup_result = hook.setup(allocator, target, destination); !setup_result) {
         return std::unexpected{setup_result.error()};
     }
 
@@ -54,59 +50,61 @@ MidHook::MidHook(MidHook&& other) noexcept {
 }
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
-    m_allocator = std::move(other.m_allocator);
-    m_hook = std::move(other.m_hook);
-    m_target = other.m_target;
-    m_stub = other.m_stub;
-    m_destination = other.m_destination;
-    other.m_stub = 0;
-    return *this;
-}
+    if (this != &other) {
+        m_hook = std::move(other.m_hook);
+        m_target = other.m_target;
+        m_stub = std::move(other.m_stub);
+        m_destination = other.m_destination;
 
-MidHook::~MidHook() {
-    if (m_stub != 0) {
-        m_allocator->free(m_stub, sizeof(asm_data));
+        other.m_target = 0;
+        other.m_destination = nullptr;
     }
+
+    return *this;
 }
 
 void MidHook::reset() {
     *this = {};
 }
 
-std::expected<void, MidHook::Error> MidHook::setup() {
-    const auto stub_allocation = m_allocator->allocate(sizeof(asm_data));
+std::expected<void, MidHook::Error> MidHook::setup(
+    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
+    m_target = target;
+    m_destination = destination;
+
+    auto stub_allocation = allocator->allocate(sizeof(asm_data));
 
     if (!stub_allocation) {
         return std::unexpected{stub_allocation.error()};
     }
 
-    m_stub = *stub_allocation;
+    m_stub = std::move(*stub_allocation);
 
-    std::copy_n(asm_data, sizeof(asm_data), reinterpret_cast<uint8_t*>(m_stub));
+    std::copy_n(asm_data, sizeof(asm_data), reinterpret_cast<uint8_t*>(m_stub.address()));
 
 #ifdef _M_X64
-    *(MidHookFn*)(m_stub + sizeof(asm_data) - 16) = m_destination;
+    *(MidHookFn*)(m_stub.address() + sizeof(asm_data) - 16) = m_destination;
 #else
-    *(MidHookFn*)(m_stub + sizeof(asm_data) - 8) = m_destination;
+    *(MidHookFn*)(m_stub.address() + sizeof(asm_data) - 8) = m_destination;
 
     // 32-bit has some relocations we need to fix up as well.
-    *(uintptr_t*)(m_stub + 0xA + 2) = m_stub + sizeof(asm_data) - 8;
-    *(uintptr_t*)(m_stub + 0x1C + 2) = m_stub + sizeof(asm_data) - 4;
+    *(uintptr_t*)(m_stub.address() + 0xA + 2) = m_stub.address() + sizeof(asm_data) - 8;
+    *(uintptr_t*)(m_stub.address() + 0x1C + 2) = m_stub.address() + sizeof(asm_data) - 4;
 #endif
 
-    auto hook_result = InlineHook::create(m_allocator, m_target, m_stub);
+    auto hook_result = InlineHook::create(allocator, m_target, m_stub.address());
 
     if (!hook_result) {
-        m_allocator->free(m_stub, sizeof(asm_data));
+        m_stub.free();
         return std::unexpected{hook_result.error()};
     }
 
     m_hook = std::move(*hook_result);
 
 #ifdef _M_X64
-    *(uintptr_t*)(m_stub + sizeof(asm_data) - 8) = m_hook.trampoline();
+    *(uintptr_t*)(m_stub.address() + sizeof(asm_data) - 8) = m_hook.trampoline().address();
 #else
-    *(uintptr_t*)(m_stub + sizeof(asm_data) - 4) = m_hook.trampoline();
+    *(uintptr_t*)(m_stub.address() + sizeof(asm_data) - 4) = m_hook.trampoline().address();
 #endif
 
     return {};
