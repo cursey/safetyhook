@@ -21,7 +21,7 @@ compile-definitions = ["ZYDIS_STATIC_BUILD"]
 type = "static"
 sources = ["src/*.cpp"]
 include-directories = ["include/"]
-compile-features = ["cxx_std_17"]
+compile-features = ["cxx_std_23"]
 compile-definitions = ["NOMINMAX"]
 alias = "safetyhook::safetyhook"
 link-libraries = ["Zydis", "ntdll"]
@@ -51,10 +51,4 @@ link-libraries = ["safetyhook::safetyhook"]
 condition = "build-tests"
 type = "executable"
 sources = ["tests/test3.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
-
-[target.test4]
-condition = "build-tests"
-type = "executable"
-sources = ["tests/test4.cpp"]
 link-libraries = ["safetyhook::safetyhook"]

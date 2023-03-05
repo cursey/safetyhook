@@ -1,14 +1,8 @@
 #pragma once
 
-#include <memory>
+#include "safetyhook/inline_hook.hpp"
+#include "safetyhook/mid_hook.hpp"
 
-#include "safetyhook/Builder.hpp"
-#include "safetyhook/Factory.hpp"
-#include "safetyhook/InlineHook.hpp"
-#include "safetyhook/MidHook.hpp"
-
-using SafetyHookBuilder = safetyhook::Builder;
-using SafetyHookFactory = safetyhook::Factory;
 using SafetyHookContext = safetyhook::Context;
 using SafetyHookInline = safetyhook::InlineHook;
 using SafetyHookMid = safetyhook::MidHook;

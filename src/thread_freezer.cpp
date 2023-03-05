@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <winternl.h>
 
-#include "safetyhook/ThreadFreezer.hpp"
+#include "safetyhook/thread_freezer.hpp"
 
 extern "C" {
 NTSTATUS

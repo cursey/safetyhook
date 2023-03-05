@@ -1,27 +1,34 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <mutex>
 #include <vector>
 
-#include "safetyhook/Builder.hpp"
-
 namespace safetyhook {
-class Factory final : public std::enable_shared_from_this<Factory> {
+class Allocator final {
 public:
-    [[nodiscard]] static Builder acquire();
+    [[nodiscard]] static std::shared_ptr<Allocator> global();
 
-    Factory(const Factory&) = delete;
-    Factory(Factory&&) noexcept = delete;
-    Factory& operator=(const Factory&) = delete;
-    Factory& operator=(Factory&&) noexcept = delete;
+    Allocator() = default;
+    Allocator(const Allocator&) = delete;
+    Allocator(Allocator&&) noexcept = default;
+    Allocator& operator=(const Allocator&) = delete;
+    Allocator& operator=(Allocator&&) noexcept = default;
+    ~Allocator() = default;
 
-    ~Factory();
+    enum class Error {
+        BAD_VIRTUAL_ALLOC,
+        NO_MEMORY_IN_RANGE,
+    };
+
+    [[nodiscard]] std::expected<uintptr_t, Error> allocate(size_t size);
+    [[nodiscard]] std::expected<uintptr_t, Error> allocate_near(
+        const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
+    void free(uintptr_t address, size_t size);
 
 private:
-    friend Builder;
-
     struct FreeNode {
         std::unique_ptr<FreeNode> next{};
         uintptr_t start{};
@@ -39,15 +46,8 @@ private:
     std::vector<std::unique_ptr<MemoryAllocation>> m_allocations{};
     std::mutex m_mutex{};
 
-    Factory();
-
-    [[nodiscard]] uintptr_t allocate(size_t size);
-    [[nodiscard]] uintptr_t allocate_near(
-        const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
-    void free(uintptr_t address, size_t size);
-
     void combine_adjacent_freenodes(MemoryAllocation& allocation);
-    [[nodiscard]] uintptr_t allocate_nearby_memory(
+    [[nodiscard]] std::expected<uintptr_t, Error> allocate_nearby_memory(
         const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
     [[nodiscard]] bool in_range(
         uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);

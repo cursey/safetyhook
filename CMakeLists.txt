@@ -53,11 +53,10 @@ if(SAFETYHOOK_BUNDLE_ZYDIS) # bundle-zydis
 endif()
 # Target: safetyhook
 set(safetyhook_SOURCES
-	"src/Builder.cpp"
-	"src/Factory.cpp"
-	"src/InlineHook.cpp"
-	"src/MidHook.cpp"
-	"src/ThreadFreezer.cpp"
+	"src/allocator.cpp"
+	"src/inline_hook.cpp"
+	"src/mid_hook.cpp"
+	"src/thread_freezer.cpp"
 	cmake.toml
 )
 
@@ -72,7 +71,7 @@ target_compile_definitions(safetyhook PUBLIC
 )
 
 target_compile_features(safetyhook PUBLIC
-	cxx_std_17
+	cxx_std_23
 )
 
 if(MSVC) # msvc
@@ -197,28 +196,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 	if(NOT CMKR_VS_STARTUP_PROJECT)
 		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test3)
-	endif()
-
-endif()
-# Target: test4
-if(SAFETYHOOK_BUILD_TESTS) # build-tests
-	set(test4_SOURCES
-		"tests/test4.cpp"
-		cmake.toml
-	)
-
-	add_executable(test4)
-
-	target_sources(test4 PRIVATE ${test4_SOURCES})
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test4_SOURCES})
-
-	target_link_libraries(test4 PRIVATE
-		safetyhook::safetyhook
-	)
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test4)
 	endif()
 
 endif()

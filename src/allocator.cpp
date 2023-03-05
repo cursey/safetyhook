@@ -5,14 +5,9 @@
 
 #include <Windows.h>
 
-#include "safetyhook/Builder.hpp"
-
-#include "safetyhook/Factory.hpp"
+#include "safetyhook/allocator.hpp"
 
 namespace safetyhook {
-Factory* g_factory{};
-std::mutex g_factory_mutex{};
-
 constexpr auto align_up(uintptr_t address, size_t align) {
     return (address + align - 1) & ~(align - 1);
 }
@@ -21,29 +16,27 @@ constexpr auto align_down(uintptr_t address, size_t align) {
     return address & ~(align - 1);
 }
 
-Builder Factory::acquire() {
-    std::scoped_lock lock{g_factory_mutex};
+std::shared_ptr<Allocator> Allocator::global() {
+    static std::weak_ptr<Allocator> global_allocator{};
+    static std::mutex global_allocator_mutex{};
 
-    if (g_factory == nullptr) {
-        return Builder{std::shared_ptr<Factory>{new Factory}};
-    } else {
-        return Builder{g_factory->shared_from_this()};
+    std::scoped_lock lock{global_allocator_mutex};
+
+    if (auto allocator = global_allocator.lock()) {
+        return allocator;
     }
+
+    auto allocator = std::make_shared<Allocator>();
+    global_allocator = allocator;
+    return std::move(allocator);
 }
 
-Factory::Factory() {
-    g_factory = this;
-}
-
-Factory::~Factory() {
-    g_factory = nullptr;
-}
-
-uintptr_t Factory::allocate(size_t size) {
+std::expected<uintptr_t, Allocator::Error> Allocator::allocate(size_t size) {
     return allocate_near({}, size, std::numeric_limits<size_t>::max());
 }
 
-uintptr_t Factory::allocate_near(const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
+std::expected<uintptr_t, Allocator::Error> Allocator::allocate_near(
+    const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     // First search through our list of allocations for a free block that is large
     // enough.
     for (auto& allocation : m_allocations) {
@@ -78,22 +71,22 @@ uintptr_t Factory::allocate_near(const std::vector<uintptr_t>& desired_addresses
     auto allocation_size = align_up(size, si.dwAllocationGranularity);
     auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
-    if (allocation_address == 0) {
-        return 0;
+    if (!allocation_address) {
+        return allocation_address;
     }
 
     auto& allocation = m_allocations.emplace_back(new MemoryAllocation);
 
-    allocation->address = allocation_address;
+    allocation->address = *allocation_address;
     allocation->size = allocation_size;
     allocation->freelist = std::make_unique<FreeNode>();
-    allocation->freelist->start = allocation_address + size;
-    allocation->freelist->end = allocation_address + allocation_size;
+    allocation->freelist->start = *allocation_address + size;
+    allocation->freelist->end = *allocation_address + allocation_size;
 
     return allocation_address;
 }
 
-void Factory::free(uintptr_t address, size_t size) {
+void Allocator::free(uintptr_t address, size_t size) {
     for (auto& allocation : m_allocations) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
             continue;
@@ -127,7 +120,7 @@ void Factory::free(uintptr_t address, size_t size) {
     }
 }
 
-void Factory::combine_adjacent_freenodes(MemoryAllocation& allocation) {
+void Allocator::combine_adjacent_freenodes(MemoryAllocation& allocation) {
     for (auto prev = allocation.freelist.get(), node = prev; node != nullptr; node = node->next.get()) {
         if (prev->end == node->start) {
             prev->end = node->end;
@@ -140,10 +133,16 @@ void Factory::combine_adjacent_freenodes(MemoryAllocation& allocation) {
     }
 }
 
-uintptr_t Factory::allocate_nearby_memory(
+std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     if (desired_addresses.empty()) {
-        return (uintptr_t)VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (const auto result =
+                (uintptr_t)VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            result != 0) {
+            return result;
+        }
+
+        return std::unexpected{Error::BAD_VIRTUAL_ALLOC};
     }
 
     auto attempt_allocation = [&](uintptr_t p) -> uintptr_t {
@@ -206,10 +205,10 @@ uintptr_t Factory::allocate_nearby_memory(
         }
     }
 
-    return 0;
+    return std::unexpected{Error::NO_MEMORY_IN_RANGE};
 }
 
-bool Factory::in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance) {
+bool Allocator::in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance) {
     auto is_in_range = true;
 
     for (auto&& desired_address : desired_addresses) {
@@ -223,7 +222,7 @@ bool Factory::in_range(uintptr_t address, const std::vector<uintptr_t>& desired_
     return is_in_range;
 }
 
-Factory::MemoryAllocation::~MemoryAllocation() {
+Allocator::MemoryAllocation::~MemoryAllocation() {
     VirtualFree((LPVOID)address, 0, MEM_RELEASE);
 }
 } // namespace safetyhook

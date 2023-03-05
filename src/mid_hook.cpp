@@ -1,9 +1,9 @@
 #include <algorithm>
 
-#include "safetyhook/Factory.hpp"
-#include "safetyhook/InlineHook.hpp"
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/inline_hook.hpp"
 
-#include "safetyhook/MidHook.hpp"
+#include "safetyhook/mid_hook.hpp"
 
 namespace safetyhook {
 
@@ -21,12 +21,40 @@ const uint8_t asm_data[] = {0x54, 0x55, 0x50, 0x53, 0x51, 0x52, 0x56, 0x57, 0x9C
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
 
+std::expected<MidHook, MidHook::Error> MidHook::create(void* target, MidHookFn destination) {
+    return create(Allocator::global(), target, destination);
+}
+
+std::expected<MidHook, MidHook::Error> MidHook::create(uintptr_t target, MidHookFn destination) {
+    return create(Allocator::global(), target, destination);
+}
+
+std::expected<MidHook, MidHook::Error> MidHook::create(
+    std::shared_ptr<Allocator> allocator, void* target, MidHookFn destination) {
+    return create(std::move(allocator), reinterpret_cast<uintptr_t>(target), destination);
+}
+
+std::expected<MidHook, MidHook::Error> MidHook::create(
+    std::shared_ptr<Allocator> allocator, uintptr_t target, MidHookFn destination) {
+    MidHook hook{};
+
+    hook.m_allocator = std::move(allocator);
+    hook.m_target = target;
+    hook.m_destination = destination;
+
+    if (const auto setup_result = hook.setup(); !setup_result) {
+        return std::unexpected{setup_result.error()};
+    }
+
+    return hook;
+}
+
 MidHook::MidHook(MidHook&& other) noexcept {
     *this = std::move(other);
 }
 
 MidHook& MidHook::operator=(MidHook&& other) noexcept {
-    m_factory = std::move(other.m_factory);
+    m_allocator = std::move(other.m_allocator);
     m_hook = std::move(other.m_hook);
     m_target = other.m_target;
     m_stub = other.m_stub;
@@ -37,8 +65,7 @@ MidHook& MidHook::operator=(MidHook&& other) noexcept {
 
 MidHook::~MidHook() {
     if (m_stub != 0) {
-        auto builder = Factory::acquire();
-        builder.free(m_stub, sizeof(asm_data));
+        m_allocator->free(m_stub, sizeof(asm_data));
     }
 }
 
@@ -46,12 +73,16 @@ void MidHook::reset() {
     *this = {};
 }
 
-MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn destination)
-    : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
-    auto builder = Factory::acquire();
-    m_stub = builder.allocate(sizeof(asm_data));
+std::expected<void, MidHook::Error> MidHook::setup() {
+    const auto stub_allocation = m_allocator->allocate(sizeof(asm_data));
 
-    std::copy_n(asm_data, sizeof(asm_data), (uint8_t*)m_stub);
+    if (!stub_allocation) {
+        return std::unexpected{stub_allocation.error()};
+    }
+
+    m_stub = *stub_allocation;
+
+    std::copy_n(asm_data, sizeof(asm_data), reinterpret_cast<uint8_t*>(m_stub));
 
 #ifdef _M_X64
     *(MidHookFn*)(m_stub + sizeof(asm_data) - 16) = m_destination;
@@ -63,18 +94,21 @@ MidHook::MidHook(std::shared_ptr<Factory> factory, uintptr_t target, MidHookFn d
     *(uintptr_t*)(m_stub + 0x1C + 2) = m_stub + sizeof(asm_data) - 4;
 #endif
 
-    m_hook = builder.create_inline((void*)m_target, (void*)m_stub);
+    auto hook_result = InlineHook::create(m_allocator, m_target, m_stub);
 
-    if (!m_hook) {
-        builder.free(m_stub, sizeof(asm_data));
-        m_stub = 0;
-        return;
+    if (!hook_result) {
+        m_allocator->free(m_stub, sizeof(asm_data));
+        return std::unexpected{hook_result.error()};
     }
+
+    m_hook = std::move(*hook_result);
 
 #ifdef _M_X64
     *(uintptr_t*)(m_stub + sizeof(asm_data) - 8) = m_hook.trampoline();
 #else
     *(uintptr_t*)(m_stub + sizeof(asm_data) - 4) = m_hook.trampoline();
 #endif
+
+    return {};
 }
 } // namespace safetyhook

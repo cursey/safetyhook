@@ -1,17 +1,45 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <mutex>
 #include <utility>
 #include <vector>
 
-namespace safetyhook {
-class Factory;
-class Builder;
+#include "safetyhook/allocator.hpp"
 
+namespace safetyhook {
 class InlineHook final {
 public:
+    struct Error {
+        enum Type {
+            BAD_ALLOCATION,
+            FAILED_TO_DECODE_INSTRUCTION,
+            SHORT_JUMP_IN_TRAMPOLINE,
+            IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE,
+        };
+
+        Type type;
+
+        union Extra {
+            Allocator::Error allocator_error;
+        };
+
+        Extra extra;
+
+        Error() = default;
+        Error(Type type) : type{type} {}
+        Error(Allocator::Error allocator_error) : type{Type::BAD_ALLOCATION}, extra{allocator_error} {}
+    };
+
+    [[nodiscard]] static std::expected<InlineHook, Error> create(void* target, void* destination);
+    [[nodiscard]] static std::expected<InlineHook, Error> create(uintptr_t target, uintptr_t destination);
+    [[nodiscard]] static std::expected<InlineHook, Error> create(
+        std::shared_ptr<Allocator> allocator, void* target, void* destination);
+    [[nodiscard]] static std::expected<InlineHook, Error> create(
+        std::shared_ptr<Allocator> allocator, uintptr_t target, uintptr_t destination);
+
     InlineHook() = default;
     InlineHook(const InlineHook&) = delete;
     InlineHook(InlineHook&& other) noexcept;
@@ -74,9 +102,7 @@ public:
     }
 
 private:
-    friend Builder;
-
-    std::shared_ptr<Factory> m_factory;
+    std::shared_ptr<Allocator> m_allocator{};
     uintptr_t m_target{};
     uintptr_t m_destination{};
     uintptr_t m_trampoline{};
@@ -85,10 +111,8 @@ private:
     std::vector<uint8_t> m_original_bytes{};
     std::recursive_mutex m_mutex{};
 
-    InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination);
-
-    void e9_hook();
-    void ff_hook();
+    std::expected<void, Error> e9_hook();
+    std::expected<void, Error> ff_hook();
     void destroy();
 };
 } // namespace safetyhook

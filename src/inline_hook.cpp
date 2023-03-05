@@ -5,10 +5,10 @@
 
 #include <Zydis.h>
 
-#include "safetyhook/Factory.hpp"
-#include "safetyhook/ThreadFreezer.hpp"
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/thread_freezer.hpp"
 
-#include "safetyhook/InlineHook.hpp"
+#include "safetyhook/inline_hook.hpp"
 
 namespace safetyhook {
 class UnprotectMemory {
@@ -102,6 +102,39 @@ static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
     return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, (const void*)ip, 15, ix));
 }
 
+std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, void* destination) {
+    return create(Allocator::global(), target, destination);
+}
+
+std::expected<InlineHook, InlineHook::Error> InlineHook::create(uintptr_t target, uintptr_t destination) {
+    return create(Allocator::global(), target, destination);
+}
+
+std::expected<InlineHook, InlineHook::Error> InlineHook::create(
+    std::shared_ptr<Allocator> allocator, void* target, void* destination) {
+    return create(std::move(allocator), reinterpret_cast<uintptr_t>(target), reinterpret_cast<uintptr_t>(destination));
+}
+std::expected<InlineHook, InlineHook::Error> InlineHook::create(
+    std::shared_ptr<Allocator> allocator, uintptr_t target, uintptr_t destination) {
+    InlineHook hook{};
+
+    hook.m_allocator = std::move(allocator);
+    hook.m_target = target;
+    hook.m_destination = destination;
+
+    if (const auto e9_result = hook.e9_hook(); !e9_result) {
+#ifdef _M_X64
+        if (const auto ff_result = hook.ff_hook(); !ff_result) {
+            return std::unexpected{ff_result.error()};
+        }
+#else
+        return std::unexpected{e9_result.error()};
+#endif
+    }
+
+    return hook;
+}
+
 InlineHook::InlineHook(InlineHook&& other) noexcept {
     *this = std::move(other);
 }
@@ -111,7 +144,7 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
 
     std::scoped_lock lock{m_mutex, other.m_mutex};
 
-    m_factory = std::move(other.m_factory);
+    m_allocator = std::move(other.m_allocator);
     m_target = other.m_target;
     m_destination = other.m_destination;
     m_trampoline = other.m_trampoline;
@@ -132,18 +165,7 @@ void InlineHook::reset() {
     *this = {};
 }
 
-InlineHook::InlineHook(std::shared_ptr<Factory> factory, uintptr_t target, uintptr_t destination)
-    : m_factory{std::move(factory)}, m_target{target}, m_destination{destination} {
-    e9_hook();
-
-#ifdef _M_X64
-    if (m_trampoline == 0) {
-        ff_hook();
-    }
-#endif
-}
-
-void InlineHook::e9_hook() {
+std::expected<void, InlineHook::Error> InlineHook::e9_hook() {
     m_trampoline_size = 0;
     auto ip = m_target;
     std::vector<uintptr_t> desired_addresses{};
@@ -154,14 +176,14 @@ void InlineHook::e9_hook() {
         ZydisDecodedInstruction ix{};
 
         if (!decode(&ix, ip)) {
-            return;
+            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
         }
 
         // TODO: Add support for expanding short jumps here. Until then, short
         // jumps within the trampoline are problematic so we just return for
         // now.
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.imm[0].size != 32) {
-            return;
+            return std::unexpected{Error::SHORT_JUMP_IN_TRAMPOLINE};
         }
 
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.disp.size == 32) {
@@ -182,12 +204,13 @@ void InlineHook::e9_hook() {
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpE9) + sizeof(JmpE9);
 #endif
 
-    auto builder = Factory::acquire();
-    m_trampoline = builder.allocate_near(desired_addresses, m_trampoline_allocation_size);
+    const auto trampoline_allocation = m_allocator->allocate_near(desired_addresses, m_trampoline_allocation_size);
 
-    if (m_trampoline == 0) {
-        return;
+    if (!trampoline_allocation) {
+        return std::unexpected{trampoline_allocation.error()};
     }
+
+    m_trampoline = *trampoline_allocation;
 
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
@@ -196,8 +219,8 @@ void InlineHook::e9_hook() {
         ZydisDecodedInstruction ix{};
 
         if (!decode(&ix, m_target + i)) {
-            builder.free(m_trampoline, m_trampoline_allocation_size);
-            return;
+            m_allocator->free(m_trampoline, m_trampoline_allocation_size);
+            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
         }
 
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.disp.size == 32) {
@@ -239,9 +262,11 @@ void InlineHook::e9_hook() {
     for (size_t i = 0; i < m_trampoline_size; ++i) {
         freezer.fix_ip(m_target + i, m_trampoline + i);
     }
+
+    return {};
 }
 
-void InlineHook::ff_hook() {
+std::expected<void, InlineHook::Error> InlineHook::ff_hook() {
     m_trampoline_size = 0;
     auto ip = m_target;
 
@@ -249,27 +274,29 @@ void InlineHook::ff_hook() {
         ZydisDecodedInstruction ix{};
 
         if (!decode(&ix, ip)) {
-            return;
+            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
         }
 
         // We can't support any instruction that is IP relative here because
         // ff_hook should only be called if e9_hook failed indicating that
         // we're likely outside the +- 2GB range.
         if (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
-            return;
+            return std::unexpected{Error::IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE};
         }
 
         m_trampoline_size += ix.length;
         ip += ix.length;
     }
 
-    auto builder = Factory::acquire();
     m_trampoline_allocation_size = m_trampoline_size + sizeof(JmpFF) + sizeof(uintptr_t) * 2;
-    m_trampoline = builder.allocate(m_trampoline_allocation_size);
 
-    if (m_trampoline == 0) {
-        return;
+    const auto trampoline_allocation = m_allocator->allocate(m_trampoline_allocation_size);
+
+    if (!trampoline_allocation) {
+        return std::unexpected{trampoline_allocation.error()};
     }
+
+    m_trampoline = *trampoline_allocation;
 
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, std::back_inserter(m_original_bytes));
     std::copy_n((const uint8_t*)m_target, m_trampoline_size, (uint8_t*)m_trampoline);
@@ -291,6 +318,8 @@ void InlineHook::ff_hook() {
     for (size_t i = 0; i < m_trampoline_size; ++i) {
         freezer.fix_ip(m_target + i, m_trampoline + i);
     }
+
+    return {};
 }
 
 void InlineHook::destroy() {
@@ -300,7 +329,6 @@ void InlineHook::destroy() {
         return;
     }
 
-    auto builder = Factory::acquire();
     ThreadFreezer freezer{};
     UnprotectMemory unprotect{m_target, m_trampoline_size};
 
@@ -312,7 +340,7 @@ void InlineHook::destroy() {
 
     // If the IP is on the trampolines jmp.
     freezer.fix_ip(m_trampoline + m_trampoline_size, m_target + m_trampoline_size);
-    builder.free(m_trampoline, m_trampoline_allocation_size);
+    m_allocator->free(m_trampoline, m_trampoline_allocation_size);
 
     m_trampoline = 0;
 }
