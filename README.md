@@ -34,9 +34,9 @@ FetchContent_MakeAvailable(safetyhook)
 ```C++
 #include <iostream>
 
-#include <SafetyHook.hpp>
+#include <safetyhook.hpp>
 
-int add(int x, int y) {
+__declspec(noinline) int add(int x, int y) {
     return x + y;
 }
 
@@ -46,26 +46,17 @@ int hook_add(int x, int y) {
     return g_add_hook.call<int>(x * 2, y * 2);
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
-    {
-        // Acquire the factory's builder which will freeze all threads and give
-        // us access to the hook creation methods.
-        auto builder = SafetyHookFactory::acquire(); 
+    // Create a hook on add.
+    g_add_hook = *SafetyHookInline::create((void*)add, (void*)hook_add);
 
-        // Create a hook on add.
-        g_add_hook = builder.create_inline(add, hook_add);
-
-        // Once we leave this scope, builder will unfreeze all threads and our
-        // factory will be kept alive by g_add_hook.
-    }
-
-    std::cout << "hooked add(2, 3) = " << add(2, 3) << "\n";
+    std::cout << "hooked add(3, 4) = " << add(3, 4) << "\n";
 
     g_add_hook = {};
 
-    std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
+    std::cout << "unhooked add(5, 6) = " << add(5, 6) << "\n";
 
     return 0;
 }
