@@ -14,17 +14,6 @@ NtGetNextThread(HANDLE ProcessHandle, HANDLE ThreadHandle, ACCESS_MASK DesiredAc
 
 namespace safetyhook {
 ThreadFreezer::ThreadFreezer() {
-    auto peb = reinterpret_cast<uintptr_t>(NtCurrentTeb()->ProcessEnvironmentBlock);
-
-#if defined(_M_X64)
-    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0x110);
-#elif defined(_M_IX86)
-    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0xA0);
-#else
-#error "Unsupported architecture"
-#endif
-    EnterCriticalSection(loader_lock);
-
     size_t num_threads_frozen{};
 
     do {
@@ -62,8 +51,6 @@ ThreadFreezer::ThreadFreezer() {
             m_frozen_threads.push_back({thread_id, thread, thread_ctx});
         }
     } while (num_threads_frozen != m_frozen_threads.size());
-
-    LeaveCriticalSection(loader_lock);
 }
 
 ThreadFreezer::~ThreadFreezer() {
