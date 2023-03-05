@@ -27,8 +27,10 @@ std::shared_ptr<Allocator> Allocator::global() {
     }
 
     auto allocator = std::make_shared<Allocator>();
+
     global_allocator = allocator;
-    return std::move(allocator);
+
+    return allocator;
 }
 
 std::expected<uintptr_t, Allocator::Error> Allocator::allocate(size_t size) {
