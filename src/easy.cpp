@@ -24,4 +24,4 @@ MidHook create_mid(uintptr_t target, MidHookFn destination) {
         return {};
     }
 }
-}
+} // namespace safetyhook
