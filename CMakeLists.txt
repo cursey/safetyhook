@@ -69,6 +69,7 @@ endif()
 # Target: safetyhook
 set(safetyhook_SOURCES
 	"src/allocator.cpp"
+	"src/easy.cpp"
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"
 	"src/thread_freezer.cpp"

@@ -46,7 +46,7 @@ int main() {
         }
     }
 
-    g_hook = *SafetyHookMid::create(ip, hooked_add_42);
+    g_hook = safetyhook::create_mid(ip, hooked_add_42);
 
     std::cout << add_42(3) << "\n";
 

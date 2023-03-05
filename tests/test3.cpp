@@ -25,7 +25,7 @@ int main() {
     std::thread t(SayHelloInfinitely);
     t.detach();
 
-    g_hook = *SafetyHookInline::create((void*)SayHello, (void*)Hooked_SayHello);
+    g_hook = safetyhook::create_inline((void*)SayHello, (void*)Hooked_SayHello);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
