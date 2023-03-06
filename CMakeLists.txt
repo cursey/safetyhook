@@ -25,6 +25,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 endif()
 
 # Options
+option(SAFETYHOOK_BUILD_DOCS "" OFF)
 option(SAFETYHOOK_BUILD_TESTS "" OFF)
 option(SAFETYHOOK_BUNDLE_ZYDIS "" ON)
 
@@ -43,6 +44,11 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			ON
 	)
 	FetchContent_MakeAvailable(Catch2)
+
+endif()
+# Packages
+if(SAFETYHOOK_BUILD_DOCS) # build-docs
+	find_package(Doxygen REQUIRED)
 
 endif()
 # Target: Zydis
@@ -127,6 +133,34 @@ target_link_libraries(safetyhook PUBLIC
 	ntdll
 )
 
+# Target: docs
+if(SAFETYHOOK_BUILD_DOCS) # build-docs
+	set(CMKR_TARGET docs)
+	get_target_property(HEADER_DIR safetyhook INTERFACE_INCLUDE_DIRECTORIES)
+	file(GLOB_RECURSE HEADER_FILES ${HEADER_DIR}/*.hpp)
+	set(DOXYGEN_INDEX_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
+	set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+	set(DOXYFILE_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
+	configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT})
+	add_custom_command(
+	    OUTPUT ${DOXYGEN_INDEX_FILE}
+	    DEPENDS ${HEADER_FILES}
+	    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+	    MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+	    COMMENT "Generating docs"
+	)
+	add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+
+	set(docs_SOURCES
+		cmake.toml
+	)
+
+	add_custom_target(docs SOURCES)
+
+	target_sources(docs PRIVATE ${docs_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${docs_SOURCES})
+
+endif()
 # Target: test0
 if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	set(test0_SOURCES

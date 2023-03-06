@@ -4,3 +4,6 @@ cmake-build*
 .idea
 .vscode
 .vs/
+docs/html
+docs/latex
+docs/Doxyfile

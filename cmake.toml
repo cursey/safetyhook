@@ -3,10 +3,12 @@
 name = "safetyhook"
 
 [options]
+SAFETYHOOK_BUILD_DOCS = false
 SAFETYHOOK_BUILD_TESTS = false
 SAFETYHOOK_BUNDLE_ZYDIS = true
 
 [conditions]
+build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-tests = "SAFETYHOOK_BUILD_TESTS"
 bundle-zydis = "SAFETYHOOK_BUNDLE_ZYDIS"
 
@@ -15,6 +17,10 @@ condition = "build-tests"
 git = "https://github.com/catchorg/Catch2.git"
 tag = "v3.3.2"
 shallow = true
+
+[find-package.Doxygen]
+condition = "build-docs"
+required = true
 
 [target.Zydis]
 condition = "bundle-zydis"
@@ -34,6 +40,27 @@ link-libraries = ["Zydis", "ntdll"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+
+[target.docs]
+condition = "build-docs"
+type = "custom"
+cmake-before = """
+get_target_property(HEADER_DIR safetyhook INTERFACE_INCLUDE_DIRECTORIES)
+file(GLOB_RECURSE HEADER_FILES ${HEADER_DIR}/*.hpp)
+set(DOXYGEN_INDEX_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
+set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+set(DOXYFILE_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
+configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT})
+add_custom_command(
+    OUTPUT ${DOXYGEN_INDEX_FILE}
+    DEPENDS ${HEADER_FILES}
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+    MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+    COMMENT "Generating docs"
+)
+add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+"""
+
 
 [target.test0]
 condition = "build-tests"

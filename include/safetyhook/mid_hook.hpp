@@ -1,3 +1,6 @@
+/// @file safetyhook/mid_hook.hpp
+/// @brief Mid function hooking class.
+
 #pragma once
 
 #include <cstdint>
@@ -8,37 +11,83 @@
 #include "safetyhook/inline_hook.hpp"
 
 namespace safetyhook {
+
+/// @brief A MidHook destination function.
+using MidHookFn = void (*)(Context& ctx);
+
+/// @brief A mid function hook.
 class MidHook final {
 public:
+    /// @brief Error type for MidHook.
     struct Error {
+        /// @brief The type of error.
         enum Type {
             BAD_ALLOCATION,
             BAD_INLINE_HOOK,
         };
 
+        /// @brief The type of error.
         Type type;
 
+        /// @brief Extra error information.
         union Extra {
-            Allocator::Error allocator_error;
-            InlineHook::Error inline_hook_error;
+            Allocator::Error allocator_error;    ///< Allocator error information.
+            InlineHook::Error inline_hook_error; ///< InlineHook error information.
         };
 
+        /// @brief Extra error information.
         Extra extra;
 
         Error() = default;
+
+        /// @brief Constructs a new Error object with the given type.
+        /// @param type The type of error.
         Error(Type type) : type{type} {}
+
+        /// @brief Constructs a BAD_ALLOCATION error.
+        /// @param allocator_error The Allocator::Error responsible.
         Error(Allocator::Error allocator_error) : type{Type::BAD_ALLOCATION} {
             extra.allocator_error = allocator_error;
         }
+
+        /// @brief Constructs a BAD_INLINE_HOOK error.
+        /// @param inline_hook_error The InlineHook::Error responsible.
         Error(InlineHook::Error inline_hook_error) : type{Type::BAD_INLINE_HOOK} {
             extra.inline_hook_error = inline_hook_error;
         }
     };
 
+    /// @brief Creates a new MidHook object.
+    /// @param target The address of the function to hook.
+    /// @param destination The destination function.
+    /// @return The MidHook object or a MidHook::Error if an error occurred.
+    /// @note This will use the default global Allocator.
+    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
     [[nodiscard]] static std::expected<MidHook, Error> create(void* target, MidHookFn destination);
+
+    /// @brief Creates a new MidHook object.
+    /// @param target The address of the function to hook.
+    /// @param destination The destination function.
+    /// @return The MidHook object or a MidHook::Error if an error occurred.
+    /// @note This will use the default global Allocator.
+    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
     [[nodiscard]] static std::expected<MidHook, Error> create(uintptr_t target, MidHookFn destination);
+
+    /// @brief Creates a new MidHook object with a given Allocator.
+    /// @param allocator The Allocator to use.
+    /// @param target The address of the function to hook.
+    /// @param destination The destination function.
+    /// @return The MidHook object or a MidHook::Error if an error occurred.
+    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
     [[nodiscard]] static std::expected<MidHook, Error> create(
         const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination);
+
+    /// @brief Creates a new MidHook object with a given Allocator.
+    /// @param allocator The Allocator to use.
+    /// @param target The address of the function to hook.
+    /// @param destination The destination function.
+    /// @return The MidHook object or a MidHook::Error if an error occurred.
+    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
     [[nodiscard]] static std::expected<MidHook, Error> create(
         const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination);
 
@@ -49,10 +98,21 @@ public:
     MidHook& operator=(MidHook&& other) noexcept;
     ~MidHook() = default;
 
+    /// @brief Reset the hook.
+    /// @details This will remove the hook and free the stub.
+    /// @note This is called automatically in the destructor.
     void reset();
 
-    [[nodiscard]] auto target() const { return m_target; }
-    [[nodiscard]] auto destination() const { return m_destination; }
+    /// @brief Get the target address.
+    /// @return The target address.
+    [[nodiscard]] uintptr_t target() const { return m_target; }
+
+    /// @brief Get the destination function.
+    /// @return The destination function.
+    [[nodiscard]] MidHookFn destination() const { return m_destination; }
+
+    /// @brief Tests if the hook is valid.
+    /// @return true if the hook is valid, false otherwise.
     explicit operator bool() const { return static_cast<bool>(m_stub); }
 
 private:
