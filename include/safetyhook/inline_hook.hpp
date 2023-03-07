@@ -19,33 +19,38 @@ public:
     /// @brief Error type for InlineHook.
     struct Error {
         /// @brief The type of error.
-        enum Type {
+        enum {
             BAD_ALLOCATION,                       ///< An error occurred when allocating memory.
             FAILED_TO_DECODE_INSTRUCTION,         ///< Failed to decode an instruction.
             SHORT_JUMP_IN_TRAMPOLINE,             ///< The trampoline contains a short jump.
             IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE, ///< An IP-relative instruction is out of range.
-        };
-
-        /// @brief The type of error.
-        Type type;
+        } type;
 
         /// @brief Extra information about the error.
-        union Extra {
+        union {
             Allocator::Error allocator_error; ///< Allocator error information.
         };
 
-        /// @brief Extra information about the error.
-        Extra extra;
+        /// @brief Create a BAD_ALLOCATION error.
+        /// @param err The Allocator::Error that failed.
+        /// @return The new BAD_ALLOCATION error.
+        [[nodiscard]] static Error bad_allocation(Allocator::Error err) {
+            return {.type = BAD_ALLOCATION, .allocator_error = err};
+        }
 
-        Error() = default;
+        /// @brief Create a FAILED_TO_DECODE_INSTRUCTION error.
+        /// @return The new FAILED_TO_DECODE_INSTRUCTION error.
+        [[nodiscard]] static Error failed_to_decode_instruction() { return {.type = FAILED_TO_DECODE_INSTRUCTION}; }
 
-        /// @brief Constructs a new Error object with the given type.
-        /// @param type The type of the error.
-        Error(Type type) : type{type} {}
+        /// @brief Create a SHORT_JUMP_IN_TRAMPOLINE error.
+        /// @return The new SHORT_JUMP_IN_TRAMPOLINE error.
+        [[nodiscard]] static Error short_jump_in_trampoline() { return {.type = SHORT_JUMP_IN_TRAMPOLINE}; }
 
-        /// @brief Creates a BAD_ALLOCATION error.
-        /// @param allocator_error The Allocator::Error responsible.
-        Error(Allocator::Error allocator_error) : type{Type::BAD_ALLOCATION}, extra{allocator_error} {}
+        /// @brief Create a IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
+        /// @return The new IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
+        [[nodiscard]] static Error ip_relative_instruction_out_of_range() {
+            return {.type = IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE};
+        }
     };
 
     /// @brief Create an inline hook.

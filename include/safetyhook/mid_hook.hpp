@@ -21,39 +21,29 @@ public:
     /// @brief Error type for MidHook.
     struct Error {
         /// @brief The type of error.
-        enum Type {
+        enum {
             BAD_ALLOCATION,
             BAD_INLINE_HOOK,
-        };
-
-        /// @brief The type of error.
-        Type type;
+        } type;
 
         /// @brief Extra error information.
-        union Extra {
+        union {
             Allocator::Error allocator_error;    ///< Allocator error information.
             InlineHook::Error inline_hook_error; ///< InlineHook error information.
         };
 
-        /// @brief Extra error information.
-        Extra extra;
-
-        Error() = default;
-
-        /// @brief Constructs a new Error object with the given type.
-        /// @param type The type of error.
-        Error(Type type) : type{type} {}
-
-        /// @brief Constructs a BAD_ALLOCATION error.
-        /// @param allocator_error The Allocator::Error responsible.
-        Error(Allocator::Error allocator_error) : type{Type::BAD_ALLOCATION} {
-            extra.allocator_error = allocator_error;
+        /// @brief Create a BAD_ALLOCATION error.
+        /// @param err The Allocator::Error that failed.
+        /// @return The new BAD_ALLOCATION error.
+        [[nodiscard]] static Error bad_allocation(Allocator::Error err) {
+            return {.type = BAD_ALLOCATION, .allocator_error = err};
         }
 
-        /// @brief Constructs a BAD_INLINE_HOOK error.
-        /// @param inline_hook_error The InlineHook::Error responsible.
-        Error(InlineHook::Error inline_hook_error) : type{Type::BAD_INLINE_HOOK} {
-            extra.inline_hook_error = inline_hook_error;
+        /// @brief Create a BAD_INLINE_HOOK error.
+        /// @param err The InlineHook::Error that failed.
+        /// @return The new BAD_INLINE_HOOK error.
+        [[nodiscard]] static Error bad_inline_hook(InlineHook::Error err) {
+            return {.type = BAD_INLINE_HOOK, .inline_hook_error = err};
         }
     };
 

@@ -186,14 +186,14 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
         ZydisDecodedInstruction ix{};
 
         if (!decode(&ix, ip)) {
-            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
+            return std::unexpected{Error::failed_to_decode_instruction()};
         }
 
         // TODO: Add support for expanding short jumps here. Until then, short
         // jumps within the trampoline are problematic so we just return for
         // now.
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.imm[0].size != 32) {
-            return std::unexpected{Error::SHORT_JUMP_IN_TRAMPOLINE};
+            return std::unexpected{Error::short_jump_in_trampoline()};
         }
 
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.disp.size == 32) {
@@ -217,7 +217,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     auto trampoline_allocation = allocator->allocate_near(desired_addresses, trampoline_allocation_size);
 
     if (!trampoline_allocation) {
-        return std::unexpected{trampoline_allocation.error()};
+        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
 
     m_trampoline = std::move(*trampoline_allocation);
@@ -230,7 +230,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
         if (!decode(&ix, m_target + i)) {
             m_trampoline.free();
-            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
+            return std::unexpected{Error::failed_to_decode_instruction()};
         }
 
         if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.disp.size == 32) {
@@ -284,14 +284,14 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
         ZydisDecodedInstruction ix{};
 
         if (!decode(&ix, ip)) {
-            return std::unexpected{Error::FAILED_TO_DECODE_INSTRUCTION};
+            return std::unexpected{Error::failed_to_decode_instruction()};
         }
 
         // We can't support any instruction that is IP relative here because
         // ff_hook should only be called if e9_hook failed indicating that
         // we're likely outside the +- 2GB range.
         if (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
-            return std::unexpected{Error::IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE};
+            return std::unexpected{Error::ip_relative_instruction_out_of_range()};
         }
 
         m_trampoline_size += ix.length;
@@ -302,7 +302,7 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
     auto trampoline_allocation = allocator->allocate(trampoline_allocation_size);
 
     if (!trampoline_allocation) {
-        return std::unexpected{trampoline_allocation.error()};
+        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
 
     m_trampoline = std::move(*trampoline_allocation);
