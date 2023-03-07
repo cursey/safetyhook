@@ -44,6 +44,7 @@ void Allocation::free() {
         m_allocator->free(m_address, m_size);
         m_address = 0;
         m_size = 0;
+        m_allocator.reset();
     }
 }
 
