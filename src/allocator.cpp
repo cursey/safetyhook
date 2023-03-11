@@ -3,6 +3,7 @@
 #include <functional>
 #include <limits>
 
+#define NOMINMAX
 #include <Windows.h>
 
 #include "safetyhook/allocator.hpp"

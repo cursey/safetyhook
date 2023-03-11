@@ -88,10 +88,6 @@ target_sources(safetyhook PRIVATE ${safetyhook_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${safetyhook_SOURCES})
 
 add_library(safetyhook::safetyhook ALIAS safetyhook)
-target_compile_definitions(safetyhook PUBLIC
-	NOMINMAX
-)
-
 target_compile_features(safetyhook PUBLIC
 	cxx_std_23
 )

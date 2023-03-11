@@ -34,7 +34,6 @@ type = "static"
 sources = ["src/*.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_23"]
-compile-definitions = ["NOMINMAX"]
 alias = "safetyhook::safetyhook"
 link-libraries = ["Zydis", "ntdll"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
