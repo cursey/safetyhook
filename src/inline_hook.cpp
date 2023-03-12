@@ -5,10 +5,10 @@
 
 #include <Zydis.h>
 
-#include "safetyhook/allocator.hpp"
-#include "safetyhook/thread_freezer.hpp"
+#include <safetyhook/allocator.hpp>
+#include <safetyhook/thread_freezer.hpp>
 
-#include "safetyhook/inline_hook.hpp"
+#include <safetyhook/inline_hook.hpp>
 
 namespace safetyhook {
 class UnprotectMemory {

@@ -1,9 +1,9 @@
 #include <algorithm>
 
-#include "safetyhook/allocator.hpp"
-#include "safetyhook/inline_hook.hpp"
+#include <safetyhook/allocator.hpp>
+#include <safetyhook/inline_hook.hpp>
 
-#include "safetyhook/mid_hook.hpp"
+#include <safetyhook/mid_hook.hpp>
 
 namespace safetyhook {
 

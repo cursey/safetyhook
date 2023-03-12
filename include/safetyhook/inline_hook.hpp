@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "safetyhook/allocator.hpp"
+#include <safetyhook/allocator.hpp>
 
 namespace safetyhook {
 /// @brief An inline hook.

@@ -3,7 +3,9 @@
 #include <Windows.h>
 #include <winternl.h>
 
-#include "safetyhook/thread_freezer.hpp"
+#include <safetyhook/thread_freezer.hpp>
+
+#pragma comment(lib, "ntdll")
 
 extern "C" {
 NTSTATUS

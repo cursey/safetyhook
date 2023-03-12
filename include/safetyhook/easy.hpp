@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "safetyhook/inline_hook.hpp"
-#include "safetyhook/mid_hook.hpp"
+#include <safetyhook/inline_hook.hpp>
+#include <safetyhook/mid_hook.hpp>
 
 namespace safetyhook {
 /// @brief Easy to use API for creating an InlineHook.

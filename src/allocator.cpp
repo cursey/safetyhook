@@ -6,7 +6,7 @@
 #define NOMINMAX
 #include <Windows.h>
 
-#include "safetyhook/allocator.hpp"
+#include <safetyhook/allocator.hpp>
 
 namespace safetyhook {
 constexpr auto align_up(uintptr_t address, size_t align) {
