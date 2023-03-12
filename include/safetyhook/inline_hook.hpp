@@ -140,12 +140,7 @@ public:
     /// @note This function will use the default calling convention set by your compiler.
     template <typename RetT = void, typename... Args> RetT call(Args... args) {
         std::scoped_lock lock{m_mutex};
-
-        if (m_trampoline) {
-            return original<RetT (*)(Args...)>()(args...);
-        } else {
-            return RetT();
-        }
+        return m_trampoline ? original<RetT (*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -156,12 +151,7 @@ public:
     /// @note This function will use the __cdecl calling convention.
     template <typename RetT = void, typename... Args> RetT ccall(Args... args) {
         std::scoped_lock lock{m_mutex};
-
-        if (m_trampoline) {
-            return original<RetT(__cdecl*)(Args...)>()(args...);
-        } else {
-            return RetT();
-        }
+        return m_trampoline ? original<RetT(__cdecl*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -172,12 +162,7 @@ public:
     /// @note This function will use the __thiscall calling convention.
     template <typename RetT = void, typename... Args> RetT thiscall(Args... args) {
         std::scoped_lock lock{m_mutex};
-
-        if (m_trampoline) {
-            return original<RetT(__thiscall*)(Args...)>()(args...);
-        } else {
-            return RetT();
-        }
+        return m_trampoline ? original<RetT(__thiscall*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -188,12 +173,7 @@ public:
     /// @note This function will use the __stdcall calling convention.
     template <typename RetT = void, typename... Args> RetT stdcall(Args... args) {
         std::scoped_lock lock{m_mutex};
-
-        if (m_trampoline) {
-            return original<RetT(__stdcall*)(Args...)>()(args...);
-        } else {
-            return RetT();
-        }
+        return m_trampoline ? original<RetT(__stdcall*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
