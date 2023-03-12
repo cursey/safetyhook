@@ -195,19 +195,20 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             return std::unexpected{Error::failed_to_decode_instruction()};
         }
 
-        // TODO: Add support for expanding short jumps here. Until then, short
-        // jumps within the trampoline are problematic so we just return for
-        // now.
-        if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.imm[0].size != 32) {
-            return std::unexpected{Error::short_jump_in_trampoline()};
-        }
+        const auto is_relative = (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) != 0;
 
-        if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.disp.size == 32) {
-            auto target_address = ip + ix.length + (int32_t)ix.raw.disp.value;
-            desired_addresses.emplace_back(target_address);
-        } else if ((ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) && ix.raw.imm[0].size == 32) {
-            auto target_address = ip + ix.length + (int32_t)ix.raw.imm[0].value.s;
-            desired_addresses.emplace_back(target_address);
+        if (is_relative) {
+            if (ix.raw.disp.size == 32) {
+                auto target_address = ip + ix.length + (int32_t)ix.raw.disp.value;
+                desired_addresses.emplace_back(target_address);
+            } else if (ix.raw.imm[0].size == 32) {
+                auto target_address = ip + ix.length + (int32_t)ix.raw.imm[0].value.s;
+                desired_addresses.emplace_back(target_address);
+            } else {
+                // TODO: Add support for expanding short jumps here. Until then, short jumps within the trampoline are
+                // problematic so we just return for now.
+                return std::unexpected{Error::short_jump_in_trampoline()};
+            }
         }
 
         m_trampoline_size += ix.length;
