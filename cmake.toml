@@ -6,11 +6,14 @@ name = "safetyhook"
 SAFETYHOOK_BUILD_DOCS = false
 SAFETYHOOK_BUILD_TESTS = false
 SAFETYHOOK_BUNDLE_ZYDIS = true
+SAFETYHOOK_AMALGAMATE = false
 
 [conditions]
 build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-tests = "SAFETYHOOK_BUILD_TESTS"
 bundle-zydis = "SAFETYHOOK_BUNDLE_ZYDIS"
+amalgamate = "SAFETYHOOK_AMALGAMATE"
+build-amalgamate-tests = "SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE"
 
 [fetch-content.Catch2]
 condition = "build-tests"
@@ -20,6 +23,10 @@ shallow = true
 
 [find-package.Doxygen]
 condition = "build-docs"
+required = true
+
+[find-package.Python3]
+condition = "amalgamate"
 required = true
 
 [target.Zydis]
@@ -44,8 +51,7 @@ gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dt
 condition = "build-docs"
 type = "custom"
 cmake-before = """
-get_target_property(HEADER_DIR safetyhook INTERFACE_INCLUDE_DIRECTORIES)
-file(GLOB_RECURSE HEADER_FILES ${HEADER_DIR}/*.hpp)
+file(GLOB_RECURSE HEADER_FILES include/*.hpp)
 set(DOXYGEN_INDEX_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
 set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
 set(DOXYFILE_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
@@ -60,6 +66,24 @@ add_custom_command(
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 """
 
+[target.amalgamation]
+condition = "amalgamate"
+type = "custom"
+cmake-before = """
+file(GLOB_RECURSE HEADER_FILES include/*.hpp)
+file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
+set(AMALGAMATED_FILE ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.cpp)
+set(AMALGAMATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.hpp)
+set(AMALGAMATE_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate.py)
+add_custom_command(
+    OUTPUT ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+    DEPENDS ${HEADER_FILES} ${SOURCE_FILES} ${AMALGAMATE_SCRIPT}
+    COMMAND ${Python3_EXECUTABLE} ${AMALGAMATE_SCRIPT} ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+    MAIN_DEPENDENCY ${AMALGAMATE_SCRIPT}
+    COMMENT "Amalgamating"
+)
+add_custom_target(Amalgamate ALL DEPENDS ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER})
+"""
 
 [target.test0]
 condition = "build-tests"
@@ -90,3 +114,14 @@ condition = "build-tests"
 type = "executable"
 sources = ["unittest/*.cpp"]
 link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook"]
+
+[target.unittest-amalgamated]
+condition = "build-amalgamate-tests"
+type = "executable"
+sources = ["unittest/*.cpp", "amalgamated-dist/safetyhook.cpp"]
+include-directories = ["amalgamated-dist/"]
+link-libraries = ["Zydis", "Catch2::Catch2WithMain"]
+compile-features = ["cxx_std_23"]
+cmake-after = """
+add_dependencies(unittest-amalgamated Amalgamate)
+"""

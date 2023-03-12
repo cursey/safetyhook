@@ -7,3 +7,4 @@ cmake-build*
 docs/html
 docs/latex
 docs/Doxyfile
+amalgamated-dist

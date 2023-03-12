@@ -28,6 +28,7 @@ endif()
 option(SAFETYHOOK_BUILD_DOCS "" OFF)
 option(SAFETYHOOK_BUILD_TESTS "" OFF)
 option(SAFETYHOOK_BUNDLE_ZYDIS "" ON)
+option(SAFETYHOOK_AMALGAMATE "" OFF)
 
 project(safetyhook)
 
@@ -49,6 +50,10 @@ endif()
 # Packages
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
 	find_package(Doxygen REQUIRED)
+
+endif()
+if(SAFETYHOOK_AMALGAMATE) # amalgamate
+	find_package(Python3 REQUIRED)
 
 endif()
 # Target: Zydis
@@ -132,8 +137,7 @@ target_link_libraries(safetyhook PUBLIC
 # Target: docs
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
 	set(CMKR_TARGET docs)
-	get_target_property(HEADER_DIR safetyhook INTERFACE_INCLUDE_DIRECTORIES)
-	file(GLOB_RECURSE HEADER_FILES ${HEADER_DIR}/*.hpp)
+	file(GLOB_RECURSE HEADER_FILES include/*.hpp)
 	set(DOXYGEN_INDEX_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
 	set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
 	set(DOXYFILE_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
@@ -155,6 +159,33 @@ if(SAFETYHOOK_BUILD_DOCS) # build-docs
 
 	target_sources(docs PRIVATE ${docs_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${docs_SOURCES})
+
+endif()
+# Target: amalgamation
+if(SAFETYHOOK_AMALGAMATE) # amalgamate
+	set(CMKR_TARGET amalgamation)
+	file(GLOB_RECURSE HEADER_FILES include/*.hpp)
+	file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
+	set(AMALGAMATED_FILE ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.cpp)
+	set(AMALGAMATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.hpp)
+	set(AMALGAMATE_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate.py)
+	add_custom_command(
+	    OUTPUT ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+	    DEPENDS ${HEADER_FILES} ${SOURCE_FILES} ${AMALGAMATE_SCRIPT}
+	    COMMAND ${Python3_EXECUTABLE} ${AMALGAMATE_SCRIPT} ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+	    MAIN_DEPENDENCY ${AMALGAMATE_SCRIPT}
+	    COMMENT "Amalgamating"
+	)
+	add_custom_target(Amalgamate ALL DEPENDS ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER})
+
+	set(amalgamation_SOURCES
+		cmake.toml
+	)
+
+	add_custom_target(amalgamation SOURCES)
+
+	target_sources(amalgamation PRIVATE ${amalgamation_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${amalgamation_SOURCES})
 
 endif()
 # Target: test0
@@ -268,5 +299,42 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	if(NOT CMKR_VS_STARTUP_PROJECT)
 		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT unittest)
 	endif()
+
+endif()
+# Target: unittest-amalgamated
+if(SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-tests
+	set(unittest-amalgamated_SOURCES
+		"unittest/allocator.cpp"
+		"unittest/inline_hook.cpp"
+		"unittest/mid_hook.cpp"
+		"amalgamated-dist/safetyhook.cpp"
+		cmake.toml
+	)
+
+	add_executable(unittest-amalgamated)
+
+	target_sources(unittest-amalgamated PRIVATE ${unittest-amalgamated_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${unittest-amalgamated_SOURCES})
+
+	target_compile_features(unittest-amalgamated PRIVATE
+		cxx_std_23
+	)
+
+	target_include_directories(unittest-amalgamated PRIVATE
+		"amalgamated-dist/"
+	)
+
+	target_link_libraries(unittest-amalgamated PRIVATE
+		Zydis
+		Catch2::Catch2WithMain
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT unittest-amalgamated)
+	endif()
+
+	set(CMKR_TARGET unittest-amalgamated)
+	add_dependencies(unittest-amalgamated Amalgamate)
 
 endif()
