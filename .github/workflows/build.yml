@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Configure
         run: |
@@ -30,3 +30,31 @@ jobs:
         run: |
           ./build/${{matrix.build_type}}/unittest.exe
           ./build/${{matrix.build_type}}/unittest-amalgamated.exe
+
+  amalgamated-dist:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Amalgamate
+        run: |
+          python3 amalgamate.py
+
+      - name: Upload amalgamate
+        uses: actions/upload-artifact@v3
+        with:
+          name: safetyhook-amalgamated
+          path: amalgamated-dist/
+
+      - name: Download & extract Zydis
+        run: |
+          Invoke-WebRequest -Uri https://github.com/zyantific/zydis/releases/download/v4.0.0/zydis-amalgamated.zip -OutFile zydis.zip
+          Expand-Archive .\zydis.zip .
+          Remove-Item .\zydis.zip
+
+      - name: Upload amalgamate with Zydis
+        uses: actions/upload-artifact@v3
+        with:
+          name: safetyhook-amalgamated-zydis
+          path: amalgamated-dist/
