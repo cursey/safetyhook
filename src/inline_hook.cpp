@@ -3,7 +3,13 @@
 
 #include <Windows.h>
 
+#if __has_include(<Zydis/Zydis.h>)
+#include <Zydis/Zydis.h>
+#elif __has_include(<Zydis.h>)
 #include <Zydis.h>
+#else
+#error "Zydis not found"
+#endif
 
 #include <safetyhook/allocator.hpp>
 #include <safetyhook/thread_freezer.hpp>

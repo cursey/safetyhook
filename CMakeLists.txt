@@ -27,8 +27,8 @@ endif()
 # Options
 option(SAFETYHOOK_BUILD_DOCS "" OFF)
 option(SAFETYHOOK_BUILD_TESTS "" OFF)
-option(SAFETYHOOK_BUNDLE_ZYDIS "" ON)
 option(SAFETYHOOK_AMALGAMATE "" OFF)
+option(SAFETYHOOK_FETCH_ZYDIS "" OFF)
 
 project(safetyhook)
 
@@ -47,6 +47,19 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	FetchContent_MakeAvailable(Catch2)
 
 endif()
+if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
+	message(STATUS "Fetching Zydis (v4.0.0)...")
+	FetchContent_Declare(Zydis
+		GIT_REPOSITORY
+			"https://github.com/zyantific/zydis.git"
+		GIT_TAG
+			v4.0.0
+		GIT_SHALLOW
+			ON
+	)
+	FetchContent_MakeAvailable(Zydis)
+
+endif()
 # Packages
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
 	find_package(Doxygen REQUIRED)
@@ -54,27 +67,6 @@ if(SAFETYHOOK_BUILD_DOCS) # build-docs
 endif()
 if(SAFETYHOOK_AMALGAMATE) # amalgamate
 	find_package(Python3 REQUIRED)
-
-endif()
-# Target: Zydis
-if(SAFETYHOOK_BUNDLE_ZYDIS) # bundle-zydis
-	set(Zydis_SOURCES
-		"src/Zydis.c"
-		cmake.toml
-	)
-
-	add_library(Zydis STATIC)
-
-	target_sources(Zydis PRIVATE ${Zydis_SOURCES})
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Zydis_SOURCES})
-
-	target_compile_definitions(Zydis PUBLIC
-		ZYDIS_STATIC_BUILD
-	)
-
-	target_include_directories(Zydis PUBLIC
-		"include/"
-	)
 
 endif()
 # Target: safetyhook

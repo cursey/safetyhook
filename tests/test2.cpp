@@ -1,6 +1,13 @@
 #include <iostream>
 
+#if __has_include(<Zydis/Zydis.h>)
+#include <Zydis/Zydis.h>
+#elif __has_include(<Zydis.h>)
 #include <Zydis.h>
+#else
+#error "Zydis not found"
+#endif
+
 #include <safetyhook.hpp>
 
 __declspec(noinline) int add_42(int a) {

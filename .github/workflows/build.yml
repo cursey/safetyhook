@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_BUILD_TESTS=ON -DSAFETYHOOK_AMALGAMATE=ON ..
+          cmake -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_TESTS=ON -DSAFETYHOOK_AMALGAMATE=ON ..
 
       - name: Build
         run: |

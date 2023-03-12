@@ -5,20 +5,26 @@ name = "safetyhook"
 [options]
 SAFETYHOOK_BUILD_DOCS = false
 SAFETYHOOK_BUILD_TESTS = false
-SAFETYHOOK_BUNDLE_ZYDIS = true
 SAFETYHOOK_AMALGAMATE = false
+SAFETYHOOK_FETCH_ZYDIS = false
 
 [conditions]
 build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-tests = "SAFETYHOOK_BUILD_TESTS"
-bundle-zydis = "SAFETYHOOK_BUNDLE_ZYDIS"
 amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-tests = "SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE"
+fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
 
 [fetch-content.Catch2]
 condition = "build-tests"
 git = "https://github.com/catchorg/Catch2.git"
 tag = "v3.3.2"
+shallow = true
+
+[fetch-content.Zydis]
+condition = "fetch-zydis"
+git = "https://github.com/zyantific/zydis.git"
+tag = "v4.0.0"
 shallow = true
 
 [find-package.Doxygen]
@@ -28,13 +34,6 @@ required = true
 [find-package.Python3]
 condition = "amalgamate"
 required = true
-
-[target.Zydis]
-condition = "bundle-zydis"
-type = "static"
-sources = ["src/Zydis.c"]
-include-directories = ["include/"]
-compile-definitions = ["ZYDIS_STATIC_BUILD"]
 
 [target.safetyhook]
 type = "static"
