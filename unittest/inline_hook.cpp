@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <xbyak/xbyak.h>
 #include <safetyhook.hpp>
 
 TEST_CASE("Function hooked multiple times", "[inline_hook]") {
@@ -143,4 +144,404 @@ TEST_CASE("Active function is hooked and unhooked", "[inline_hook]") {
 
     REQUIRE(Target::say_hello(0) == "Hello #0");
     REQUIRE(count > 0);
+}
+
+TEST_CASE("Function with short unconditional branch is hooked", "[inline-hook]") {
+    using namespace std::literals;
+    using namespace Xbyak::util;
+
+    static SafetyHookInline hook;
+
+    struct Hook {
+        static int __fastcall fn() { 
+            return hook.thiscall<int>() + 42; 
+        };
+    };
+
+    Xbyak::CodeGenerator cg{};
+
+    cg.jmp("@f");
+    cg.mov(eax, 0);
+    cg.ret();
+    cg.nop(10, false);
+    cg.L("@@");
+    cg.mov(eax, 1);
+    cg.ret();
+    cg.nop(10, false);
+
+    const auto fn = (int(__fastcall*)())cg.getCode();
+
+    REQUIRE(fn() == 1);
+
+    hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+    REQUIRE(fn() == 43);
+
+    hook.reset();
+
+    REQUIRE(fn() == 1);
+}
+
+TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
+    using namespace std::literals;
+    using namespace Xbyak::util;
+
+    static SafetyHookInline hook;
+
+    struct Hook {
+        static int __fastcall fn(int x) { 
+            return hook.thiscall<int>(x) + 42; 
+        };
+    };
+
+    Xbyak::CodeGenerator cg{};
+    Xbyak::Label label{};
+    const auto finalize = [&cg, &label] {
+        cg.mov(eax, 0);
+        cg.ret();
+        cg.nop(10, false);
+        cg.L(label);
+        cg.mov(eax, 1);
+        cg.ret();
+        cg.nop(10, false);
+        return (int(__fastcall*)(int))cg.getCode();
+    };
+
+    cg.cmp(ecx, 8);
+
+    SECTION("JB") {
+        cg.jb(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JBE") {
+        cg.jbe(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JL") {
+        cg.jl(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JLE") {
+        cg.jle(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JNB") {
+        cg.jnb(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNBE") {
+        cg.jnbe(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNL") {
+        cg.jnl(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNLE") {
+        cg.jnle(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNO") {
+        cg.jno(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNP") {
+        cg.jnp(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNS") {
+        cg.jns(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JNZ") {
+        cg.jnz(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 43);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 1);
+    }
+
+    SECTION("JO") {
+        cg.jo(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JP") {
+        cg.jp(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JS") {
+        cg.js(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 43);
+        CHECK(fn(8) == 42);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 1);
+        CHECK(fn(8) == 0);
+        CHECK(fn(9) == 0);
+    }
+
+    SECTION("JZ") {
+        cg.jz(label);
+        const auto fn = finalize();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+
+        hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+        CHECK(fn(7) == 42);
+        CHECK(fn(8) == 43);
+        CHECK(fn(9) == 42);
+
+        hook.reset();
+
+        CHECK(fn(7) == 0);
+        CHECK(fn(8) == 1);
+        CHECK(fn(9) == 0);
+    }
 }

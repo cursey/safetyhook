@@ -21,6 +21,12 @@ git = "https://github.com/catchorg/Catch2.git"
 tag = "v3.3.2"
 shallow = true
 
+[fetch-content.xbyak]
+condition = "build-tests"
+git = "https://github.com/herumi/xbyak.git"
+tag = "v6.69"
+shallow = true
+
 [fetch-content.Zydis]
 condition = "fetch-zydis"
 git = "https://github.com/zyantific/zydis.git"
@@ -112,14 +118,14 @@ link-libraries = ["safetyhook::safetyhook"]
 condition = "build-tests"
 type = "executable"
 sources = ["unittest/*.cpp"]
-link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook"]
+link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook", "xbyak::xbyak"]
 
 [target.unittest-amalgamated]
 condition = "build-amalgamate-tests"
 type = "executable"
 sources = ["unittest/*.cpp", "amalgamated-dist/safetyhook.cpp"]
 include-directories = ["amalgamated-dist/"]
-link-libraries = ["Zydis", "Catch2::Catch2WithMain"]
+link-libraries = ["Zydis", "Catch2::Catch2WithMain", "xbyak::xbyak"]
 compile-features = ["cxx_std_23"]
 cmake-after = """
 add_dependencies(unittest-amalgamated Amalgamate)

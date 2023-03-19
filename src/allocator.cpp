@@ -229,8 +229,8 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
     MEMORY_BASIC_INFORMATION mbi{};
 
     // Search backwards from the desired_address.
-    for (auto p = desired_address; p > search_start;
-         p = align_down((uintptr_t)mbi.BaseAddress - 1, si.dwAllocationGranularity)) {
+    for (auto p = desired_address; p > search_start && in_range(p, desired_addresses, max_distance);
+         p = align_down((uintptr_t)mbi.AllocationBase - 1, si.dwAllocationGranularity)) {
         if (VirtualQuery((LPCVOID)p, &mbi, sizeof(mbi)) == 0) {
             break;
         }
@@ -245,7 +245,8 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
     }
 
     // Search forwards from the desired_address.
-    for (auto p = desired_address; p < search_end; p += mbi.RegionSize) {
+    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance);
+         p += mbi.RegionSize) {
         if (VirtualQuery((LPCVOID)p, &mbi, sizeof(mbi)) == 0) {
             break;
         }

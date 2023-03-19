@@ -47,6 +47,19 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	FetchContent_MakeAvailable(Catch2)
 
 endif()
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	message(STATUS "Fetching xbyak (v6.69)...")
+	FetchContent_Declare(xbyak
+		GIT_REPOSITORY
+			"https://github.com/herumi/xbyak.git"
+		GIT_TAG
+			v6.69
+		GIT_SHALLOW
+			ON
+	)
+	FetchContent_MakeAvailable(xbyak)
+
+endif()
 if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
 	message(STATUS "Fetching Zydis (v4.0.0)...")
 	FetchContent_Declare(Zydis
@@ -273,6 +286,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	set(unittest_SOURCES
 		"unittest/allocator.cpp"
 		"unittest/inline_hook.cpp"
+		"unittest/inline_hook.x86_64.cpp"
 		"unittest/mid_hook.cpp"
 		cmake.toml
 	)
@@ -285,6 +299,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_link_libraries(unittest PRIVATE
 		Catch2::Catch2WithMain
 		safetyhook::safetyhook
+		xbyak::xbyak
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -298,6 +313,7 @@ if(SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-tests
 	set(unittest-amalgamated_SOURCES
 		"unittest/allocator.cpp"
 		"unittest/inline_hook.cpp"
+		"unittest/inline_hook.x86_64.cpp"
 		"unittest/mid_hook.cpp"
 		"amalgamated-dist/safetyhook.cpp"
 		cmake.toml
@@ -319,6 +335,7 @@ if(SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-tests
 	target_link_libraries(unittest-amalgamated PRIVATE
 		Zydis
 		Catch2::Catch2WithMain
+		xbyak::xbyak
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)

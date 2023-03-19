@@ -20,15 +20,17 @@ public:
     struct Error {
         /// @brief The type of error.
         enum {
-            BAD_ALLOCATION,                       ///< An error occurred when allocating memory.
-            FAILED_TO_DECODE_INSTRUCTION,         ///< Failed to decode an instruction.
-            SHORT_JUMP_IN_TRAMPOLINE,             ///< The trampoline contains a short jump.
-            IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE, ///< An IP-relative instruction is out of range.
+            BAD_ALLOCATION,                        ///< An error occurred when allocating memory.
+            FAILED_TO_DECODE_INSTRUCTION,          ///< Failed to decode an instruction.
+            SHORT_JUMP_IN_TRAMPOLINE,              ///< The trampoline contains a short jump.
+            IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE,  ///< An IP-relative instruction is out of range.
+            UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, ///< An unsupported instruction was found in the trampoline.
         } type;
 
         /// @brief Extra information about the error.
         union {
             Allocator::Error allocator_error; ///< Allocator error information.
+            uintptr_t ip;                     ///< IP of the problematic instruction.
         };
 
         /// @brief Create a BAD_ALLOCATION error.
@@ -40,16 +42,26 @@ public:
 
         /// @brief Create a FAILED_TO_DECODE_INSTRUCTION error.
         /// @return The new FAILED_TO_DECODE_INSTRUCTION error.
-        [[nodiscard]] static Error failed_to_decode_instruction() { return {.type = FAILED_TO_DECODE_INSTRUCTION}; }
+        [[nodiscard]] static Error failed_to_decode_instruction(uintptr_t ip) {
+            return {.type = FAILED_TO_DECODE_INSTRUCTION, .ip = ip};
+        }
 
         /// @brief Create a SHORT_JUMP_IN_TRAMPOLINE error.
         /// @return The new SHORT_JUMP_IN_TRAMPOLINE error.
-        [[nodiscard]] static Error short_jump_in_trampoline() { return {.type = SHORT_JUMP_IN_TRAMPOLINE}; }
+        [[nodiscard]] static Error short_jump_in_trampoline(uintptr_t ip) {
+            return {.type = SHORT_JUMP_IN_TRAMPOLINE, .ip = ip};
+        }
 
         /// @brief Create a IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
         /// @return The new IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
-        [[nodiscard]] static Error ip_relative_instruction_out_of_range() {
-            return {.type = IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE};
+        [[nodiscard]] static Error ip_relative_instruction_out_of_range(uintptr_t ip) {
+            return {.type = IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE, .ip = ip};
+        }
+
+        /// @brief Create a UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE error.
+        /// @return The new UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE error.
+        [[nodiscard]] static Error unsupported_instruction_in_trampoline(uintptr_t ip) {
+            return {.type = UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, .ip = ip};
         }
     };
 
@@ -236,14 +248,19 @@ private:
     uintptr_t m_target{};
     uintptr_t m_destination{};
     Allocation m_trampoline{};
-    size_t m_trampoline_size{};
     std::vector<uint8_t> m_original_bytes{};
+    uintptr_t m_trampoline_size{};
+    // std::vector<uint8_t> m_trampoline_bytes{};
     std::recursive_mutex m_mutex{};
 
     std::expected<void, Error> setup(
         const std::shared_ptr<Allocator>& allocator, uintptr_t target, uintptr_t destination);
     std::expected<void, Error> e9_hook(const std::shared_ptr<Allocator>& allocator);
+
+#if defined(_M_X64)
     std::expected<void, Error> ff_hook(const std::shared_ptr<Allocator>& allocator);
+#endif
+
     void destroy();
 };
 } // namespace safetyhook
