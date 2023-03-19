@@ -154,7 +154,7 @@ TEST_CASE("Function with short unconditional branch is hooked", "[inline-hook]")
 
     struct Hook {
         static int __fastcall fn() { 
-            return hook.thiscall<int>() + 42; 
+            return hook.fastcall<int>() + 42; 
         };
     };
 
@@ -190,7 +190,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
 
     struct Hook {
         static int __fastcall fn(int x) { 
-            return hook.thiscall<int>(x) + 42; 
+            return hook.fastcall<int>(x) + 42; 
         };
     };
 

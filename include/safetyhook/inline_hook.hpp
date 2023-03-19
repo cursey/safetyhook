@@ -201,6 +201,22 @@ public:
     /// @tparam ...Args The argument types of the function.
     /// @param ...args The arguments to pass to the function.
     /// @return The result of calling the original function.
+    /// @note This function will use the __fastcall calling convention.
+    template <typename RetT = void, typename... Args> RetT fastcall(Args... args) {
+        std::scoped_lock lock{m_mutex};
+
+        if (m_trampoline) {
+            return original<RetT(__fastcall*)(Args...)>()(args...);
+        } else {
+            return RetT();
+        }
+    }
+
+    /// @brief Calls the original function.
+    /// @tparam RetT The return type of the function.
+    /// @tparam ...Args The argument types of the function.
+    /// @param ...args The arguments to pass to the function.
+    /// @return The result of calling the original function.
     /// @note This function will use the default calling convention set by your compiler.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     // safety or are worried about the performance cost of locking the mutex.
@@ -242,6 +258,18 @@ public:
     // safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_stdcall(Args... args) {
         return original<RetT(__stdcall*)(Args...)>()(args...);
+    }
+
+    /// @brief Calls the original function.
+    /// @tparam RetT The return type of the function.
+    /// @tparam ...Args The argument types of the function.
+    /// @param ...args The arguments to pass to the function.
+    /// @return The result of calling the original function.
+    /// @note This function will use the __fastcall calling convention.
+    /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
+    // safety or are worried about the performance cost of locking the mutex.
+    template <typename RetT = void, typename... Args> RetT unsafe_fastcall(Args... args) {
+        return original<RetT(__fastcall*)(Args...)>()(args...);
     }
 
 private:
