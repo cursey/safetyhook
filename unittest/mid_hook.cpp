@@ -14,7 +14,7 @@ TEST_CASE("Mid hook to change a register", "[mid_hook]") {
 
     struct Hook {
         static void add_42(SafetyHookContext& ctx) {
-#if defined(_M_X64)
+#ifdef _M_X64
             ctx.rcx = 1337 - 42;
 #elif defined(_M_IX86) 
             ctx.ecx = 1337 - 42;

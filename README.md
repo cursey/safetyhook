@@ -1,6 +1,6 @@
 # SafetyHook
 
-SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of it's implementation. To that end it currently does:
+SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of its implementation. To that end it currently does:
 
 * Stops all other threads when creating or deleting hooks
 * Fixes the IP of threads that may be affected by the creation or deletion of hooks
@@ -13,7 +13,7 @@ SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It
 
 ## Installation
 
-SafetyHook can be added via CMake's `FetchContent`, git submodules, or copied directly into your project. By default it comes bundled with the [Zydis](https://github.com/zyantific/zydis) disassembler. If you already have [Zydis](https://github.com/zyantific/zydis) integrated into your project you can disable SafetyHook's bundling by using the CMake option `-DSAFETYHOOK_BUNDLE_ZYDIS=OFF`.
+SafetyHook can be added via CMake's `FetchContent`, git submodules, or copied directly into your project. By default, it comes bundled with the [Zydis](https://github.com/zyantific/zydis) disassembler. If you already have [Zydis](https://github.com/zyantific/zydis) integrated into your project you can disable SafetyHook's bundling by using the CMake option `-DSAFETYHOOK_BUNDLE_ZYDIS=OFF`.
 
 ### FetchContent
 
