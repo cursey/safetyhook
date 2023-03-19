@@ -43,7 +43,7 @@ int main() {
     while (*(uint8_t*)ip != 0xC3) {
         ZydisDecodedInstruction ix{};
 
-        ZydisDecoderDecodeInstruction(&decoder, nullptr, (const void*)ip, 15, &ix);
+        ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<void*>(ip), 15, &ix);
 
         // Follow JMPs
         if (ix.opcode == 0xE9) {

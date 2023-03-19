@@ -24,7 +24,7 @@ TEST_CASE("Mid hook to change a register", "[mid_hook]") {
         }
     };
 
-    auto hook_result = SafetyHookMid::create((void*)Target::add_42, Hook::add_42);
+    auto hook_result = SafetyHookMid::create(reinterpret_cast<void*>(Target::add_42), Hook::add_42);
 
     REQUIRE(hook_result);
 

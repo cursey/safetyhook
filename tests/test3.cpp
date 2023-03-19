@@ -8,7 +8,7 @@ __declspec(noinline) void SayHello(int times) {
     std::cout << "Hello #" << times << std::endl;
 }
 
-void Hooked_SayHello(int times) {
+void Hooked_SayHello(int times [[maybe_unused]]) {
     g_hook.call<void, int>(1337);
 }
 
@@ -25,7 +25,7 @@ int main() {
     std::thread t(SayHelloInfinitely);
     t.detach();
 
-    g_hook = safetyhook::create_inline((void*)SayHello, (void*)Hooked_SayHello);
+    g_hook = safetyhook::create_inline(reinterpret_cast<void*>(SayHello), reinterpret_cast<void*>(Hooked_SayHello));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 

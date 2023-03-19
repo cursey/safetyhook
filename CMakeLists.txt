@@ -205,6 +205,41 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_sources(test0 PRIVATE ${test0_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test0_SOURCES})
 
+	target_compile_features(test0 PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test0 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test0 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test0 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
 	target_link_libraries(test0 PRIVATE
 		safetyhook::safetyhook
 	)
@@ -226,6 +261,41 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 
 	target_sources(test1 PRIVATE ${test1_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test1_SOURCES})
+
+	target_compile_features(test1 PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test1 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test1 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test1 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
 
 	target_link_libraries(test1 PRIVATE
 		safetyhook::safetyhook
@@ -249,6 +319,41 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_sources(test2 PRIVATE ${test2_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test2_SOURCES})
 
+	target_compile_features(test2 PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test2 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test2 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test2 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
 	target_link_libraries(test2 PRIVATE
 		safetyhook::safetyhook
 	)
@@ -270,6 +375,41 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 
 	target_sources(test3 PRIVATE ${test3_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test3_SOURCES})
+
+	target_compile_features(test3 PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test3 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test3 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test3 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
 
 	target_link_libraries(test3 PRIVATE
 		safetyhook::safetyhook
@@ -296,6 +436,45 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_sources(unittest PRIVATE ${unittest_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${unittest_SOURCES})
 
+	target_compile_features(unittest PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(unittest PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(unittest PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(unittest PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	target_link_libraries(unittest PRIVATE
+		safetyhook::safetyhook
+	)
+
 	target_link_libraries(unittest PRIVATE
 		Catch2::Catch2WithMain
 		safetyhook::safetyhook
@@ -309,41 +488,78 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 
 endif()
 # Target: unittest-amalgamated
-if(SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-tests
-	set(unittest-amalgamated_SOURCES
-		"unittest/allocator.cpp"
-		"unittest/inline_hook.cpp"
-		"unittest/inline_hook.x86_64.cpp"
-		"unittest/mid_hook.cpp"
-		"amalgamated-dist/safetyhook.cpp"
-		cmake.toml
-	)
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	if(SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-tests
+		set(unittest-amalgamated_SOURCES
+			"unittest/allocator.cpp"
+			"unittest/inline_hook.cpp"
+			"unittest/inline_hook.x86_64.cpp"
+			"unittest/mid_hook.cpp"
+			"amalgamated-dist/safetyhook.cpp"
+			cmake.toml
+		)
 
-	add_executable(unittest-amalgamated)
+		add_executable(unittest-amalgamated)
 
-	target_sources(unittest-amalgamated PRIVATE ${unittest-amalgamated_SOURCES})
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${unittest-amalgamated_SOURCES})
+		target_sources(unittest-amalgamated PRIVATE ${unittest-amalgamated_SOURCES})
+		source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${unittest-amalgamated_SOURCES})
 
-	target_compile_features(unittest-amalgamated PRIVATE
-		cxx_std_23
-	)
+		target_compile_features(unittest-amalgamated PRIVATE
+			cxx_std_23
+		)
 
-	target_include_directories(unittest-amalgamated PRIVATE
-		"amalgamated-dist/"
-	)
+		if(MSVC) # msvc
+			target_compile_options(unittest-amalgamated PRIVATE
+				"/WX"
+				"/permissive-"
+				"/W4"
+				"/w14640"
+			)
+		endif()
 
-	target_link_libraries(unittest-amalgamated PRIVATE
-		Zydis
-		Catch2::Catch2WithMain
-		xbyak::xbyak
-	)
+		if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+			target_compile_options(unittest-amalgamated PRIVATE
+				-Werror
+				-Wall
+				-Wextra
+				-Wshadow
+				-Wnon-virtual-dtor
+				-pedantic
+			)
+		endif()
 
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT unittest-amalgamated)
+		if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+			target_compile_options(unittest-amalgamated PRIVATE
+				-Werror
+				-Wall
+				-Wextra
+				-Wshadow
+				-Wnon-virtual-dtor
+				-pedantic
+			)
+		endif()
+
+		target_link_libraries(unittest-amalgamated PRIVATE
+			safetyhook::safetyhook
+		)
+
+		target_include_directories(unittest-amalgamated PRIVATE
+			"amalgamated-dist/"
+		)
+
+		target_link_libraries(unittest-amalgamated PRIVATE
+			Zydis
+			Catch2::Catch2WithMain
+			xbyak::xbyak
+		)
+
+		get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+		if(NOT CMKR_VS_STARTUP_PROJECT)
+			set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT unittest-amalgamated)
+		endif()
+
+		set(CMKR_TARGET unittest-amalgamated)
+		add_dependencies(unittest-amalgamated Amalgamate)
+
 	endif()
-
-	set(CMKR_TARGET unittest-amalgamated)
-	add_dependencies(unittest-amalgamated Amalgamate)
-
 endif()

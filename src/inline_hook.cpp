@@ -20,10 +20,10 @@ namespace safetyhook {
 class UnprotectMemory {
 public:
     UnprotectMemory(uintptr_t address, size_t size) : m_address{address}, m_size{size} {
-        VirtualProtect((LPVOID)m_address, m_size, PAGE_EXECUTE_READWRITE, &m_protect);
+        VirtualProtect(reinterpret_cast<LPVOID>(m_address), m_size, PAGE_EXECUTE_READWRITE, &m_protect);
     }
 
-    ~UnprotectMemory() { VirtualProtect((LPVOID)m_address, m_size, m_protect, &m_protect); }
+    ~UnprotectMemory() { VirtualProtect(reinterpret_cast<LPVOID>(m_address), m_size, m_protect, &m_protect); }
 
 private:
     uintptr_t m_address{};
@@ -37,13 +37,13 @@ struct JmpE9 {
     uint32_t offset{0};
 };
 
+#if defined(_M_X64)
 struct JmpFF {
     uint8_t opcode0{0xFF};
     uint8_t opcode1{0x25};
     uint32_t offset{0};
 };
 
-#if defined(_M_X64)
 struct TrampolineEpilogueE9 {
     JmpE9 jmp_to_original{};
     JmpFF jmp_to_destination{};
@@ -62,11 +62,12 @@ struct TrampolineEpilogueE9 {
 #endif
 #pragma pack(pop)
 
+#if defined(_M_X64)
 static auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
     JmpFF jmp{};
 
     jmp.offset = static_cast<uint32_t>(data - src - sizeof(jmp));
-    *(uintptr_t*)data = dst;
+    *reinterpret_cast<uintptr_t*>(data) = dst;
 
     return jmp;
 }
@@ -79,11 +80,12 @@ static void emit_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data, size_t siz
     UnprotectMemory unprotect{src, size};
 
     if (size > sizeof(JmpFF)) {
-        std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
+        std::fill_n(reinterpret_cast<uint8_t*>(src), size, static_cast<uint8_t>(0x90));
     }
 
-    *(JmpFF*)src = make_jmp_ff(src, dst, data);
+    *reinterpret_cast<JmpFF*>(src) = make_jmp_ff(src, dst, data);
 }
+#endif
 
 constexpr auto make_jmp_e9(uintptr_t src, uintptr_t dst) {
     JmpE9 jmp{};
@@ -101,10 +103,10 @@ static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9
     UnprotectMemory unprotect{src, size};
 
     if (size > sizeof(JmpE9)) {
-        std::fill_n((uint8_t*)src, size, static_cast<uint8_t>(0x90));
+        std::fill_n(reinterpret_cast<uint8_t*>(src), size, static_cast<uint8_t>(0x90));
     }
 
-    *(JmpE9*)src = make_jmp_e9(src, dst);
+    *reinterpret_cast<JmpE9*>(src) = make_jmp_e9(src, dst);
 }
 
 static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
@@ -123,7 +125,7 @@ static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
         return false;
     }
 
-    return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, (const void*)ip, 15, ix));
+    return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<const void*>(ip), 15, ix));
 }
 
 std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, void* destination) {
@@ -213,23 +215,24 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
         }
 
         m_trampoline_size += ix.length;
-        m_original_bytes.insert(m_original_bytes.end(), (const uint8_t*)ip, (const uint8_t*)ip + ix.length);
+        m_original_bytes.insert(
+            m_original_bytes.end(), reinterpret_cast<uint8_t*>(ip), reinterpret_cast<uint8_t*>(ip) + ix.length);
 
         const auto is_relative = (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) != 0;
 
         if (is_relative) {
             if (ix.raw.disp.size == 32) {
-                const auto target_address = ip + ix.length + ix.raw.disp.value;
+                const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.disp.value);
                 desired_addresses.emplace_back(target_address);
             } else if (ix.raw.imm[0].size == 32) {
-                const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
+                const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
                 desired_addresses.emplace_back(target_address);
             } else if (ix.meta.category == ZYDIS_CATEGORY_COND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
-                const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
+                const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
                 desired_addresses.emplace_back(target_address);
                 m_trampoline_size += 4; // near conditional branches are 4 bytes larger.
             } else if (ix.meta.category == ZYDIS_CATEGORY_UNCOND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
-                const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
+                const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
                 desired_addresses.emplace_back(target_address);
                 m_trampoline_size += 3; // near unconditional branches are 3 bytes larger.
             } else {
@@ -257,40 +260,40 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
         if (is_relative && ix.raw.disp.size == 32) {
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
-            const auto target_address = ip + ix.length + ix.raw.disp.value;
-            const auto new_disp = (int32_t)(target_address - (tramp_ip + ix.length));
-            *(uint32_t*)(tramp_ip + ix.raw.disp.offset) = new_disp;
+            const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.disp.value);
+            const auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + ix.length));
+            *reinterpret_cast<uint32_t*>(tramp_ip + ix.raw.disp.offset) = new_disp;
             tramp_ip += ix.length;
         } else if (is_relative && ix.raw.imm[0].size == 32) {
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
-            const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
-            const auto new_disp = (int32_t)(target_address - (tramp_ip + ix.length));
-            *(uint32_t*)(tramp_ip + ix.raw.imm[0].offset) = new_disp;
+            const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
+            const auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + ix.length));
+            *reinterpret_cast<uint32_t*>(tramp_ip + ix.raw.imm[0].offset) = new_disp;
             tramp_ip += ix.length;
         } else if (ix.meta.category == ZYDIS_CATEGORY_COND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
-            const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
-            auto new_disp = (int32_t)(target_address - (tramp_ip + 6));
+            const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
+            auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + 6));
 
             // Handle the case where the target is now in the trampoline.
             if (target_address < m_target + m_original_bytes.size()) {
-                new_disp = (int32_t)ix.raw.imm[0].value.s;
+                new_disp = static_cast<int32_t>(ix.raw.imm[0].value.s);
             }
 
-            *(uint8_t*)(tramp_ip) = 0x0F;
-            *(uint8_t*)(tramp_ip + 1) = 0x10 + ix.opcode;
-            *(uint32_t*)(tramp_ip + 2) = new_disp;
+            *reinterpret_cast<uint8_t*>(tramp_ip) = 0x0F;
+            *reinterpret_cast<uint8_t*>(tramp_ip + 1) = 0x10 + ix.opcode;
+            *reinterpret_cast<uint32_t*>(tramp_ip + 2) = new_disp;
             tramp_ip += 6;
         } else if (ix.meta.category == ZYDIS_CATEGORY_UNCOND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
-            const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
-            auto new_disp = (int32_t)(target_address - (tramp_ip + 5));
+            const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
+            auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + 5));
 
             // Handle the case where the target is now in the trampoline.
             if (target_address < m_target + m_original_bytes.size()) {
-                new_disp = (int32_t)ix.raw.imm[0].value.s;
+                new_disp = static_cast<int32_t>(ix.raw.imm[0].value.s);
             }
 
-            *(uint8_t*)(tramp_ip) = 0xE9;
-            *(uint32_t*)(tramp_ip + 1) = new_disp;
+            *reinterpret_cast<uint8_t*>(tramp_ip) = 0xE9;
+            *reinterpret_cast<uint32_t*>(tramp_ip + 1) = new_disp;
             tramp_ip += 5;
         } else {
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
@@ -349,7 +352,8 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
             return std::unexpected{Error::ip_relative_instruction_out_of_range(ip)};
         }
 
-        m_original_bytes.insert(m_original_bytes.end(), (const uint8_t*)ip, (const uint8_t*)ip + ix.length);
+        m_original_bytes.insert(
+            m_original_bytes.end(), reinterpret_cast<uint8_t*>(ip), reinterpret_cast<uint8_t*>(ip + ix.length));
         m_trampoline_size += ix.length;
     }
 
@@ -398,7 +402,7 @@ void InlineHook::destroy() {
     ThreadFreezer freezer{};
     UnprotectMemory unprotect{m_target, m_original_bytes.size()};
 
-    std::copy(m_original_bytes.begin(), m_original_bytes.end(), (uint8_t*)m_target);
+    std::copy(m_original_bytes.begin(), m_original_bytes.end(), reinterpret_cast<uint8_t*>(m_target));
 
     for (size_t i = 0; i < m_trampoline_size; ++i) {
         freezer.fix_ip(m_trampoline.address() + i, m_target + i);

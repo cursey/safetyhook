@@ -29,7 +29,7 @@ TEST_CASE("Function with RIP-relative operand is hooked", "[inline-hook-x86_64]"
     cg.L(str_label);
     asciiz(cg, "Hello");
 
-    const auto fn = (const char*(*)())cg.getCode();
+    const auto fn = cg.getCode<const char*(*)()>();
 
     REQUIRE((fn() == "Hello"sv));
 
@@ -39,7 +39,7 @@ TEST_CASE("Function with RIP-relative operand is hooked", "[inline-hook-x86_64]"
         static const char* fn() { return "Hello, world!"; }
     };
 
-    auto hook_result = SafetyHookInline::create((void*)fn, (void*)Hook::fn);
+    auto hook_result = SafetyHookInline::create(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
 
     REQUIRE(hook_result);
 
@@ -65,7 +65,7 @@ TEST_CASE("Function with no nearby memory is hooked", "[inline-hook-x86_64]") {
     cg.imul(eax, dword[rsp + 8]);
     cg.ret();
 
-    const auto fn = (int (*)(int))(start.getAddress());
+    auto fn = reinterpret_cast<int (*)(int)>(const_cast<uint8_t*>(start.getAddress()));
 
     REQUIRE(fn(2) == 4);
     REQUIRE(fn(3) == 9);
@@ -77,7 +77,7 @@ TEST_CASE("Function with no nearby memory is hooked", "[inline-hook-x86_64]") {
         static int fn(int a) { return hook.call<int>(a) * a; }
     };
 
-    auto hook_result = SafetyHookInline::create((void*)fn, (void*)Hook::fn);
+    auto hook_result = SafetyHookInline::create(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
 
     REQUIRE(hook_result);
 

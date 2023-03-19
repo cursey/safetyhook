@@ -90,43 +90,42 @@ add_custom_command(
 add_custom_target(Amalgamate ALL DEPENDS ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER})
 """
 
-[target.test0]
+[template.test]
 condition = "build-tests"
 type = "executable"
-sources = ["tests/test0.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
+compile-features = ["cxx_std_23"]
+msvc.private-compile-options = ["/WX", "/permissive-", "/W4", "/w14640"]
+clang.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+gcc.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+
+[target.test0]
+type = "test"
+sources = ["tests/test0.cpp"]
 
 [target.test1]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test1.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
 [target.test2]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test2.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
 [target.test3]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test3.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
 [target.unittest]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["unittest/*.cpp"]
 link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook", "xbyak::xbyak"]
 
 [target.unittest-amalgamated]
 condition = "build-amalgamate-tests"
-type = "executable"
+type = "test"
 sources = ["unittest/*.cpp", "amalgamated-dist/safetyhook.cpp"]
 include-directories = ["amalgamated-dist/"]
 link-libraries = ["Zydis", "Catch2::Catch2WithMain", "xbyak::xbyak"]
-compile-features = ["cxx_std_23"]
 cmake-after = """
 add_dependencies(unittest-amalgamated Amalgamate)
 """

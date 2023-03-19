@@ -51,7 +51,7 @@ int main() {
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
     // Create a hook on add.
-    g_add_hook = safetyhook::create_inline((void*)add, (void*)hook_add);
+    g_add_hook = safetyhook::create_inline(reinterpret_cast<void*>(add), reinterpret_cast<void*>(hook_add));
 
     std::cout << "hooked add(3, 4) = " << add(3, 4) << "\n";
 

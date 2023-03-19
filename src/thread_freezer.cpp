@@ -45,7 +45,7 @@ ThreadFreezer::ThreadFreezer() {
 
             thread_ctx.ContextFlags = CONTEXT_FULL;
 
-            if (SuspendThread(thread) == (DWORD)-1 || GetThreadContext(thread, &thread_ctx) == FALSE) {
+            if (SuspendThread(thread) == static_cast<DWORD>(-1) || GetThreadContext(thread, &thread_ctx) == FALSE) {
                 CloseHandle(thread);
                 continue;
             }
