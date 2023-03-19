@@ -3,10 +3,11 @@
 SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of it's implementation. To that end it currently does:
 
 * Stops all other threads when creating or deleting hooks
-* Locks the PEB Loader Lock while freezing threads
 * Fixes the IP of threads that may be affected by the creation or deletion of hooks
 * Fixes IP relative displacements of relocated instructions (eg. `lea rax, [rip + 0x1234]`)
 * Fixes relative offsets of relocated instructions (eg. `jmp 0x1234`)
+* Widens short branches into near branches
+* Handles short branches that land within the trampoline
 * Uses a modern disassembler engine that supports the latest instructions
 * Has a carefully designed API that is hard to misuse
 
@@ -50,7 +51,7 @@ int main() {
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
     // Create a hook on add.
-    g_add_hook = *SafetyHookInline::create((void*)add, (void*)hook_add);
+    g_add_hook = safetyhook::create_inline((void*)add, (void*)hook_add);
 
     std::cout << "hooked add(3, 4) = " << add(3, 4) << "\n";
 
