@@ -269,14 +269,26 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             tramp_ip += ix.length;
         } else if (ix.meta.category == ZYDIS_CATEGORY_COND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
-            const auto new_disp = (int32_t)(target_address - (tramp_ip + 6));
+            auto new_disp = (int32_t)(target_address - (tramp_ip + 6));
+
+            // Handle the case where the target is now in the trampoline.
+            if (target_address < m_target + m_original_bytes.size()) {
+                new_disp = (int32_t)ix.raw.imm[0].value.s;
+            }
+
             *(uint8_t*)(tramp_ip) = 0x0F;
             *(uint8_t*)(tramp_ip + 1) = 0x10 + ix.opcode;
             *(uint32_t*)(tramp_ip + 2) = new_disp;
             tramp_ip += 6;
         } else if (ix.meta.category == ZYDIS_CATEGORY_UNCOND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
-            const auto new_disp = (int32_t)(target_address - (tramp_ip + 5));
+            auto new_disp = (int32_t)(target_address - (tramp_ip + 5));
+
+            // Handle the case where the target is now in the trampoline.
+            if (target_address < m_target + m_original_bytes.size()) {
+                new_disp = (int32_t)ix.raw.imm[0].value.s;
+            }
+
             *(uint8_t*)(tramp_ip) = 0xE9;
             *(uint32_t*)(tramp_ip + 1) = new_disp;
             tramp_ip += 5;

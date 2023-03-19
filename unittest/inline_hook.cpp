@@ -545,3 +545,36 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(9) == 0);
     }
 }
+
+TEST_CASE("Function with short jump inside trampoline", "[inline-hook]") {
+    using namespace Xbyak::util;
+
+    Xbyak::CodeGenerator cg{};
+
+    cg.jmp("@f");
+    cg.ret();
+    cg.L("@@");
+    cg.mov(eax, 42);
+    cg.ret();
+    cg.nop(10, false);
+    
+    const auto fn = (int(*)())cg.getCode();
+
+    REQUIRE(fn() == 42);
+
+    static SafetyHookInline hook;
+
+    struct Hook {
+        static int fn() {
+            return hook.call<int>() + 1;
+        }
+    };
+
+    hook = safetyhook::create_inline((void*)fn, (void*)Hook::fn);
+
+    REQUIRE(fn() == 43);
+
+    hook.reset();
+
+    REQUIRE(fn() == 42);
+}
