@@ -68,8 +68,8 @@ public:
 
     /// @brief The error type returned by the allocate functions.
     enum class Error : uint8_t {
-        BAD_VIRTUAL_ALLOC, ///< VirtualAlloc failed.
-        NO_MEMORY_IN_RANGE ///< No memory in range.
+        BAD_VIRTUAL_ALLOC,  ///< VirtualAlloc failed.
+        NO_MEMORY_IN_RANGE, ///< No memory in range.
     };
 
     /// @brief Allocates memory.

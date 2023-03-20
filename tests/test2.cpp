@@ -30,7 +30,7 @@ int main() {
     // Let's disassemble add_42 and hook its RET.
     ZydisDecoder decoder{};
 
-#ifdef _M_X64
+#if defined(_M_X64)
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
 #elif defined(_M_IX86)
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);

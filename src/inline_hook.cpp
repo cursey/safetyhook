@@ -36,7 +36,7 @@ struct JmpE9 {
     uint32_t offset{0};
 };
 
-#ifdef _M_X64
+#if defined(_M_X64)
 struct JmpFF {
     uint8_t opcode0{0xFF};
     uint8_t opcode1{0x25};
@@ -112,7 +112,7 @@ static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
     ZydisDecoder decoder{};
     ZyanStatus status{};
 
-#ifdef _M_X64
+#if defined(_M_X64)
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
 #elif defined(_M_IX86)
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);

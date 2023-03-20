@@ -13,9 +13,15 @@ SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It
 
 ## Installation
 
-SafetyHook can be added via CMake's `FetchContent`, git submodules, or copied directly into your project. By default, it comes bundled with the [Zydis](https://github.com/zyantific/zydis) disassembler. If you already have [Zydis](https://github.com/zyantific/zydis) integrated into your project you can disable SafetyHook's bundling by using the CMake option `-DSAFETYHOOK_BUNDLE_ZYDIS=OFF`.
+SafetyHook can be added via CMake's `FetchContent`, git submodules, or copied directly into your project using the amalgamated builds. SafetyHook requires [Zydis](https://github.com/zyantific/zydis) to function.
 
-### FetchContent
+### Amalgamated builds
+
+This is the easiest way to use safety hook. You can find amalgamated builds on the releases page. Simply download the ZIP file containing [Zydis](https://github.com/zyantific/zydis) (or without [Zydis](https://github.com/zyantific/zydis) if you already have it in your project) and copy the files into your project.
+
+You may need to define `ZYDIS_STATIC_BUILD` if you're using the build with [Zydis](https://github.com/zyantific/zydis) included.
+
+### CMake FetchContent
 
 ```CMake
 include(FetchContent)
@@ -27,8 +33,9 @@ FetchContent_Declare(
     GIT_TAG "origin/main"
 )
 FetchContent_MakeAvailable(safetyhook)
-
 ```
+
+If you want SafetyHook to fetch [Zydis](https://github.com/zyantific/zydis) you must enable the CMake option `-DSAFETYHOOK_FETCH_ZYDIS=ON`.
 
 ## Usage
 
@@ -50,7 +57,7 @@ int hook_add(int x, int y) {
 int main() {
     std::cout << "unhooked add(2, 3) = " << add(2, 3) << "\n";
 
-    // Create a hook on add.
+    // Create a hook on add (This uses SafetyHook's easy API).
     g_add_hook = safetyhook::create_inline(reinterpret_cast<void*>(add), reinterpret_cast<void*>(hook_add));
 
     std::cout << "hooked add(3, 4) = " << add(3, 4) << "\n";

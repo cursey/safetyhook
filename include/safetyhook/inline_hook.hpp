@@ -20,11 +20,11 @@ public:
     struct Error {
         /// @brief The type of error.
         enum : uint8_t {
-            BAD_ALLOCATION,                       ///< An error occurred when allocating memory.
-            FAILED_TO_DECODE_INSTRUCTION,         ///< Failed to decode an instruction.
-            SHORT_JUMP_IN_TRAMPOLINE,             ///< The trampoline contains a short jump.
-            IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE, ///< An IP-relative instruction is out of range.
-            UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE ///< An unsupported instruction was found in the trampoline.
+            BAD_ALLOCATION,                        ///< An error occurred when allocating memory.
+            FAILED_TO_DECODE_INSTRUCTION,          ///< Failed to decode an instruction.
+            SHORT_JUMP_IN_TRAMPOLINE,              ///< The trampoline contains a short jump.
+            IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE,  ///< An IP-relative instruction is out of range.
+            UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, ///< An unsupported instruction was found in the trampoline.
         } type;
 
         /// @brief Extra information about the error.
