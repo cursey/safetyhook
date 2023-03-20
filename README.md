@@ -1,6 +1,6 @@
 # SafetyHook
 
-SafetyHook is a procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of its implementation. To that end it currently does:
+SafetyHook is a **C++23** procedure hooking library for Windows x86 and x86_64 systems. It aims to make runtime procedure hooking as safe as possible while maintaining simplicity of its implementation. To that end it currently does:
 
 * Stops all other threads when creating or deleting hooks
 * Fixes the IP of threads that may be affected by the creation or deletion of hooks
