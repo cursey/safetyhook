@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*
 
 jobs:
   build:
@@ -42,6 +44,12 @@ jobs:
         run: |
           python3 amalgamate.py
 
+      - name: Compress amalgamated release 
+        uses: vimtor/action-zip@v1.1
+        with:
+          files: amalgamated-dist/
+          dest: safetyhook-amalgamated.zip
+
       - name: Upload amalgamate
         uses: actions/upload-artifact@v3
         with:
@@ -55,31 +63,17 @@ jobs:
           Remove-Item .\zydis.zip
            @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\amalgamated-dist\Zydis.h
 
+      - name: Compress amalgamated release with Zydis
+        uses: vimtor/action-zip@v1.1
+        with:
+          files: amalgamated-dist/
+          dest: safetyhook-amalgamated-zydis.zip
+
       - name: Upload amalgamate with Zydis
         uses: actions/upload-artifact@v3
         with:
           name: safetyhook-amalgamated-zydis
           path: amalgamated-dist/
-
-      - name: Compress amalgamated release 
-        uses: vimtor/action-zip@v1.1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            amalgamated-dist/safetyhook.hpp
-            amalgamated-dist/safetyhook.cpp
-          dest: safetyhook-amalgamated
-
-      - name: Compress amalgamated release with Zydis
-        uses: vimtor/action-zip@v1.1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            amalgamated-dist/safetyhook.hpp
-            amalgamated-dist/safetyhook.cpp
-            amalgamated-dist/Zydis.h
-            amalgamated-dist/Zydis.c
-          dest: safetyhook-amalgamated-zydis
 
       - name: Release
         uses: softprops/action-gh-release@v0.1.15
