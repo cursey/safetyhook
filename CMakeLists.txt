@@ -215,6 +215,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"/permissive-"
 			"/W4"
 			"/w14640"
+			"/EHsc"
 		)
 	endif()
 
@@ -272,6 +273,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"/permissive-"
 			"/W4"
 			"/w14640"
+			"/EHsc"
 		)
 	endif()
 
@@ -329,6 +331,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"/permissive-"
 			"/W4"
 			"/w14640"
+			"/EHsc"
 		)
 	endif()
 
@@ -386,6 +389,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"/permissive-"
 			"/W4"
 			"/w14640"
+			"/EHsc"
 		)
 	endif()
 
@@ -446,6 +450,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"/permissive-"
 			"/W4"
 			"/w14640"
+			"/EHsc"
 		)
 	endif()
 
@@ -514,6 +519,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 				"/permissive-"
 				"/W4"
 				"/w14640"
+				"/EHsc"
 			)
 		endif()
 

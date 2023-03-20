@@ -27,7 +27,7 @@ ThreadFreezer::ThreadFreezer() {
                 THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
                 0, &thread);
 
-            if (status != 0) {
+            if (!NT_SUCCESS(status)) {
                 break;
             }
 

@@ -27,7 +27,7 @@ SafetyHookMid g_hook{};
 int main() {
     std::cout << add_42(2) << "\n";
 
-    // Lets disassemble add_42 and hook its RET.
+    // Let's disassemble add_42 and hook its RET.
     ZydisDecoder decoder{};
 
 #if defined(_M_X64)

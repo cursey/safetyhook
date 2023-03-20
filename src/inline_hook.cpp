@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iterator>
 
 #include <Windows.h>
@@ -62,7 +61,7 @@ struct TrampolineEpilogueE9 {
 #endif
 #pragma pack(pop)
 
-#if defined(_M_X64)
+#ifdef _M_X64
 static auto make_jmp_ff(uintptr_t src, uintptr_t dst, uintptr_t data) {
     JmpFF jmp{};
 
@@ -262,13 +261,13 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
             const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.disp.value);
             const auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + ix.length));
-            *reinterpret_cast<uint32_t*>(tramp_ip + ix.raw.disp.offset) = new_disp;
+            *reinterpret_cast<int32_t*>(tramp_ip + ix.raw.disp.offset) = new_disp;
             tramp_ip += ix.length;
         } else if (is_relative && ix.raw.imm[0].size == 32) {
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
             const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
             const auto new_disp = static_cast<int32_t>(target_address - (tramp_ip + ix.length));
-            *reinterpret_cast<uint32_t*>(tramp_ip + ix.raw.imm[0].offset) = new_disp;
+            *reinterpret_cast<int32_t*>(tramp_ip + ix.raw.imm[0].offset) = new_disp;
             tramp_ip += ix.length;
         } else if (ix.meta.category == ZYDIS_CATEGORY_COND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
@@ -281,7 +280,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
             *reinterpret_cast<uint8_t*>(tramp_ip) = 0x0F;
             *reinterpret_cast<uint8_t*>(tramp_ip + 1) = 0x10 + ix.opcode;
-            *reinterpret_cast<uint32_t*>(tramp_ip + 2) = new_disp;
+            *reinterpret_cast<int32_t*>(tramp_ip + 2) = new_disp;
             tramp_ip += 6;
         } else if (ix.meta.category == ZYDIS_CATEGORY_UNCOND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
@@ -293,7 +292,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             }
 
             *reinterpret_cast<uint8_t*>(tramp_ip) = 0xE9;
-            *reinterpret_cast<uint32_t*>(tramp_ip + 1) = new_disp;
+            *reinterpret_cast<int32_t*>(tramp_ip + 1) = new_disp;
             tramp_ip += 5;
         } else {
             std::copy_n(reinterpret_cast<uint8_t*>(ip), ix.length, reinterpret_cast<uint8_t*>(tramp_ip));
@@ -334,7 +333,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     return {};
 }
 
-#if defined(_M_X64)
+#ifdef _M_X64
 std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr<Allocator>& allocator) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueFF);

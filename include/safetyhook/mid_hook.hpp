@@ -21,7 +21,7 @@ public:
     /// @brief Error type for MidHook.
     struct Error {
         /// @brief The type of error.
-        enum {
+        enum : uint8_t {
             BAD_ALLOCATION,
             BAD_INLINE_HOOK,
         } type;

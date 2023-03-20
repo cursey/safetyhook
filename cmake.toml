@@ -95,7 +95,7 @@ condition = "build-tests"
 type = "executable"
 link-libraries = ["safetyhook::safetyhook"]
 compile-features = ["cxx_std_23"]
-msvc.private-compile-options = ["/WX", "/permissive-", "/W4", "/w14640"]
+msvc.private-compile-options = ["/WX", "/permissive-", "/W4", "/w14640", "/EHsc"]
 clang.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 

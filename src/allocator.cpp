@@ -93,7 +93,7 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     // First search through our list of allocations for a free block that is large
     // enough.
-    for (auto& allocation : m_memory) {
+    for (const auto& allocation : m_memory) {
         if (allocation->size < size) {
             continue;
         }
@@ -122,14 +122,14 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
 
     GetSystemInfo(&si);
 
-    auto allocation_size = align_up(size, si.dwAllocationGranularity);
-    auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
+    const auto allocation_size = align_up(size, si.dwAllocationGranularity);
+    const auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
     if (!allocation_address) {
         return std::unexpected{allocation_address.error()};
     }
 
-    auto& allocation = m_memory.emplace_back(new Memory);
+    const auto& allocation = m_memory.emplace_back(new Memory);
 
     allocation->address = *allocation_address;
     allocation->size = allocation_size;
@@ -141,7 +141,7 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
 }
 
 void Allocator::internal_free(uintptr_t address, size_t size) {
-    for (auto& allocation : m_memory) {
+    for (const auto& allocation : m_memory) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
             continue;
         }
@@ -191,7 +191,7 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
     const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance) {
     if (desired_addresses.empty()) {
         if (const auto result = VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-            result != 0) {
+            result != nullptr) {
             return reinterpret_cast<uintptr_t>(result);
         }
 
@@ -264,17 +264,14 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
 }
 
 bool Allocator::in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance) {
-    auto is_in_range = true;
-
     for (auto&& desired_address : desired_addresses) {
         auto delta = (address > desired_address) ? address - desired_address : desired_address - address;
         if (delta > max_distance) {
-            is_in_range = false;
-            break;
+            return false;
         }
     }
 
-    return is_in_range;
+    return true;
 }
 
 Allocator::Memory::~Memory() {
