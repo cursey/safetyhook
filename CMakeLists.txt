@@ -61,6 +61,10 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 
 endif()
 if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
+	set(ZYDIS_BUILD_EXAMPLES OFF)
+	set(ZYDIS_BUILD_TOOLS OFF)
+	set(ZYDIS_BUILD_DOXYGEN OFF)
+
 	message(STATUS "Fetching Zydis (v4.0.0)...")
 	FetchContent_Declare(Zydis
 		GIT_REPOSITORY
