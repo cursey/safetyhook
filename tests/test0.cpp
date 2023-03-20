@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <SafetyHook.hpp>
+#include <safetyhook.hpp>
 
 SafetyHookInline hook0, hook1, hook2, hook3;
 
@@ -25,13 +25,10 @@ void hook3_fn(const std::string& name) {
 }
 
 int main() {
-    {
-        auto builder = SafetyHookFactory::acquire();
-        hook0 = builder.create_inline((void*)say_hi, (void*)hook0_fn);
-        hook1 = builder.create_inline((void*)say_hi, (void*)hook1_fn);
-        hook2 = builder.create_inline((void*)say_hi, (void*)hook2_fn);
-        hook3 = builder.create_inline((void*)say_hi, (void*)hook3_fn);
-    }
+    hook0 = safetyhook::create_inline(reinterpret_cast<void*>(say_hi), reinterpret_cast<void*>(hook0_fn));
+    hook1 = safetyhook::create_inline(reinterpret_cast<void*>(say_hi), reinterpret_cast<void*>(hook1_fn));
+    hook2 = safetyhook::create_inline(reinterpret_cast<void*>(say_hi), reinterpret_cast<void*>(hook2_fn));
+    hook3 = safetyhook::create_inline(reinterpret_cast<void*>(say_hi), reinterpret_cast<void*>(hook3_fn));
 
     say_hi("world");
 
