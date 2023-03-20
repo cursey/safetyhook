@@ -33,6 +33,7 @@ jobs:
 
   amalgamated-dist:
     runs-on: windows-2022
+    needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -52,9 +53,39 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/zyantific/zydis/releases/download/v4.0.0/zydis-amalgamated.zip -OutFile zydis.zip
           Expand-Archive .\zydis.zip .
           Remove-Item .\zydis.zip
+           @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\amalgamated-dist\Zydis.h
 
       - name: Upload amalgamate with Zydis
         uses: actions/upload-artifact@v3
         with:
           name: safetyhook-amalgamated-zydis
           path: amalgamated-dist/
+
+      - name: Compress amalgamated release 
+        uses: vimtor/action-zip@v1.1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            amalgamated-dist/safetyhook.hpp
+            amalgamated-dist/safetyhook.cpp
+          dest: safetyhook-amalgamated
+
+      - name: Compress amalgamated release with Zydis
+        uses: vimtor/action-zip@v1.1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            amalgamated-dist/safetyhook.hpp
+            amalgamated-dist/safetyhook.cpp
+            amalgamated-dist/Zydis.h
+            amalgamated-dist/Zydis.c
+          dest: safetyhook-amalgamated-zydis
+
+      - name: Release
+        uses: softprops/action-gh-release@v0.1.15
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          prerelease: ${{contains(github.ref, '-pre')}}
+          files: |
+            safetyhook-amalgamated.zip
+            safetyhook-amalgamated-zydis.zip
