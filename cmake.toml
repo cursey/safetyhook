@@ -3,56 +3,129 @@
 name = "safetyhook"
 
 [options]
+SAFETYHOOK_BUILD_DOCS = false
 SAFETYHOOK_BUILD_TESTS = false
+SAFETYHOOK_AMALGAMATE = false
+SAFETYHOOK_FETCH_ZYDIS = false
 
 [conditions]
+build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-tests = "SAFETYHOOK_BUILD_TESTS"
+amalgamate = "SAFETYHOOK_AMALGAMATE"
+build-amalgamate-tests = "SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE"
+fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
 
-[vcpkg]
-version = "2022.07.25"
-packages = ["bddisasm"]
+[fetch-content.Catch2]
+condition = "build-tests"
+git = "https://github.com/catchorg/Catch2.git"
+tag = "v3.3.2"
+shallow = true
 
-[find-package]
-bddisasm = { required = false }
+[fetch-content.xbyak]
+condition = "build-tests"
+git = "https://github.com/herumi/xbyak.git"
+tag = "v6.69"
+shallow = true
+
+[fetch-content.Zydis]
+condition = "fetch-zydis"
+git = "https://github.com/zyantific/zydis.git"
+tag = "v4.0.0"
+shallow = true
+
+[find-package.Doxygen]
+condition = "build-docs"
+required = true
+
+[find-package.Python3]
+condition = "amalgamate"
+required = true
 
 [target.safetyhook]
 type = "static"
-sources = ["src/**.cpp", "src/**.hpp", "include/**.hpp"]
+sources = ["src/*.cpp"]
 include-directories = ["include/"]
-compile-features = ["cxx_std_17"]
-compile-definitions = ["NOMINMAX"]
-link-libraries = ["bddisasm::bddisasm", "ntdll"]
+compile-features = ["cxx_std_23"]
 alias = "safetyhook::safetyhook"
+link-libraries = ["Zydis", "ntdll"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 
-[target.test0]
+[target.docs]
+condition = "build-docs"
+type = "custom"
+cmake-before = """
+file(GLOB_RECURSE HEADER_FILES include/*.hpp)
+set(DOXYGEN_INDEX_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
+set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+set(DOXYFILE_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
+configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT})
+add_custom_command(
+    OUTPUT ${DOXYGEN_INDEX_FILE}
+    DEPENDS ${HEADER_FILES}
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+    MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+    COMMENT "Generating docs"
+)
+add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+"""
+
+[target.amalgamation]
+condition = "amalgamate"
+type = "custom"
+cmake-before = """
+file(GLOB_RECURSE HEADER_FILES include/*.hpp)
+file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
+set(AMALGAMATED_FILE ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.cpp)
+set(AMALGAMATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/amalgamated-dist/safetyhook.hpp)
+set(AMALGAMATE_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate.py)
+add_custom_command(
+    OUTPUT ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+    DEPENDS ${HEADER_FILES} ${SOURCE_FILES} ${AMALGAMATE_SCRIPT}
+    COMMAND ${Python3_EXECUTABLE} ${AMALGAMATE_SCRIPT} ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER}
+    MAIN_DEPENDENCY ${AMALGAMATE_SCRIPT}
+    COMMENT "Amalgamating"
+)
+add_custom_target(Amalgamate ALL DEPENDS ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER})
+"""
+
+[template.test]
 condition = "build-tests"
 type = "executable"
-sources = ["tests/test0.cpp"]
 link-libraries = ["safetyhook::safetyhook"]
+compile-features = ["cxx_std_23"]
+msvc.private-compile-options = ["/WX", "/permissive-", "/W4", "/w14640", "/EHsc"]
+clang.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+gcc.private-compile-options = ["-Werror", "-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+
+[target.test0]
+type = "test"
+sources = ["tests/test0.cpp"]
 
 [target.test1]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test1.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
 [target.test2]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test2.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
 [target.test3]
-condition = "build-tests"
-type = "executable"
+type = "test"
 sources = ["tests/test3.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
 
-[target.test4]
-condition = "build-tests"
-type = "executable"
-sources = ["tests/test4.cpp"]
-link-libraries = ["safetyhook::safetyhook"]
+[target.unittest]
+type = "test"
+sources = ["unittest/*.cpp"]
+link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook", "xbyak::xbyak"]
+
+[target.unittest-amalgamated]
+condition = "build-amalgamate-tests"
+type = "test"
+sources = ["unittest/*.cpp", "amalgamated-dist/safetyhook.cpp"]
+include-directories = ["amalgamated-dist/"]
+link-libraries = ["Zydis", "Catch2::Catch2WithMain", "xbyak::xbyak"]
+cmake-after = """
+add_dependencies(unittest-amalgamated Amalgamate)
+"""

@@ -3,7 +3,9 @@
 #include <Windows.h>
 #include <winternl.h>
 
-#include "safetyhook/ThreadFreezer.hpp"
+#include <safetyhook/thread_freezer.hpp>
+
+#pragma comment(lib, "ntdll")
 
 extern "C" {
 NTSTATUS
@@ -14,17 +16,6 @@ NtGetNextThread(HANDLE ProcessHandle, HANDLE ThreadHandle, ACCESS_MASK DesiredAc
 
 namespace safetyhook {
 ThreadFreezer::ThreadFreezer() {
-    auto peb = reinterpret_cast<uintptr_t>(NtCurrentTeb()->ProcessEnvironmentBlock);
-
-#if defined(_M_X64)
-    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0x110);
-#elif defined(_M_IX86)
-    auto loader_lock = *reinterpret_cast<RTL_CRITICAL_SECTION**>(peb + 0xA0);
-#else
-#error "Unsupported architecture"
-#endif
-    EnterCriticalSection(loader_lock);
-
     size_t num_threads_frozen{};
 
     do {
@@ -36,7 +27,7 @@ ThreadFreezer::ThreadFreezer() {
                 THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
                 0, &thread);
 
-            if (status != 0) {
+            if (!NT_SUCCESS(status)) {
                 break;
             }
 
@@ -54,7 +45,7 @@ ThreadFreezer::ThreadFreezer() {
 
             thread_ctx.ContextFlags = CONTEXT_FULL;
 
-            if (SuspendThread(thread) == (DWORD)-1 || GetThreadContext(thread, &thread_ctx) == FALSE) {
+            if (SuspendThread(thread) == static_cast<DWORD>(-1) || GetThreadContext(thread, &thread_ctx) == FALSE) {
                 CloseHandle(thread);
                 continue;
             }
@@ -62,8 +53,6 @@ ThreadFreezer::ThreadFreezer() {
             m_frozen_threads.push_back({thread_id, thread, thread_ctx});
         }
     } while (num_threads_frozen != m_frozen_threads.size());
-
-    LeaveCriticalSection(loader_lock);
 }
 
 ThreadFreezer::~ThreadFreezer() {

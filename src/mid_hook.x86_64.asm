@@ -20,26 +20,16 @@ pushfq
 ; set destination parameter
 lea rcx, [rsp]
 
-; fix stack (store stack change in rbx)
-sub rsp, 40
-test rsp, 8
-jz already_aligned
-
-sub rsp, 8
-mov rbx, 48
-jmp finished_aligning
-
-already_aligned:
-mov rbx, 40
-
-finished_aligning:
+; align stack, save original
+mov rbx, rsp
+sub rsp, 48
+and rsp, -16
 
 ; call destination
-
 call [destination]
 
 ; restore stack
-add rsp, rbx
+mov rsp, rbx
 
 ; restore context
 popfq
