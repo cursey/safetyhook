@@ -16,6 +16,8 @@ NtGetNextThread(HANDLE ProcessHandle, HANDLE ThreadHandle, ACCESS_MASK DesiredAc
 
 namespace safetyhook {
 ThreadFreezer::ThreadFreezer() {
+    m_frozen_threads.reserve(1024);
+
     size_t num_threads_frozen{};
 
     do {
