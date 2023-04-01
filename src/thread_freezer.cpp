@@ -23,13 +23,20 @@ ThreadFreezer::ThreadFreezer() {
         HANDLE thread{};
 
         while (true) {
+            HANDLE next_thread{};
             const auto status = NtGetNextThread(GetCurrentProcess(), thread,
                 THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
-                0, &thread);
+                0, &next_thread);
+
+            if (thread != nullptr) {
+                CloseHandle(thread);
+            }
 
             if (!NT_SUCCESS(status)) {
                 break;
             }
+
+            thread = next_thread;
 
             const auto thread_id = GetThreadId(thread);
             const auto already_frozen = std::any_of(m_frozen_threads.begin(), m_frozen_threads.end(),
@@ -37,7 +44,6 @@ ThreadFreezer::ThreadFreezer() {
 
             // Don't freeze ourselves or threads we already froze.
             if (thread_id == 0 || thread_id == GetCurrentThreadId() || already_frozen) {
-                CloseHandle(thread);
                 continue;
             }
 
@@ -46,11 +52,11 @@ ThreadFreezer::ThreadFreezer() {
             thread_ctx.ContextFlags = CONTEXT_FULL;
 
             if (SuspendThread(thread) == static_cast<DWORD>(-1) || GetThreadContext(thread, &thread_ctx) == FALSE) {
-                CloseHandle(thread);
                 continue;
             }
 
             m_frozen_threads.push_back({thread_id, thread, thread_ctx});
+            thread = nullptr;
         }
     } while (num_threads_frozen != m_frozen_threads.size());
 }

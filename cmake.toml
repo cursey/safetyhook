@@ -120,6 +120,12 @@ sources = ["tests/test2.cpp"]
 type = "test"
 sources = ["tests/test3.cpp"]
 
+[target.test4]
+condition = "build-tests"
+type = "shared"
+sources = ["tests/test4.cpp"]
+link-libraries = ["safetyhook::safetyhook"]
+
 [target.unittest]
 type = "test"
 sources = ["unittest/*.cpp"]
