@@ -441,6 +441,42 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_sources(test4 PRIVATE ${test4_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test4_SOURCES})
 
+	target_compile_features(test4 PUBLIC
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test4 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+			"/EHsc"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test4 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test4 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
 	target_link_libraries(test4 PUBLIC
 		safetyhook::safetyhook
 	)
