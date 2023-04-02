@@ -38,6 +38,17 @@ private:
         CONTEXT ctx{};
     };
 
-    std::vector<FrozenThread> m_frozen_threads{};
+    // Custom allocator for `m_frozen_threads` that will work while threads are being frozen. This is necessary because
+    // `new` can deadlock while freezing threads.
+    template <class T> struct HeapAllocator {
+        using value_type = T;
+
+        HeapAllocator() = default;
+        template <class U> constexpr HeapAllocator(const HeapAllocator<U>&) noexcept {}
+        [[nodiscard]] T* allocate(size_t n) { return static_cast<T*>(HeapAlloc(GetProcessHeap(), 0, n * sizeof(T))); }
+        void deallocate(T* p, size_t) noexcept { HeapFree(GetProcessHeap(), 0, p); }
+    };
+
+    std::vector<FrozenThread, HeapAllocator<FrozenThread>> m_frozen_threads{};
 };
 } // namespace safetyhook
