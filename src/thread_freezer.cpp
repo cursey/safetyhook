@@ -18,6 +18,7 @@ namespace safetyhook {
 void execute_while_frozen(std::function<void()> run_fn, std::function<void(uint32_t, HANDLE, CONTEXT&)> visit_fn) {
     // Freeze all threads.
     int num_threads_frozen{};
+    auto first_run = true;
 
     do {
         HANDLE thread{};
@@ -51,7 +52,9 @@ void execute_while_frozen(std::function<void()> run_fn, std::function<void(uint3
                 continue;
             }
 
-            if (suspend_count != 0) { // Thread was already suspended.
+            // Check if the thread was already frozen. Only resume if the thread was already frozen and it wasn't the
+            // first run of this freeze loop to account for threads that may have already been frozen for other reasons.
+            if (suspend_count != 0 && !first_run) {
                 ResumeThread(thread);
                 continue;
             }
@@ -70,6 +73,8 @@ void execute_while_frozen(std::function<void()> run_fn, std::function<void(uint3
 
             ++num_threads_frozen;
         }
+
+        first_run = false;
     } while (num_threads_frozen != 0);
 
     // Run the function.
