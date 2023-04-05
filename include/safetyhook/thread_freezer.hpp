@@ -17,7 +17,8 @@ namespace safetyhook {
 /// @note The visit function will be called in the order that the threads were frozen.
 /// @note The visit function will be called before the run function.
 /// @note Keep the logic inside run_fn and visit_fn as simple as possible to avoid deadlocks.
-void execute_while_frozen(std::function<void()> run_fn, std::function<void(uint32_t, HANDLE, CONTEXT&)> visit_fn = {});
+void execute_while_frozen(
+    const std::function<void()>& run_fn, const std::function<void(uint32_t, HANDLE, CONTEXT&)>& visit_fn = {});
 
 /// @brief Will modify the context of a thread's IP to point to a new address if its IP is at the old address.
 /// @param ctx The thread context to modify.

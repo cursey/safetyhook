@@ -110,7 +110,7 @@ static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9
 
 static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
     ZydisDecoder decoder{};
-    ZyanStatus status{};
+    ZyanStatus status;
 
 #if defined(_M_X64)
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
