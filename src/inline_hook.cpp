@@ -110,7 +110,7 @@ static void emit_jmp_e9(uintptr_t src, uintptr_t dst, size_t size = sizeof(JmpE9
 
 static bool decode(ZydisDecodedInstruction* ix, uintptr_t ip) {
     ZydisDecoder decoder{};
-    ZyanStatus status{};
+    ZyanStatus status;
 
 #if defined(_M_X64)
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
@@ -320,15 +320,17 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 #endif
 
     // jmp from original to trampoline.
-    ThreadFreezer freezer{};
-
-    src = m_target;
-    dst = reinterpret_cast<uintptr_t>(&trampoline_epilogue->jmp_to_destination);
-    emit_jmp_e9(src, dst, m_original_bytes.size());
-
-    for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-        freezer.fix_ip(m_target + i, m_trampoline.address() + i);
-    }
+    execute_while_frozen(
+        [this, &trampoline_epilogue] {
+            const auto src = m_target;
+            const auto dst = reinterpret_cast<uintptr_t>(&trampoline_epilogue->jmp_to_destination);
+            emit_jmp_e9(src, dst, m_original_bytes.size());
+        },
+        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
+                fix_ip(ctx, m_target + i, m_trampoline.address() + i);
+            }
+        });
 
     return {};
 }
@@ -376,16 +378,18 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
     emit_jmp_ff(src, dst, data);
 
     // jmp from original to trampoline.
-    ThreadFreezer freezer{};
-
-    src = m_target;
-    dst = m_destination;
-    data = src + sizeof(JmpFF);
-    emit_jmp_ff(src, dst, data, m_original_bytes.size());
-
-    for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-        freezer.fix_ip(m_target + i, m_trampoline.address() + i);
-    }
+    execute_while_frozen(
+        [this] {
+            const auto src = m_target;
+            const auto dst = m_destination;
+            const auto data = src + sizeof(JmpFF);
+            emit_jmp_ff(src, dst, data, m_original_bytes.size());
+        },
+        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
+                fix_ip(ctx, m_target + i, m_trampoline.address() + i);
+            }
+        });
 
     return {};
 }
@@ -398,14 +402,16 @@ void InlineHook::destroy() {
         return;
     }
 
-    ThreadFreezer freezer{};
-    UnprotectMemory unprotect{m_target, m_original_bytes.size()};
-
-    std::copy(m_original_bytes.begin(), m_original_bytes.end(), reinterpret_cast<uint8_t*>(m_target));
-
-    for (size_t i = 0; i < m_trampoline_size; ++i) {
-        freezer.fix_ip(m_trampoline.address() + i, m_target + i);
-    }
+    execute_while_frozen(
+        [this] {
+            UnprotectMemory unprotect{m_target, m_original_bytes.size()};
+            std::copy(m_original_bytes.begin(), m_original_bytes.end(), reinterpret_cast<uint8_t*>(m_target));
+        },
+        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
+                fix_ip(ctx, m_trampoline.address() + i, m_target + i);
+            }
+        });
 
     m_trampoline.free();
 }

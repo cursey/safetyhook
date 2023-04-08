@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include <Windows.h>
 #include <winternl.h>
 
@@ -15,71 +13,118 @@ NtGetNextThread(HANDLE ProcessHandle, HANDLE ThreadHandle, ACCESS_MASK DesiredAc
 }
 
 namespace safetyhook {
-ThreadFreezer::ThreadFreezer() {
-    size_t num_threads_frozen{};
+void execute_while_frozen(
+    const std::function<void()>& run_fn, const std::function<void(uint32_t, HANDLE, CONTEXT&)>& visit_fn) {
+    // Freeze all threads.
+    int num_threads_frozen;
+    auto first_run = true;
 
     do {
-        num_threads_frozen = m_frozen_threads.size();
+        num_threads_frozen = 0;
         HANDLE thread{};
 
         while (true) {
+            HANDLE next_thread{};
             const auto status = NtGetNextThread(GetCurrentProcess(), thread,
                 THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0,
-                0, &thread);
+                0, &next_thread);
+
+            if (thread != nullptr) {
+                CloseHandle(thread);
+            }
 
             if (!NT_SUCCESS(status)) {
                 break;
             }
 
-            const auto thread_id = GetThreadId(thread);
-            const auto already_frozen = std::any_of(m_frozen_threads.begin(), m_frozen_threads.end(),
-                [=](const auto& thread) { return thread.thread_id == thread_id; });
+            thread = next_thread;
 
-            // Don't freeze ourselves or threads we already froze.
-            if (thread_id == 0 || thread_id == GetCurrentThreadId() || already_frozen) {
-                CloseHandle(thread);
+            const auto thread_id = GetThreadId(thread);
+
+            if (thread_id == 0 || thread_id == GetCurrentThreadId()) {
                 continue;
             }
 
-            auto thread_ctx = CONTEXT{};
+            const auto suspend_count = SuspendThread(thread);
+
+            if (suspend_count == static_cast<DWORD>(-1)) {
+                continue;
+            }
+
+            // Check if the thread was already frozen. Only resume if the thread was already frozen, and it wasn't the
+            // first run of this freeze loop to account for threads that may have already been frozen for other reasons.
+            if (suspend_count != 0 && !first_run) {
+                ResumeThread(thread);
+                continue;
+            }
+
+            CONTEXT thread_ctx{};
 
             thread_ctx.ContextFlags = CONTEXT_FULL;
 
-            if (SuspendThread(thread) == static_cast<DWORD>(-1) || GetThreadContext(thread, &thread_ctx) == FALSE) {
-                CloseHandle(thread);
+            if (GetThreadContext(thread, &thread_ctx) == FALSE) {
                 continue;
             }
 
-            m_frozen_threads.push_back({thread_id, thread, thread_ctx});
-        }
-    } while (num_threads_frozen != m_frozen_threads.size());
-}
+            if (visit_fn) {
+                visit_fn(thread_id, thread, thread_ctx);
+            }
 
-ThreadFreezer::~ThreadFreezer() {
-    for (auto& thread : m_frozen_threads) {
-        SetThreadContext(thread.handle, &thread.ctx);
-        ResumeThread(thread.handle);
-        CloseHandle(thread.handle);
+            ++num_threads_frozen;
+        }
+
+        first_run = false;
+    } while (num_threads_frozen != 0);
+
+    // Run the function.
+    if (run_fn) {
+        run_fn();
+    }
+
+    // Resume all threads.
+    HANDLE thread{};
+
+    while (true) {
+        HANDLE next_thread{};
+        const auto status = NtGetNextThread(GetCurrentProcess(), thread,
+            THREAD_QUERY_LIMITED_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, 0, 0,
+            &next_thread);
+
+        if (thread != nullptr) {
+            CloseHandle(thread);
+        }
+
+        if (!NT_SUCCESS(status)) {
+            break;
+        }
+
+        thread = next_thread;
+
+        const auto thread_id = GetThreadId(thread);
+
+        if (thread_id == 0 || thread_id == GetCurrentThreadId()) {
+            continue;
+        }
+
+        ResumeThread(thread);
     }
 }
 
-void ThreadFreezer::fix_ip(uintptr_t old_ip, uintptr_t new_ip) {
-    for (auto& thread : m_frozen_threads) {
+void fix_ip(CONTEXT& ctx, uintptr_t old_ip, uintptr_t new_ip) {
 #ifdef _M_X64
-        auto ip = thread.ctx.Rip;
+    auto ip = ctx.Rip;
 #else
-        auto ip = thread.ctx.Eip;
+    auto ip = ctx.Eip;
 #endif
 
-        if (ip == old_ip) {
-            ip = new_ip;
-        }
-
-#ifdef _M_X64
-        thread.ctx.Rip = ip;
-#else
-        thread.ctx.Eip = ip;
-#endif
+    if (ip == old_ip) {
+        ip = new_ip;
     }
+
+#ifdef _M_X64
+    ctx.Rip = ip;
+#else
+    ctx.Eip = ip;
+#endif
 }
 } // namespace safetyhook

@@ -114,10 +114,10 @@ private:
         const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance = 0x7FFF'FFFF);
     void internal_free(uintptr_t address, size_t size);
 
-    void combine_adjacent_freenodes(Memory& memory);
-    [[nodiscard]] std::expected<uintptr_t, Error> allocate_nearby_memory(
+    static void combine_adjacent_freenodes(Memory& memory);
+    [[nodiscard]] static std::expected<uintptr_t, Error> allocate_nearby_memory(
         const std::vector<uintptr_t>& desired_addresses, size_t size, size_t max_distance);
-    [[nodiscard]] bool in_range(
+    [[nodiscard]] static bool in_range(
         uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance);
 };
 } // namespace safetyhook

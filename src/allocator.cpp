@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cassert>
 #include <functional>
 #include <limits>
 
@@ -264,14 +263,10 @@ std::expected<uintptr_t, Allocator::Error> Allocator::allocate_nearby_memory(
 }
 
 bool Allocator::in_range(uintptr_t address, const std::vector<uintptr_t>& desired_addresses, size_t max_distance) {
-    for (auto&& desired_address : desired_addresses) {
+    return std::ranges::all_of(desired_addresses, [&](const auto& desired_address) {
         auto delta = (address > desired_address) ? address - desired_address : desired_address - address;
-        if (delta > max_distance) {
-            return false;
-        }
-    }
-
-    return true;
+        return delta <= max_distance;
+    });
 }
 
 Allocator::Memory::~Memory() {
