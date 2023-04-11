@@ -33,9 +33,9 @@ git = "https://github.com/zyantific/zydis.git"
 tag = "v4.0.0"
 shallow = true
 cmake-before = """
-set(ZYDIS_BUILD_EXAMPLES OFF)
-set(ZYDIS_BUILD_TOOLS OFF)
-set(ZYDIS_BUILD_DOXYGEN OFF)
+option(ZYDIS_BUILD_EXAMPLES "" OFF)
+option(ZYDIS_BUILD_TOOLS "" OFF)
+option(ZYDIS_BUILD_DOXYGEN "" OFF)
 """
 
 [find-package.Doxygen]
