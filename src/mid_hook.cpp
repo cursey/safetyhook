@@ -37,7 +37,7 @@ std::expected<MidHook, MidHook::Error> MidHook::create(
     const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
     MidHook hook{};
 
-    if (const auto setup_result = hook.setup(allocator, target, destination); !setup_result) {
+    if (const auto setup_result = hook.setup(allocator, reinterpret_cast<uint8_t*>(target), destination); !setup_result) {
         return std::unexpected{setup_result.error()};
     }
 
@@ -67,7 +67,7 @@ void MidHook::reset() {
 }
 
 std::expected<void, MidHook::Error> MidHook::setup(
-    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, uint8_t* target, MidHookFn destination) {
     m_target = target;
     m_destination = destination;
 
@@ -87,8 +87,8 @@ std::expected<void, MidHook::Error> MidHook::setup(
     *reinterpret_cast<MidHookFn*>(m_stub.address() + sizeof(asm_data) - 8) = m_destination;
 
     // 32-bit has some relocations we need to fix up as well.
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + 0xA + 2) = m_stub.address() + sizeof(asm_data) - 8;
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + 0x1C + 2) = m_stub.address() + sizeof(asm_data) - 4;
+    *reinterpret_cast<uint8_t**>(m_stub.address() + 0xA + 2) = m_stub.address() + sizeof(asm_data) - 8;
+    *reinterpret_cast<uint8_t**>(m_stub.address() + 0x1C + 2) = m_stub.address() + sizeof(asm_data) - 4;
 #endif
 
     auto hook_result = InlineHook::create(allocator, m_target, m_stub.address());
@@ -101,9 +101,9 @@ std::expected<void, MidHook::Error> MidHook::setup(
     m_hook = std::move(*hook_result);
 
 #ifdef _M_X64
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + sizeof(asm_data) - 8) = m_hook.trampoline().address();
+    *reinterpret_cast<uint8_t**>(m_stub.address() + sizeof(asm_data) - 8) = m_hook.trampoline().address();
 #else
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + sizeof(asm_data) - 4) = m_hook.trampoline().address();
+    *reinterpret_cast<uint8_t**>(m_stub.address() + sizeof(asm_data) - 4) = m_hook.trampoline().address();
 #endif
 
     return {};

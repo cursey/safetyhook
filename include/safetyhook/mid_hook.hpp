@@ -95,7 +95,7 @@ public:
 
     /// @brief Get the target address.
     /// @return The target address.
-    [[nodiscard]] uintptr_t target() const { return m_target; }
+    [[nodiscard]] uint8_t* target() const { return m_target; }
 
     /// @brief Get the destination function.
     /// @return The destination function.
@@ -107,11 +107,11 @@ public:
 
 private:
     InlineHook m_hook{};
-    uintptr_t m_target{};
+    uint8_t* m_target{};
     Allocation m_stub{};
     MidHookFn m_destination{};
 
     std::expected<void, Error> setup(
-        const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination);
+        const std::shared_ptr<Allocator>& allocator, uint8_t* target, MidHookFn destination);
 };
 } // namespace safetyhook
