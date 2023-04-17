@@ -12,6 +12,7 @@
 
 #include <safetyhook/allocator.hpp>
 #include <safetyhook/thread_freezer.hpp>
+#include <safetyhook/utility.hpp>
 
 #include <safetyhook/inline_hook.hpp>
 
@@ -66,7 +67,7 @@ static auto make_jmp_ff(uint8_t* src, uint8_t* dst, uint8_t* data) {
     JmpFF jmp{};
 
     jmp.offset = static_cast<uint32_t>(data - src - sizeof(jmp));
-    *reinterpret_cast<uint8_t**>(data) = dst;
+    store(data, dst);
 
     return jmp;
 }
@@ -82,7 +83,7 @@ static void emit_jmp_ff(uint8_t* src, uint8_t* dst, uint8_t* data, size_t size =
         std::fill_n(src, size, static_cast<uint8_t>(0x90));
     }
 
-    *reinterpret_cast<JmpFF*>(src) = make_jmp_ff(src, dst, data);
+    store(src, make_jmp_ff(src, dst, data));
 }
 #endif
 
@@ -105,7 +106,7 @@ static void emit_jmp_e9(uint8_t* src, uint8_t* dst, size_t size = sizeof(JmpE9))
         std::fill_n(src, size, static_cast<uint8_t>(0x90));
     }
 
-    *reinterpret_cast<JmpE9*>(src) = make_jmp_e9(src, dst);
+    store(src, make_jmp_e9(src, dst));
 }
 
 static bool decode(ZydisDecodedInstruction* ix, uint8_t* ip) {
@@ -262,13 +263,13 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             std::copy_n(ip, ix.length, tramp_ip);
             const auto target_address = ip + ix.length + ix.raw.disp.value;
             const auto new_disp = target_address - (tramp_ip + ix.length);
-            *reinterpret_cast<int32_t*>(tramp_ip + ix.raw.disp.offset) = static_cast<int32_t>(new_disp);
+            store(tramp_ip + ix.raw.disp.offset, static_cast<int32_t>(new_disp));
             tramp_ip += ix.length;
         } else if (is_relative && ix.raw.imm[0].size == 32) {
             std::copy_n(ip, ix.length, tramp_ip);
             const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
             const auto new_disp = target_address - (tramp_ip + ix.length);
-            *reinterpret_cast<int32_t*>(tramp_ip + ix.raw.imm[0].offset) = static_cast<int32_t>(new_disp);
+            store(tramp_ip + ix.raw.imm[0].offset, static_cast<int32_t>(new_disp));
             tramp_ip += ix.length;
         } else if (ix.meta.category == ZYDIS_CATEGORY_COND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
@@ -281,7 +282,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
             *tramp_ip = 0x0F;
             *(tramp_ip + 1) = 0x10 + ix.opcode;
-            *reinterpret_cast<int32_t*>(tramp_ip + 2) = static_cast<int32_t>(new_disp);
+            store(tramp_ip + 2, static_cast<int32_t>(new_disp));
             tramp_ip += 6;
         } else if (ix.meta.category == ZYDIS_CATEGORY_UNCOND_BR && ix.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT) {
             const auto target_address = ip + ix.length + ix.raw.imm[0].value.s;
@@ -293,7 +294,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             }
 
             *tramp_ip = 0xE9;
-            *reinterpret_cast<int32_t*>(tramp_ip + 1) = static_cast<int32_t>(new_disp);
+            store(tramp_ip + 1, static_cast<int32_t>(new_disp));
             tramp_ip += 5;
         } else {
             std::copy_n(ip, ix.length, tramp_ip);
