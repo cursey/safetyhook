@@ -26,9 +26,13 @@ public:
     /// @note This is called automatically when the Allocation object is destroyed.
     void free();
 
+    /// @brief Returns a pointer to the data of the allocation.
+    /// @return Pointer to the data of the allocation.
+    [[nodiscard]] uint8_t* data() const noexcept { return m_address; }
+
     /// @brief Returns the address of the allocation.
     /// @return The address of the allocation.
-    [[nodiscard]] uint8_t* address() const noexcept { return m_address; }
+    [[nodiscard]] uintptr_t address() const noexcept { return (uintptr_t)m_address; }
 
     /// @brief Returns the size of the allocation.
     /// @return The size of the allocation.

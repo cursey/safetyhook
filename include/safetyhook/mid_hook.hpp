@@ -93,9 +93,13 @@ public:
     /// @note This is called automatically in the destructor.
     void reset();
 
-    /// @brief Get the target address.
-    /// @return The target address.
+    /// @brief Get a pointer to the target.
+    /// @return A pointer to the target.
     [[nodiscard]] uint8_t* target() const { return m_target; }
+
+    /// @brief Get the address of the target.
+    /// @return The address of the target.
+    [[nodiscard]] uintptr_t target_address() const { return reinterpret_cast<uintptr_t>(m_target); }
 
     /// @brief Get the destination function.
     /// @return The destination function.

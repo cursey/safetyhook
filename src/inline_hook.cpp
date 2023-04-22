@@ -250,8 +250,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
     m_trampoline = std::move(*trampoline_allocation);
 
-    for (auto ip = m_target, tramp_ip = m_trampoline.address(); ip < m_target + m_original_bytes.size();
-         ip += ix.length) {
+    for (auto ip = m_target, tramp_ip = m_trampoline.data(); ip < m_target + m_original_bytes.size(); ip += ix.length) {
         if (!decode(&ix, ip)) {
             m_trampoline.free();
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
@@ -330,7 +329,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
         },
         [this](uint32_t, HANDLE, CONTEXT& ctx) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.address() + i);
+                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
             }
         });
 
@@ -367,10 +366,10 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
 
     m_trampoline = std::move(*trampoline_allocation);
 
-    std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_trampoline.address());
+    std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_trampoline.data());
 
-    const auto trampoline_epilogue = reinterpret_cast<TrampolineEpilogueFF*>(
-        m_trampoline.address() + m_trampoline_size - sizeof(TrampolineEpilogueFF));
+    const auto trampoline_epilogue =
+        reinterpret_cast<TrampolineEpilogueFF*>(m_trampoline.data() + m_trampoline_size - sizeof(TrampolineEpilogueFF));
 
     // jmp from trampoline to original.
     auto src = reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_original);
@@ -388,7 +387,7 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
         },
         [this](uint32_t, HANDLE, CONTEXT& ctx) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.address() + i);
+                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
             }
         });
 
@@ -410,7 +409,7 @@ void InlineHook::destroy() {
         },
         [this](uint32_t, HANDLE, CONTEXT& ctx) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_trampoline.address() + i, m_target + i);
+                fix_ip(ctx, m_trampoline.data() + i, m_target + i);
             }
         });
 

@@ -115,13 +115,21 @@ public:
     /// @note This is called automatically in the destructor.
     void reset();
 
+    /// @brief Get a pointer to the target.
+    /// @return A pointer to the target.
+    [[nodiscard]] uint8_t* target() const { return m_target; }
+
     /// @brief Get the target address.
     /// @return The target address.
-    [[nodiscard]] uint8_t* target() const { return m_target; }
+    [[nodiscard]] uintptr_t target_address() const { return reinterpret_cast<uintptr_t>(m_target); }
+
+    /// @brief Get a pointer ot the destination.
+    /// @return A pointer to the destination.
+    [[nodiscard]] uint8_t* destination() const { return m_destination; }
 
     /// @brief Get the destination address.
     /// @return The destination address.
-    [[nodiscard]] uint8_t* destination() const { return m_destination; }
+    [[nodiscard]] uintptr_t destination_address() const { return reinterpret_cast<uintptr_t>(m_destination); }
 
     /// @brief Get the trampoline Allocation.
     /// @return The trampoline Allocation.

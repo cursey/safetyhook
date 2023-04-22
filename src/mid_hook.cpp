@@ -81,19 +81,19 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
     m_stub = std::move(*stub_allocation);
 
-    std::copy_n(asm_data, sizeof(asm_data), reinterpret_cast<uint8_t*>(m_stub.address()));
+    std::copy_n(asm_data, sizeof(asm_data), m_stub.data());
 
 #ifdef _M_X64
-    store(m_stub.address() + sizeof(asm_data) - 16, m_destination);
+    store(m_stub.data() + sizeof(asm_data) - 16, m_destination);
 #else
-    store(m_stub.address() + sizeof(asm_data) - 8, m_destination);
+    store(m_stub.data() + sizeof(asm_data) - 8, m_destination);
 
     // 32-bit has some relocations we need to fix up as well.
-    store(m_stub.address() + 0xA + 2, m_stub.address() + sizeof(asm_data) - 8);
-    store(m_stub.address() + 0x1C + 2, m_stub.address() + sizeof(asm_data) - 4);
+    store(m_stub.data() + 0xA + 2, m_stub.data() + sizeof(asm_data) - 8);
+    store(m_stub.data() + 0x1C + 2, m_stub.data() + sizeof(asm_data) - 4);
 #endif
 
-    auto hook_result = InlineHook::create(allocator, m_target, m_stub.address());
+    auto hook_result = InlineHook::create(allocator, m_target, m_stub.data());
 
     if (!hook_result) {
         m_stub.free();
@@ -103,9 +103,9 @@ std::expected<void, MidHook::Error> MidHook::setup(
     m_hook = std::move(*hook_result);
 
 #ifdef _M_X64
-    store(m_stub.address() + sizeof(asm_data) - 8, m_hook.trampoline().address());
+    store(m_stub.data() + sizeof(asm_data) - 8, m_hook.trampoline().data());
 #else
-    store(m_stub.address() + sizeof(asm_data) - 4, m_hook.trampoline().address());
+    store(m_stub.data() + sizeof(asm_data) - 4, m_hook.trampoline().data());
 #endif
 
     return {};
