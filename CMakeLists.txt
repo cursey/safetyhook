@@ -93,6 +93,7 @@ set(safetyhook_SOURCES
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"
 	"src/thread_freezer.cpp"
+	"src/vmt_hook.cpp"
 	cmake.toml
 )
 

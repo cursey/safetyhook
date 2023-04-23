@@ -216,7 +216,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the default calling convention set by your compiler.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_call(Args... args) {
         return original<RetT (*)(Args...)>()(args...);
     }
@@ -228,7 +228,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __cdecl calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_ccall(Args... args) {
         return original<RetT(__cdecl*)(Args...)>()(args...);
     }
@@ -240,7 +240,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __thiscall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_thiscall(Args... args) {
         return original<RetT(__thiscall*)(Args...)>()(args...);
     }
@@ -252,7 +252,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __stdcall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_stdcall(Args... args) {
         return original<RetT(__stdcall*)(Args...)>()(args...);
     }
@@ -264,7 +264,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __fastcall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_fastcall(Args... args) {
         return original<RetT(__fastcall*)(Args...)>()(args...);
     }
