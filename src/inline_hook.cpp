@@ -132,17 +132,8 @@ std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, vo
     return create(Allocator::global(), target, destination);
 }
 
-std::expected<InlineHook, InlineHook::Error> InlineHook::create(uintptr_t target, uintptr_t destination) {
-    return create(Allocator::global(), target, destination);
-}
-
 std::expected<InlineHook, InlineHook::Error> InlineHook::create(
     const std::shared_ptr<Allocator>& allocator, void* target, void* destination) {
-    return create(allocator, reinterpret_cast<uintptr_t>(target), reinterpret_cast<uintptr_t>(destination));
-}
-
-std::expected<InlineHook, InlineHook::Error> InlineHook::create(
-    const std::shared_ptr<Allocator>& allocator, uintptr_t target, uintptr_t destination) {
     InlineHook hook{};
 
     if (const auto setup_result =

@@ -25,17 +25,8 @@ std::expected<MidHook, MidHook::Error> MidHook::create(void* target, MidHookFn d
     return create(Allocator::global(), target, destination);
 }
 
-std::expected<MidHook, MidHook::Error> MidHook::create(uintptr_t target, MidHookFn destination) {
-    return create(Allocator::global(), target, destination);
-}
-
 std::expected<MidHook, MidHook::Error> MidHook::create(
     const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination) {
-    return create(allocator, reinterpret_cast<uintptr_t>(target), destination);
-}
-
-std::expected<MidHook, MidHook::Error> MidHook::create(
-    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
     MidHook hook{};
 
     if (const auto setup_result = hook.setup(allocator, reinterpret_cast<uint8_t*>(target), destination);

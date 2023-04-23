@@ -3,20 +3,18 @@
 
 TEST_CASE("Mid hook to change a register", "[mid_hook]") {
     struct Target {
-        __declspec(noinline) static int __fastcall add_42(int a) {
-            return a + 42;
-        }
+        __declspec(noinline) static int __fastcall add_42(int a) { return a + 42; }
     };
 
     REQUIRE(Target::add_42(0) == 42);
-    
+
     static SafetyHookMid hook;
 
     struct Hook {
         static void add_42(SafetyHookContext& ctx) {
 #if defined(_M_X64)
             ctx.rcx = 1337 - 42;
-#elif defined(_M_IX86) 
+#elif defined(_M_IX86)
             ctx.ecx = 1337 - 42;
 #else
 #error "Unsupported architecture"
@@ -24,7 +22,7 @@ TEST_CASE("Mid hook to change a register", "[mid_hook]") {
         }
     };
 
-    auto hook_result = SafetyHookMid::create(reinterpret_cast<void*>(Target::add_42), Hook::add_42);
+    auto hook_result = SafetyHookMid::create(Target::add_42, Hook::add_42);
 
     REQUIRE(hook_result);
 

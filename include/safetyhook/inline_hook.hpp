@@ -78,12 +78,17 @@ public:
     [[nodiscard]] static std::expected<InlineHook, Error> create(void* target, void* destination);
 
     /// @brief Create an inline hook.
+    /// @tparam T The type of the function to hook.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note This will use the default global Allocator.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    [[nodiscard]] static std::expected<InlineHook, Error> create(uintptr_t target, uintptr_t destination);
+    template <typename T>
+        requires std::is_function_v<T>
+    [[nodiscard]] static std::expected<InlineHook, Error> create(T* target, T* destination) {
+        return create(reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
+    }
 
     /// @brief Create an inline hook with a given Allocator.
     /// @param allocator The allocator to use.
@@ -95,13 +100,18 @@ public:
         const std::shared_ptr<Allocator>& allocator, void* target, void* destination);
 
     /// @brief Create an inline hook with a given Allocator.
+    /// @tparam T The type of the function to hook.
     /// @param allocator The allocator to use.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
+    template <typename T>
+        requires std::is_function_v<T>
     [[nodiscard]] static std::expected<InlineHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, uintptr_t target, uintptr_t destination);
+        const std::shared_ptr<Allocator>& allocator, T* target, T* destination) {
+        return create(allocator, reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
+    }
 
     InlineHook() = default;
     InlineHook(const InlineHook&) = delete;
