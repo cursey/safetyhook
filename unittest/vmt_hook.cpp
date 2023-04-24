@@ -18,8 +18,8 @@ TEST_CASE("VMT hook an object instance", "[vmt_hook]") {
     static SafetyHookVmt target_hook{};
     static SafetyHookVm add_42_hook{};
 
-    struct Hook {
-        static int __thiscall add_42(Target* self, int a) { return add_42_hook.thiscall<int>(self, a) + 1337; }
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
     auto vmt_result = SafetyHookVmt::create(target.get());
@@ -28,7 +28,7 @@ TEST_CASE("VMT hook an object instance", "[vmt_hook]") {
 
     target_hook = std::move(*vmt_result);
 
-    auto vm_result = target_hook.hook_method(1, Hook::add_42);
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
 
     REQUIRE(vm_result);
 
@@ -62,9 +62,9 @@ TEST_CASE("Resetting the VMT hook removes all VM hooks for that object", "[vmt_h
     static SafetyHookVm add_42_hook{};
     static SafetyHookVm add_43_hook{};
 
-    struct Hook {
-        static int __thiscall add_42(Target* self, int a) { return add_42_hook.thiscall<int>(self, a) + 1337; }
-        static int __thiscall add_43(Target* self, int a) { return add_43_hook.thiscall<int>(self, a) + 1337; }
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+        int hooked_add_43(int a) { return add_43_hook.thiscall<int>(this, a) + 1337; }
     };
 
     auto vmt_result = SafetyHookVmt::create(target.get());
@@ -73,7 +73,7 @@ TEST_CASE("Resetting the VMT hook removes all VM hooks for that object", "[vmt_h
 
     target_hook = std::move(*vmt_result);
 
-    auto vm_result = target_hook.hook_method(1, Hook::add_42);
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
 
     REQUIRE(vm_result);
 
@@ -81,7 +81,7 @@ TEST_CASE("Resetting the VMT hook removes all VM hooks for that object", "[vmt_h
 
     REQUIRE(target->add_42(1) == 1380);
 
-    vm_result = target_hook.hook_method(2, Hook::add_43);
+    vm_result = target_hook.hook_method(2, &Hook::hooked_add_43);
 
     REQUIRE(vm_result);
 
@@ -113,8 +113,8 @@ TEST_CASE("VMT hooking an object maintains correct RTTI", "[vmt_hook]") {
     static SafetyHookVmt target_hook{};
     static SafetyHookVm add_42_hook{};
 
-    struct Hook {
-        static int __thiscall add_42(Target* self, int a) { return add_42_hook.thiscall<int>(self, a) + 1337; }
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
     auto vmt_result = SafetyHookVmt::create(target.get());
@@ -123,7 +123,7 @@ TEST_CASE("VMT hooking an object maintains correct RTTI", "[vmt_hook]") {
 
     target_hook = std::move(*vmt_result);
 
-    auto vm_result = target_hook.hook_method(1, Hook::add_42);
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
 
     REQUIRE(vm_result);
 

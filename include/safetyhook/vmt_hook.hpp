@@ -72,7 +72,7 @@ public:
 
         ++index; // Skip RTTI pointer.
         hook.m_original_vm = m_new_vmt[index];
-        hook.m_new_vm = reinterpret_cast<uint8_t*>(new_function);
+        store(reinterpret_cast<uint8_t*>(&hook.m_new_vm), new_function);
         hook.m_vmt_entry = &m_new_vmt[index];
         m_new_vmt[index] = hook.m_new_vm;
 
