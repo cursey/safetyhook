@@ -7,7 +7,7 @@ TEST_CASE("VMT hook an object instance", "[vmt_hook]") {
         virtual int add_42(int a) = 0;
     };
 
-    struct Target : public Interface {
+    struct Target : Interface {
         __declspec(noinline) int add_42(int a) override { return a + 42; }
     };
 
@@ -48,7 +48,7 @@ TEST_CASE("Resetting the VMT hook removes all VM hooks for that object", "[vmt_h
         virtual int add_43(int a) = 0;
     };
 
-    struct Target : public Interface {
+    struct Target : Interface {
         __declspec(noinline) int add_42(int a) override { return a + 42; }
         __declspec(noinline) int add_43(int a) override { return a + 43; }
     };

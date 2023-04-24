@@ -7,6 +7,8 @@
 #include <expected>
 #include <vector>
 
+#include <safetyhook/utility.hpp>
+
 namespace safetyhook {
 class VmHook final {
 public:
@@ -65,9 +67,7 @@ public:
 
     void reset();
 
-    template <typename T>
-        requires std::is_function_v<T>
-    [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, T* new_function) {
+    [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, FnPtr auto new_function) {
         VmHook hook{};
 
         hook.m_original_vm = m_new_vmt[index];
