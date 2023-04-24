@@ -1,8 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <concepts>
 #include <cstdint>
+#include <type_traits>
 
 namespace safetyhook {
 template <typename T> constexpr void store(uint8_t* address, const T& value) {

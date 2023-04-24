@@ -39,11 +39,15 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     hook.m_object = object;
     hook.m_original_vmt = *reinterpret_cast<uint8_t***>(object);
 
+    // Copy pointer to RTTI.
+    hook.m_new_vmt.push_back(*(hook.m_original_vmt - 1));
+
+    // Copy virtual method pointers.
     for (auto vm = hook.m_original_vmt; *vm; ++vm) {
         hook.m_new_vmt.push_back(*vm);
     }
 
-    *reinterpret_cast<uint8_t***>(object) = hook.m_new_vmt.data();
+    *reinterpret_cast<uint8_t***>(object) = hook.m_new_vmt.data() + 1;
 
     return hook;
 }

@@ -70,6 +70,7 @@ public:
     [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, FnPtr auto new_function) {
         VmHook hook{};
 
+        ++index; // Skip RTTI pointer.
         hook.m_original_vm = m_new_vmt[index];
         hook.m_new_vm = reinterpret_cast<uint8_t*>(new_function);
         hook.m_vmt_entry = &m_new_vmt[index];
