@@ -38,9 +38,9 @@ int main() {
 #error "Unsupported architecture"
 #endif
 
-    auto ip = (uintptr_t)add_42;
+    auto ip = reinterpret_cast<uint8_t*>(add_42);
 
-    while (*(uint8_t*)ip != 0xC3) {
+    while (*ip != 0xC3) {
         ZydisDecodedInstruction ix{};
 
         ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<void*>(ip), 15, &ix);

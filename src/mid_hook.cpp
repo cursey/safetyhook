@@ -2,6 +2,7 @@
 
 #include <safetyhook/allocator.hpp>
 #include <safetyhook/inline_hook.hpp>
+#include <safetyhook/utility.hpp>
 
 #include <safetyhook/mid_hook.hpp>
 
@@ -24,20 +25,12 @@ std::expected<MidHook, MidHook::Error> MidHook::create(void* target, MidHookFn d
     return create(Allocator::global(), target, destination);
 }
 
-std::expected<MidHook, MidHook::Error> MidHook::create(uintptr_t target, MidHookFn destination) {
-    return create(Allocator::global(), target, destination);
-}
-
 std::expected<MidHook, MidHook::Error> MidHook::create(
     const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination) {
-    return create(allocator, reinterpret_cast<uintptr_t>(target), destination);
-}
-
-std::expected<MidHook, MidHook::Error> MidHook::create(
-    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
     MidHook hook{};
 
-    if (const auto setup_result = hook.setup(allocator, target, destination); !setup_result) {
+    if (const auto setup_result = hook.setup(allocator, reinterpret_cast<uint8_t*>(target), destination);
+        !setup_result) {
         return std::unexpected{setup_result.error()};
     }
 
@@ -67,7 +60,7 @@ void MidHook::reset() {
 }
 
 std::expected<void, MidHook::Error> MidHook::setup(
-    const std::shared_ptr<Allocator>& allocator, uintptr_t target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, uint8_t* target, MidHookFn destination) {
     m_target = target;
     m_destination = destination;
 
@@ -79,19 +72,19 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
     m_stub = std::move(*stub_allocation);
 
-    std::copy_n(asm_data, sizeof(asm_data), reinterpret_cast<uint8_t*>(m_stub.address()));
+    std::copy_n(asm_data, sizeof(asm_data), m_stub.data());
 
 #ifdef _M_X64
-    *reinterpret_cast<MidHookFn*>(m_stub.address() + sizeof(asm_data) - 16) = m_destination;
+    store(m_stub.data() + sizeof(asm_data) - 16, m_destination);
 #else
-    *reinterpret_cast<MidHookFn*>(m_stub.address() + sizeof(asm_data) - 8) = m_destination;
+    store(m_stub.data() + sizeof(asm_data) - 8, m_destination);
 
     // 32-bit has some relocations we need to fix up as well.
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + 0xA + 2) = m_stub.address() + sizeof(asm_data) - 8;
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + 0x1C + 2) = m_stub.address() + sizeof(asm_data) - 4;
+    store(m_stub.data() + 0xA + 2, m_stub.data() + sizeof(asm_data) - 8);
+    store(m_stub.data() + 0x1C + 2, m_stub.data() + sizeof(asm_data) - 4);
 #endif
 
-    auto hook_result = InlineHook::create(allocator, m_target, m_stub.address());
+    auto hook_result = InlineHook::create(allocator, m_target, m_stub.data());
 
     if (!hook_result) {
         m_stub.free();
@@ -101,9 +94,9 @@ std::expected<void, MidHook::Error> MidHook::setup(
     m_hook = std::move(*hook_result);
 
 #ifdef _M_X64
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + sizeof(asm_data) - 8) = m_hook.trampoline().address();
+    store(m_stub.data() + sizeof(asm_data) - 8, m_hook.trampoline().data());
 #else
-    *reinterpret_cast<uintptr_t*>(m_stub.address() + sizeof(asm_data) - 4) = m_hook.trampoline().address();
+    store(m_stub.data() + sizeof(asm_data) - 4, m_hook.trampoline().data());
 #endif
 
     return {};

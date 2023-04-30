@@ -24,5 +24,5 @@ void execute_while_frozen(
 /// @param ctx The thread context to modify.
 /// @param old_ip The old IP address.
 /// @param new_ip The new IP address.
-void fix_ip(CONTEXT& ctx, uintptr_t old_ip, uintptr_t new_ip);
+void fix_ip(CONTEXT& ctx, uint8_t* old_ip, uint8_t* new_ip);
 } // namespace safetyhook

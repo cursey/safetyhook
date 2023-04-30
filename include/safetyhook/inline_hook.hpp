@@ -30,7 +30,7 @@ public:
         /// @brief Extra information about the error.
         union {
             Allocator::Error allocator_error; ///< Allocator error information.
-            uintptr_t ip;                     ///< IP of the problematic instruction.
+            uint8_t* ip;                      ///< IP of the problematic instruction.
         };
 
         /// @brief Create a BAD_ALLOCATION error.
@@ -43,28 +43,28 @@ public:
         /// @brief Create a FAILED_TO_DECODE_INSTRUCTION error.
         /// @param ip The IP of the problematic instruction.
         /// @return The new FAILED_TO_DECODE_INSTRUCTION error.
-        [[nodiscard]] static Error failed_to_decode_instruction(uintptr_t ip) {
+        [[nodiscard]] static Error failed_to_decode_instruction(uint8_t* ip) {
             return {.type = FAILED_TO_DECODE_INSTRUCTION, .ip = ip};
         }
 
         /// @brief Create a SHORT_JUMP_IN_TRAMPOLINE error.
         /// @param ip The IP of the problematic instruction.
         /// @return The new SHORT_JUMP_IN_TRAMPOLINE error.
-        [[nodiscard]] static Error short_jump_in_trampoline(uintptr_t ip) {
+        [[nodiscard]] static Error short_jump_in_trampoline(uint8_t* ip) {
             return {.type = SHORT_JUMP_IN_TRAMPOLINE, .ip = ip};
         }
 
         /// @brief Create a IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
         /// @param ip The IP of the problematic instruction.
         /// @return The new IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE error.
-        [[nodiscard]] static Error ip_relative_instruction_out_of_range(uintptr_t ip) {
+        [[nodiscard]] static Error ip_relative_instruction_out_of_range(uint8_t* ip) {
             return {.type = IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE, .ip = ip};
         }
 
         /// @brief Create a UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE error.
         /// @param ip The IP of the problematic instruction.
         /// @return The new UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE error.
-        [[nodiscard]] static Error unsupported_instruction_in_trampoline(uintptr_t ip) {
+        [[nodiscard]] static Error unsupported_instruction_in_trampoline(uint8_t* ip) {
             return {.type = UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, .ip = ip};
         }
     };
@@ -78,12 +78,17 @@ public:
     [[nodiscard]] static std::expected<InlineHook, Error> create(void* target, void* destination);
 
     /// @brief Create an inline hook.
+    /// @tparam T The type of the function to hook.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note This will use the default global Allocator.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    [[nodiscard]] static std::expected<InlineHook, Error> create(uintptr_t target, uintptr_t destination);
+    template <typename T>
+        requires std::is_function_v<T>
+    [[nodiscard]] static std::expected<InlineHook, Error> create(T* target, T* destination) {
+        return create(reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
+    }
 
     /// @brief Create an inline hook with a given Allocator.
     /// @param allocator The allocator to use.
@@ -95,13 +100,18 @@ public:
         const std::shared_ptr<Allocator>& allocator, void* target, void* destination);
 
     /// @brief Create an inline hook with a given Allocator.
+    /// @tparam T The type of the function to hook.
     /// @param allocator The allocator to use.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
+    template <typename T>
+        requires std::is_function_v<T>
     [[nodiscard]] static std::expected<InlineHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, uintptr_t target, uintptr_t destination);
+        const std::shared_ptr<Allocator>& allocator, T* target, T* destination) {
+        return create(allocator, reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
+    }
 
     InlineHook() = default;
     InlineHook(const InlineHook&) = delete;
@@ -115,13 +125,21 @@ public:
     /// @note This is called automatically in the destructor.
     void reset();
 
+    /// @brief Get a pointer to the target.
+    /// @return A pointer to the target.
+    [[nodiscard]] uint8_t* target() const { return m_target; }
+
     /// @brief Get the target address.
     /// @return The target address.
-    [[nodiscard]] uintptr_t target() const { return m_target; }
+    [[nodiscard]] uintptr_t target_address() const { return reinterpret_cast<uintptr_t>(m_target); }
+
+    /// @brief Get a pointer ot the destination.
+    /// @return A pointer to the destination.
+    [[nodiscard]] uint8_t* destination() const { return m_destination; }
 
     /// @brief Get the destination address.
     /// @return The destination address.
-    [[nodiscard]] size_t destination() const { return m_destination; }
+    [[nodiscard]] uintptr_t destination_address() const { return reinterpret_cast<uintptr_t>(m_destination); }
 
     /// @brief Get the trampoline Allocation.
     /// @return The trampoline Allocation.
@@ -252,15 +270,15 @@ public:
     }
 
 private:
-    uintptr_t m_target{};
-    uintptr_t m_destination{};
+    uint8_t* m_target{};
+    uint8_t* m_destination{};
     Allocation m_trampoline{};
     std::vector<uint8_t> m_original_bytes{};
     uintptr_t m_trampoline_size{};
     std::recursive_mutex m_mutex{};
 
     std::expected<void, Error> setup(
-        const std::shared_ptr<Allocator>& allocator, uintptr_t target, uintptr_t destination);
+        const std::shared_ptr<Allocator>& allocator, uint8_t* target, uint8_t* destination);
     std::expected<void, Error> e9_hook(const std::shared_ptr<Allocator>& allocator);
 
 #ifdef _M_X64

@@ -1,8 +1,8 @@
 #if defined(_M_X64)
 
 #include <catch2/catch_test_macros.hpp>
-#include <xbyak/xbyak.h>
 #include <safetyhook.hpp>
+#include <xbyak/xbyak.h>
 
 void asciiz(Xbyak::CodeGenerator& cg, const char* str) {
     while (*str) {
@@ -19,7 +19,7 @@ TEST_CASE("Function with RIP-relative operand is hooked", "[inline-hook-x86_64]"
     Xbyak::CodeGenerator cg{};
     Xbyak::Label str_label{};
 
-    cg.lea(rax, ptr [rip + str_label]);
+    cg.lea(rax, ptr[rip + str_label]);
     cg.ret();
 
     for (auto i = 0; i < 10; ++i) {
@@ -29,7 +29,7 @@ TEST_CASE("Function with RIP-relative operand is hooked", "[inline-hook-x86_64]"
     cg.L(str_label);
     asciiz(cg, "Hello");
 
-    const auto fn = cg.getCode<const char*(*)()>();
+    const auto fn = cg.getCode<const char* (*)()>();
 
     REQUIRE((fn() == "Hello"sv));
 
@@ -39,7 +39,7 @@ TEST_CASE("Function with RIP-relative operand is hooked", "[inline-hook-x86_64]"
         static const char* fn() { return "Hello, world!"; }
     };
 
-    auto hook_result = SafetyHookInline::create(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+    auto hook_result = SafetyHookInline::create(fn, Hook::fn);
 
     REQUIRE(hook_result);
 
@@ -77,7 +77,7 @@ TEST_CASE("Function with no nearby memory is hooked", "[inline-hook-x86_64]") {
         static int fn(int a) { return hook.call<int>(a) * a; }
     };
 
-    auto hook_result = SafetyHookInline::create(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+    auto hook_result = SafetyHookInline::create(fn, Hook::fn);
 
     REQUIRE(hook_result);
 

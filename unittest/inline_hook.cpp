@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include <xbyak/xbyak.h>
 #include <safetyhook.hpp>
+#include <xbyak/xbyak.h>
 
 TEST_CASE("Function hooked multiple times", "[inline_hook]") {
     struct Target {
@@ -16,7 +16,7 @@ TEST_CASE("Function hooked multiple times", "[inline_hook]") {
         static std::string fn(std::string name) { return hook0.call<std::string>(name + " and bob"); }
     };
 
-    auto hook0_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::fn), reinterpret_cast<void*>(Hook0::fn));
+    auto hook0_result = SafetyHookInline::create(Target::fn, Hook0::fn);
 
     REQUIRE(hook0_result);
 
@@ -31,7 +31,7 @@ TEST_CASE("Function hooked multiple times", "[inline_hook]") {
         static std::string fn(std::string name) { return hook1.call<std::string>(name + " and alice"); }
     };
 
-    auto hook1_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::fn), reinterpret_cast<void*>(Hook1::fn));
+    auto hook1_result = SafetyHookInline::create(Target::fn, Hook1::fn);
 
     REQUIRE(hook1_result);
 
@@ -46,7 +46,7 @@ TEST_CASE("Function hooked multiple times", "[inline_hook]") {
         static std::string fn(std::string name) { return hook2.call<std::string>(name + " and eve"); }
     };
 
-    auto hook2_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::fn), reinterpret_cast<void*>(Hook2::fn));
+    auto hook2_result = SafetyHookInline::create(Target::fn, Hook2::fn);
 
     REQUIRE(hook2_result);
 
@@ -61,7 +61,7 @@ TEST_CASE("Function hooked multiple times", "[inline_hook]") {
         static std::string fn(std::string name) { return hook3.call<std::string>(name + " and carol"); }
     };
 
-    auto hook3_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::fn), reinterpret_cast<void*>(Hook3::fn));
+    auto hook3_result = SafetyHookInline::create(Target::fn, Hook3::fn);
 
     REQUIRE(hook3_result);
 
@@ -89,7 +89,7 @@ TEST_CASE("Function with multiple args hooked", "[inline_hook]") {
         static int add(int x, int y) { return add_hook.call<int>(x * 2, y * 2); }
     };
 
-    auto add_hook_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::add), reinterpret_cast<void*>(AddHook::add));
+    auto add_hook_result = SafetyHookInline::create(Target::add, AddHook::add);
 
     REQUIRE(add_hook_result);
 
@@ -128,7 +128,7 @@ TEST_CASE("Active function is hooked and unhooked", "[inline_hook]") {
         static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
     };
 
-    auto hook_result = SafetyHookInline::create(reinterpret_cast<void*>(Target::say_hello), reinterpret_cast<void*>(Hook::say_hello));
+    auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello);
 
     REQUIRE(hook_result);
 
@@ -153,9 +153,7 @@ TEST_CASE("Function with short unconditional branch is hooked", "[inline-hook]")
     static SafetyHookInline hook;
 
     struct Hook {
-        static int __fastcall fn() { 
-            return hook.fastcall<int>() + 42; 
-        };
+        static int __fastcall fn() { return hook.fastcall<int>() + 42; };
     };
 
     Xbyak::CodeGenerator cg{};
@@ -173,7 +171,7 @@ TEST_CASE("Function with short unconditional branch is hooked", "[inline-hook]")
 
     REQUIRE(fn() == 1);
 
-    hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+    hook = safetyhook::create_inline(fn, Hook::fn);
 
     REQUIRE(fn() == 43);
 
@@ -189,9 +187,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
     static SafetyHookInline hook;
 
     struct Hook {
-        static int __fastcall fn(int x) { 
-            return hook.fastcall<int>(x) + 42; 
-        };
+        static int __fastcall fn(int x) { return hook.fastcall<int>(x) + 42; };
     };
 
     Xbyak::CodeGenerator cg{};
@@ -217,7 +213,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 42);
@@ -238,7 +234,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 43);
@@ -259,7 +255,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 42);
@@ -280,7 +276,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 43);
@@ -301,7 +297,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 43);
@@ -322,7 +318,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 42);
@@ -343,7 +339,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 43);
@@ -364,7 +360,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 42);
@@ -385,7 +381,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 43);
@@ -406,7 +402,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 42);
@@ -427,7 +423,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 43);
@@ -448,7 +444,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 1);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 42);
@@ -469,7 +465,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 42);
@@ -490,7 +486,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 43);
@@ -511,7 +507,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 0);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 43);
         CHECK(fn(8) == 42);
@@ -532,7 +528,7 @@ TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
         CHECK(fn(8) == 1);
         CHECK(fn(9) == 0);
 
-        hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+        hook = safetyhook::create_inline(fn, Hook::fn);
 
         CHECK(fn(7) == 42);
         CHECK(fn(8) == 43);
@@ -557,20 +553,18 @@ TEST_CASE("Function with short jump inside trampoline", "[inline-hook]") {
     cg.mov(eax, 42);
     cg.ret();
     cg.nop(10, false);
-    
-    const auto fn = cg.getCode<int(*)()>();
+
+    const auto fn = cg.getCode<int (*)()>();
 
     REQUIRE(fn() == 42);
 
     static SafetyHookInline hook;
 
     struct Hook {
-        static int fn() {
-            return hook.call<int>() + 1;
-        }
+        static int fn() { return hook.call<int>() + 1; }
     };
 
-    hook = safetyhook::create_inline(reinterpret_cast<void*>(fn), reinterpret_cast<void*>(Hook::fn));
+    hook = safetyhook::create_inline(fn, Hook::fn);
 
     REQUIRE(fn() == 43);
 

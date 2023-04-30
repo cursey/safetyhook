@@ -110,15 +110,15 @@ void execute_while_frozen(
     }
 }
 
-void fix_ip(CONTEXT& ctx, uintptr_t old_ip, uintptr_t new_ip) {
+void fix_ip(CONTEXT& ctx, uint8_t* old_ip, uint8_t* new_ip) {
 #ifdef _M_X64
     auto ip = ctx.Rip;
 #else
     auto ip = ctx.Eip;
 #endif
 
-    if (ip == old_ip) {
-        ip = new_ip;
+    if (ip == reinterpret_cast<uintptr_t>(old_ip)) {
+        ip = reinterpret_cast<uintptr_t>(new_ip);
     }
 
 #ifdef _M_X64
