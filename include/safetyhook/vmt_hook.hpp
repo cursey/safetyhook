@@ -7,6 +7,7 @@
 #include <expected>
 #include <vector>
 
+#include <safetyhook/allocator.hpp>
 #include <safetyhook/utility.hpp>
 
 namespace safetyhook {
@@ -50,12 +51,26 @@ private:
     uint8_t* m_new_vm{};
     uint8_t** m_vmt_entry{};
 
+    // This keeps the allocation alive until the hook is destroyed.
+    std::shared_ptr<Allocation> m_new_vmt_allocation{};
+
     void destroy();
 };
 
 class VmtHook final {
 public:
-    class Error {};
+    struct Error {
+        enum : uint8_t { BAD_ALLOCATION } type;
+
+        union {
+            Allocator::Error allocator_error;
+        };
+
+        [[nodiscard]] static Error bad_allocation(Allocator::Error err) {
+            return {.type = BAD_ALLOCATION, .allocator_error = err};
+        }
+    };
+
     [[nodiscard]] static std::expected<VmtHook, Error> create(void* object);
 
     VmtHook() = default;
@@ -74,6 +89,7 @@ public:
         hook.m_original_vm = m_new_vmt[index];
         store(reinterpret_cast<uint8_t*>(&hook.m_new_vm), new_function);
         hook.m_vmt_entry = &m_new_vmt[index];
+        hook.m_new_vmt_allocation = m_new_vmt_allocation;
         m_new_vmt[index] = hook.m_new_vm;
 
         return hook;
@@ -82,7 +98,11 @@ public:
 private:
     void* m_object{};
     uint8_t** m_original_vmt{};
-    std::vector<uint8_t*> m_new_vmt{};
+    std::vector<std::shared_ptr<VmHook>> m_vm_hooks{};
+
+    // The allocation is a shared_ptr, so it can be shared with VmHooks to ensure the memory is kept alive.
+    std::shared_ptr<Allocation> m_new_vmt_allocation{};
+    uint8_t** m_new_vmt{};
 
     void destroy();
 };

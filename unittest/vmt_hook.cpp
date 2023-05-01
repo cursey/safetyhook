@@ -132,3 +132,42 @@ TEST_CASE("VMT hooking an object maintains correct RTTI", "[vmt_hook]") {
     REQUIRE(target->add_42(1) == 1380);
     REQUIRE(dynamic_cast<Target*>(target.get()) != nullptr);
 }
+
+TEST_CASE("Can safely destroy VmtHook after object is deleted", "[vmt_hook]") {
+    struct Interface {
+        virtual ~Interface() = default;
+        virtual int add_42(int a) = 0;
+    };
+
+    struct Target : Interface {
+        __declspec(noinline) int add_42(int a) override { return a + 42; }
+    };
+
+    std::unique_ptr<Interface> target = std::make_unique<Target>();
+
+    REQUIRE(target->add_42(0) == 42);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+    };
+
+    auto vmt_result = SafetyHookVmt::create(target.get());
+
+    REQUIRE(vmt_result);
+
+    target_hook = std::move(*vmt_result);
+
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+
+    REQUIRE(vm_result);
+
+    add_42_hook = std::move(*vm_result);
+
+    REQUIRE(target->add_42(1) == 1380);
+
+    target.reset();
+    target_hook.reset();
+}
