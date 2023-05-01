@@ -6,6 +6,7 @@
 #include <safetyhook/inline_hook.hpp>
 #include <safetyhook/mid_hook.hpp>
 #include <safetyhook/utility.hpp>
+#include <safetyhook/vmt_hook.hpp>
 
 namespace safetyhook {
 /// @brief Easy to use API for creating an InlineHook.
@@ -35,4 +36,6 @@ namespace safetyhook {
 [[nodiscard]] MidHook create_mid(FnPtr auto target, MidHookFn destination) {
     return create_mid(reinterpret_cast<void*>(target), destination);
 }
+
+[[nodiscard]] VmtHook create_vmt(void* object);
 } // namespace safetyhook

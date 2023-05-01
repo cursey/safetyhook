@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #include <expected>
-#include <vector>
+#include <unordered_map>
 
 #include <safetyhook/allocator.hpp>
 #include <safetyhook/utility.hpp>
@@ -80,6 +80,9 @@ public:
     VmtHook& operator=(VmtHook&& other) noexcept;
     ~VmtHook();
 
+    void apply(void* object);
+    void remove(void* object);
+
     void reset();
 
     [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, FnPtr auto new_function) {
@@ -96,9 +99,8 @@ public:
     }
 
 private:
-    void* m_object{};
-    uint8_t** m_original_vmt{};
-    std::vector<std::shared_ptr<VmHook>> m_vm_hooks{};
+    // Map of object instance to their original VMT.
+    std::unordered_map<void*, uint8_t**> m_objects{};
 
     // The allocation is a shared_ptr, so it can be shared with VmHooks to ensure the memory is kept alive.
     std::shared_ptr<Allocation> m_new_vmt_allocation{};

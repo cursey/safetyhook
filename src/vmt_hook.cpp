@@ -1,6 +1,5 @@
 #include <Windows.h>
 
-#include <safetyhook/allocator.hpp>
 #include <safetyhook/thread_freezer.hpp>
 
 #include <safetyhook/vmt_hook.hpp>
@@ -43,15 +42,17 @@ void VmHook::destroy() {
 std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     VmtHook hook{};
 
-    hook.m_object = object;
-    hook.m_original_vmt = *reinterpret_cast<uint8_t***>(object);
+    const auto original_vmt = *reinterpret_cast<uint8_t***>(object);
+    hook.m_objects.emplace(object, original_vmt);
 
+    // Count the number of virtual method pointers. We start at one to account for the RTTI pointer.
     auto num_vmt_entries = 1;
 
-    for (auto vm = hook.m_original_vmt; *vm; ++vm) {
+    for (auto vm = original_vmt; *vm; ++vm) {
         ++num_vmt_entries;
     }
 
+    // Allocate memory for the new VMT.
     auto allocation = Allocator::global()->allocate(num_vmt_entries * sizeof(uint8_t*));
 
     if (!allocation) {
@@ -62,14 +63,14 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     hook.m_new_vmt = reinterpret_cast<uint8_t**>(hook.m_new_vmt_allocation->data());
 
     // Copy pointer to RTTI.
-    hook.m_new_vmt[0] = hook.m_original_vmt[-1];
+    hook.m_new_vmt[0] = original_vmt[-1];
 
     // Copy virtual method pointers.
     for (auto i = 0; i < num_vmt_entries - 1; ++i) {
-        hook.m_new_vmt[i + 1] = hook.m_original_vmt[i];
+        hook.m_new_vmt[i + 1] = original_vmt[i];
     }
 
-    *reinterpret_cast<uint8_t***>(object) = &hook.m_new_vmt[1]; // hook.m_new_vmt.data() + 1;
+    *reinterpret_cast<uint8_t***>(object) = &hook.m_new_vmt[1];
 
     return hook;
 }
@@ -80,12 +81,9 @@ VmtHook::VmtHook(VmtHook&& other) noexcept {
 
 VmtHook& VmtHook::operator=(VmtHook&& other) noexcept {
     destroy();
-    m_object = other.m_object;
-    m_original_vmt = other.m_original_vmt;
+    m_objects = std::move(other.m_objects);
     m_new_vmt_allocation = std::move(other.m_new_vmt_allocation);
     m_new_vmt = other.m_new_vmt;
-    other.m_object = nullptr;
-    other.m_original_vmt = nullptr;
     other.m_new_vmt = nullptr;
     return *this;
 }
@@ -94,28 +92,55 @@ VmtHook::~VmtHook() {
     destroy();
 }
 
+void VmtHook::apply(void* object) {
+    m_objects.emplace(object, *reinterpret_cast<uint8_t***>(object));
+    *reinterpret_cast<uint8_t***>(object) = &m_new_vmt[1];
+}
+
+void VmtHook::remove(void* object) {
+    const auto search = m_objects.find(object);
+
+    if (search == m_objects.end()) {
+        return;
+    }
+
+    const auto original_vmt = search->second;
+
+    execute_while_frozen([&] {
+        if (IsBadWritePtr(object, sizeof(void*))) {
+            return;
+        }
+
+        if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+            return;
+        }
+
+        *reinterpret_cast<uint8_t***>(object) = original_vmt;
+    });
+
+    m_objects.erase(search);
+}
+
 void VmtHook::reset() {
     *this = {};
 }
 
 void VmtHook::destroy() {
-    if (m_original_vmt == nullptr) {
-        return;
-    }
-
     execute_while_frozen([this] {
-        if (IsBadWritePtr(m_object, sizeof(void*))) {
-            return;
-        }
+        for (const auto [object, original_vmt] : m_objects) {
+            if (IsBadWritePtr(object, sizeof(void*))) {
+                return;
+            }
 
-        if (*reinterpret_cast<uint8_t***>(m_object) != &m_new_vmt[1]) {
-            return;
-        }
+            if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+                return;
+            }
 
-        *reinterpret_cast<uint8_t***>(m_object) = m_original_vmt;
+            *reinterpret_cast<uint8_t***>(object) = original_vmt;
+        }
     });
 
-    m_original_vmt = nullptr;
+    m_objects.clear();
     m_new_vmt_allocation.reset();
     m_new_vmt = nullptr;
 }

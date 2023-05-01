@@ -17,4 +17,11 @@ MidHook create_mid(void* target, MidHookFn destination) {
     }
 }
 
+VmtHook create_vmt(void* object) {
+    if (auto hook = VmtHook::create(object)) {
+        return std::move(*hook);
+    } else {
+        return {};
+    }
+}
 } // namespace safetyhook

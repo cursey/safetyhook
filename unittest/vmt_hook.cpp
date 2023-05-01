@@ -171,3 +171,130 @@ TEST_CASE("Can safely destroy VmtHook after object is deleted", "[vmt_hook]") {
     target.reset();
     target_hook.reset();
 }
+
+TEST_CASE("Can apply an existing VMT hook to more than one object", "[vmt_hook]") {
+    struct Interface {
+        virtual ~Interface() = default;
+        virtual int add_42(int a) = 0;
+    };
+
+    struct Target : Interface {
+        __declspec(noinline) int add_42(int a) override { return a + 42; }
+    };
+
+    std::unique_ptr<Interface> target = std::make_unique<Target>();
+    std::unique_ptr<Interface> target0 = std::make_unique<Target>();
+    std::unique_ptr<Interface> target1 = std::make_unique<Target>();
+    std::unique_ptr<Interface> target2 = std::make_unique<Target>();
+
+    REQUIRE(target->add_42(0) == 42);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+    };
+
+    auto vmt_result = SafetyHookVmt::create(target.get());
+
+    REQUIRE(vmt_result);
+
+    target_hook = std::move(*vmt_result);
+
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+
+    REQUIRE(vm_result);
+
+    add_42_hook = std::move(*vm_result);
+
+    target_hook.apply(target0.get());
+    target_hook.apply(target1.get());
+    target_hook.apply(target2.get());
+
+    REQUIRE(target->add_42(1) == 1380);
+    REQUIRE(target0->add_42(1) == 1380);
+    REQUIRE(target1->add_42(1) == 1380);
+    REQUIRE(target2->add_42(1) == 1380);
+
+    add_42_hook.reset();
+
+    REQUIRE(target->add_42(2) == 44);
+    REQUIRE(target0->add_42(2) == 44);
+    REQUIRE(target1->add_42(2) == 44);
+    REQUIRE(target2->add_42(2) == 44);
+}
+
+TEST_CASE("Can remove an object that was previously VMT hooked", "[vmt_hook]") {
+    struct Interface {
+        virtual ~Interface() = default;
+        virtual int add_42(int a) = 0;
+    };
+
+    struct Target : Interface {
+        __declspec(noinline) int add_42(int a) override { return a + 42; }
+    };
+
+    std::unique_ptr<Interface> target = std::make_unique<Target>();
+    std::unique_ptr<Interface> target0 = std::make_unique<Target>();
+    std::unique_ptr<Interface> target1 = std::make_unique<Target>();
+    std::unique_ptr<Interface> target2 = std::make_unique<Target>();
+
+    REQUIRE(target->add_42(0) == 42);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+    };
+
+    auto vmt_result = SafetyHookVmt::create(target.get());
+
+    REQUIRE(vmt_result);
+
+    target_hook = std::move(*vmt_result);
+
+    auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+
+    REQUIRE(vm_result);
+
+    add_42_hook = std::move(*vm_result);
+
+    target_hook.apply(target0.get());
+    target_hook.apply(target1.get());
+    target_hook.apply(target2.get());
+
+    REQUIRE(target->add_42(1) == 1380);
+    REQUIRE(target0->add_42(1) == 1380);
+    REQUIRE(target1->add_42(1) == 1380);
+    REQUIRE(target2->add_42(1) == 1380);
+
+    target_hook.remove(target0.get());
+
+    REQUIRE(target->add_42(2) == 1381);
+    REQUIRE(target0->add_42(2) == 44);
+    REQUIRE(target1->add_42(2) == 1381);
+    REQUIRE(target2->add_42(2) == 1381);
+
+    target_hook.remove(target2.get());
+
+    REQUIRE(target->add_42(2) == 1381);
+    REQUIRE(target0->add_42(2) == 44);
+    REQUIRE(target1->add_42(2) == 1381);
+    REQUIRE(target2->add_42(2) == 44);
+
+    target_hook.remove(target.get());
+
+    REQUIRE(target->add_42(2) == 44);
+    REQUIRE(target0->add_42(2) == 44);
+    REQUIRE(target1->add_42(2) == 1381);
+    REQUIRE(target2->add_42(2) == 44);
+
+    target_hook.remove(target1.get());
+
+    REQUIRE(target->add_42(2) == 44);
+    REQUIRE(target0->add_42(2) == 44);
+    REQUIRE(target1->add_42(2) == 44);
+    REQUIRE(target2->add_42(2) == 44);
+}
