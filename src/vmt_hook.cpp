@@ -48,7 +48,7 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     // Count the number of virtual method pointers. We start at one to account for the RTTI pointer.
     auto num_vmt_entries = 1;
 
-    for (auto vm = original_vmt; *vm; ++vm) {
+    for (auto vm = original_vmt; !IsBadCodePtr(reinterpret_cast<FARPROC>(*vm)); ++vm) {
         ++num_vmt_entries;
     }
 
