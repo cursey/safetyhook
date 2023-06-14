@@ -11,4 +11,6 @@ template <typename T> constexpr void store(uint8_t* address, const T& value) {
 
 template <typename T>
 concept FnPtr = requires(T f) { std::is_pointer_v<T>&& std::is_function_v<std::remove_pointer_t<T>>; };
+
+bool is_executable(uint8_t* address);
 } // namespace safetyhook
