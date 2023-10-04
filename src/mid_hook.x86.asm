@@ -1,4 +1,7 @@
+bits 32
+
 ; save context
+push dword [trampoline]
 push esp
 push ebp
 push eax
@@ -24,10 +27,9 @@ pop ebx
 pop eax
 pop ebp
 pop esp
-
-jmp [trampoline]
+ret
 
 destination:
-.dd 0
+dd 0
 trampoline:
-.dd 0
+dd 0

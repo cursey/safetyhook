@@ -1,4 +1,7 @@
- ; save context
+bits 64
+
+; save context
+push qword [rel trampoline]
 push rsp
 push rbp
 push rax
@@ -26,7 +29,7 @@ sub rsp, 48
 and rsp, -16
 
 ; call destination
-call [destination]
+call [rel destination]
 
 ; restore stack
 mov rsp, rbx
@@ -49,10 +52,9 @@ pop rbx
 pop rax
 pop rbp
 pop rsp
-
-jmp [trampoline]
+ret
 
 destination:
-.dq 0
+dq 0
 trampoline:
-.dq 0
+dq 0

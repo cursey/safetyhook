@@ -11,7 +11,7 @@ namespace safetyhook {
 /// to the 64-bit registers at the moment the hook is called.
 /// @note The structure only provides access to integer registers.
 struct Context64 {
-    uintptr_t rflags, r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rdx, rcx, rbx, rax, rbp, rsp;
+    uintptr_t rflags, r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rdx, rcx, rbx, rax, rbp, rsp, rip;
 };
 
 /// @brief Context structure for 32-bit MidHook.
@@ -19,7 +19,7 @@ struct Context64 {
 /// to the 32-bit registers at the moment the hook is called.
 /// @note The structure only provides access to integer registers.
 struct Context32 {
-    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp;
+    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, eip;
 };
 
 /// @brief Context structure for MidHook.
