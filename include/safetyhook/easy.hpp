@@ -38,4 +38,12 @@ namespace safetyhook {
 }
 
 [[nodiscard]] VmtHook create_vmt(void* object);
+[[nodiscard]] VmHook create_vm(VmtHook& vmt, size_t index, FnPtr auto destination) {
+    if (auto hook = vmt.hook_method(index, destination)) {
+        return std::move(*hook);
+    } else {
+        return {};
+    }
+}
+
 } // namespace safetyhook

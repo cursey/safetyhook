@@ -298,3 +298,34 @@ TEST_CASE("Can remove an object that was previously VMT hooked", "[vmt_hook]") {
     REQUIRE(target1->add_42(2) == 44);
     REQUIRE(target2->add_42(2) == 44);
 }
+
+TEST_CASE("VMT hook an object instance with easy API", "[vmt_hook]") {
+    struct Interface {
+        virtual ~Interface() = default;
+        virtual int add_42(int a) = 0;
+    };
+
+    struct Target : Interface {
+        __declspec(noinline) int add_42(int a) override { return a + 42; }
+    };
+
+    std::unique_ptr<Interface> target = std::make_unique<Target>();
+
+    REQUIRE(target->add_42(0) == 42);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : Target {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+    };
+
+    target_hook = safetyhook::create_vmt(target.get());
+    add_42_hook = safetyhook::create_vm(target_hook, 1, &Hook::hooked_add_42);
+
+    REQUIRE(target->add_42(1) == 1380);
+
+    add_42_hook.reset();
+
+    REQUIRE(target->add_42(2) == 44);
+}
