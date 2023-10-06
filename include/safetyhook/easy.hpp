@@ -37,7 +37,16 @@ namespace safetyhook {
     return create_mid(reinterpret_cast<void*>(target), destination);
 }
 
+/// @brief Easy to use API for creating a VmtHook.
+/// @param object The object to hook.
+/// @return The VmtHook object.
 [[nodiscard]] VmtHook create_vmt(void* object);
+
+/// @brief Easy to use API for creating a VmHook.
+/// @param vmt The VmtHook to use to create the VmHook.
+/// @param index The index of the method to hook.
+/// @param destination The destination function.
+/// @return The VmHook object.
 [[nodiscard]] VmHook create_vm(VmtHook& vmt, size_t index, FnPtr auto destination) {
     if (auto hook = vmt.hook_method(index, destination)) {
         return std::move(*hook);
