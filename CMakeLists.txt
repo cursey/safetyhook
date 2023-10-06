@@ -93,6 +93,8 @@ set(safetyhook_SOURCES
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"
 	"src/thread_freezer.cpp"
+	"src/utility.cpp"
+	"src/vmt_hook.cpp"
 	cmake.toml
 )
 
@@ -489,6 +491,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		"unittest/inline_hook.cpp"
 		"unittest/inline_hook.x86_64.cpp"
 		"unittest/mid_hook.cpp"
+		"unittest/vmt_hook.cpp"
 		cmake.toml
 	)
 
@@ -557,6 +560,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"unittest/inline_hook.cpp"
 			"unittest/inline_hook.x86_64.cpp"
 			"unittest/mid_hook.cpp"
+			"unittest/vmt_hook.cpp"
 			"amalgamated-dist/safetyhook.cpp"
 			cmake.toml
 		)

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <safetyhook/allocator.hpp>
+#include <safetyhook/utility.hpp>
 
 namespace safetyhook {
 /// @brief An inline hook.
@@ -78,15 +79,12 @@ public:
     [[nodiscard]] static std::expected<InlineHook, Error> create(void* target, void* destination);
 
     /// @brief Create an inline hook.
-    /// @tparam T The type of the function to hook.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note This will use the default global Allocator.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    template <typename T>
-        requires std::is_function_v<T>
-    [[nodiscard]] static std::expected<InlineHook, Error> create(T* target, T* destination) {
+    [[nodiscard]] static std::expected<InlineHook, Error> create(FnPtr auto target, FnPtr auto destination) {
         return create(reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
     }
 
@@ -100,16 +98,13 @@ public:
         const std::shared_ptr<Allocator>& allocator, void* target, void* destination);
 
     /// @brief Create an inline hook with a given Allocator.
-    /// @tparam T The type of the function to hook.
     /// @param allocator The allocator to use.
     /// @param target The address of the function to hook.
     /// @param destination The destination address.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    template <typename T>
-        requires std::is_function_v<T>
     [[nodiscard]] static std::expected<InlineHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, T* target, T* destination) {
+        const std::shared_ptr<Allocator>& allocator, FnPtr auto target, FnPtr auto destination) {
         return create(allocator, reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination));
     }
 
@@ -216,7 +211,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the default calling convention set by your compiler.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_call(Args... args) {
         return original<RetT (*)(Args...)>()(args...);
     }
@@ -228,7 +223,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __cdecl calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_ccall(Args... args) {
         return original<RetT(__cdecl*)(Args...)>()(args...);
     }
@@ -240,7 +235,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __thiscall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_thiscall(Args... args) {
         return original<RetT(__thiscall*)(Args...)>()(args...);
     }
@@ -252,7 +247,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __stdcall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_stdcall(Args... args) {
         return original<RetT(__stdcall*)(Args...)>()(args...);
     }
@@ -264,7 +259,7 @@ public:
     /// @return The result of calling the original function.
     /// @note This function will use the __fastcall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
-    // safety or are worried about the performance cost of locking the mutex.
+    /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_fastcall(Args... args) {
         return original<RetT(__fastcall*)(Args...)>()(args...);
     }

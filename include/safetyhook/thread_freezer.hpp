@@ -5,7 +5,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <vector>
 
 #include <Windows.h>
 
