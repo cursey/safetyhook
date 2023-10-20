@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <functional>
 
-#include <Windows.h>
+using HANDLE = void*;
+struct _CONTEXT;
+using CONTEXT = _CONTEXT;
 
 namespace safetyhook {
 /// @brief Executes a function while all other threads are frozen. Also allows for visiting each frozen thread and
