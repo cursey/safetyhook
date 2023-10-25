@@ -111,6 +111,10 @@ public:
     /// @return The destination function.
     [[nodiscard]] MidHookFn destination() const { return m_destination; }
 
+    /// @brief Returns a vector containing the original bytes of the target function.
+    /// @return A vector of the original bytes of the target function.
+    [[nodiscard]] const auto& original_bytes() const { return m_hook.m_original_bytes; }
+
     /// @brief Tests if the hook is valid.
     /// @return true if the hook is valid, false otherwise.
     explicit operator bool() const { return static_cast<bool>(m_stub); }

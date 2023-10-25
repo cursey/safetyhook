@@ -149,6 +149,10 @@ public:
     /// @return The address of the trampoline to call the original function.
     template <typename T> [[nodiscard]] T original() const { return reinterpret_cast<T>(m_trampoline.address()); }
 
+    /// @brief Returns a vector containing the original bytes of the target function.
+    /// @return A vector of the original bytes of the target function.
+    [[nodiscard]] const auto& original_bytes() const { return m_original_bytes; }
+
     /// @brief Calls the original function.
     /// @tparam RetT The return type of the function.
     /// @tparam ...Args The argument types of the function.
@@ -265,6 +269,8 @@ public:
     }
 
 private:
+    friend class MidHook;
+
     uint8_t* m_target{};
     uint8_t* m_destination{};
     Allocation m_trampoline{};
