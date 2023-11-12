@@ -13,8 +13,26 @@ NtGetNextThread(HANDLE ProcessHandle, HANDLE ThreadHandle, ACCESS_MASK DesiredAc
 }
 
 namespace safetyhook {
+void fix_ip(CONTEXT& ctx, uint8_t* old_ip, uint8_t* new_ip) {
+#ifdef _M_X64
+    auto ip = ctx.Rip;
+#else
+    auto ip = ctx.Eip;
+#endif
+
+    if (ip == reinterpret_cast<uintptr_t>(old_ip)) {
+        ip = reinterpret_cast<uintptr_t>(new_ip);
+    }
+
+#ifdef _M_X64
+    ctx.Rip = ip;
+#else
+    ctx.Eip = ip;
+#endif
+}
+
 void execute_while_frozen(
-    const std::function<void()>& run_fn, const std::function<void(uint32_t, HANDLE, CONTEXT&)>& visit_fn) {
+    const std::function<void()>& run_fn, const std::function<void(uint32_t, const FixIpFn&)>& visit_fn) {
     // Freeze all threads.
     int num_threads_frozen;
     auto first_run = true;
@@ -67,7 +85,9 @@ void execute_while_frozen(
             }
 
             if (visit_fn) {
-                visit_fn(thread_id, thread, thread_ctx);
+                auto ip_fixer = [&thread_ctx](uint8_t* old_ip, uint8_t* new_ip) { fix_ip(thread_ctx, old_ip, new_ip); };
+
+                visit_fn(thread_id, ip_fixer);
             }
 
             ++num_threads_frozen;
@@ -110,21 +130,4 @@ void execute_while_frozen(
     }
 }
 
-void fix_ip(CONTEXT& ctx, uint8_t* old_ip, uint8_t* new_ip) {
-#ifdef _M_X64
-    auto ip = ctx.Rip;
-#else
-    auto ip = ctx.Eip;
-#endif
-
-    if (ip == reinterpret_cast<uintptr_t>(old_ip)) {
-        ip = reinterpret_cast<uintptr_t>(new_ip);
-    }
-
-#ifdef _M_X64
-    ctx.Rip = ip;
-#else
-    ctx.Eip = ip;
-#endif
-}
 } // namespace safetyhook

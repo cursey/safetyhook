@@ -318,9 +318,9 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             const auto dst = reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination);
             emit_jmp_e9(src, dst, m_original_bytes.size());
         },
-        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+        [this](uint32_t, auto& fix_ip) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
+                fix_ip(m_target + i, m_trampoline.data() + i);
             }
         });
 
@@ -376,9 +376,9 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
             const auto data = src + sizeof(JmpFF);
             emit_jmp_ff(src, dst, data, m_original_bytes.size());
         },
-        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+        [this](uint32_t, auto& fix_ip) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
+                fix_ip(m_target + i, m_trampoline.data() + i);
             }
         });
 
@@ -398,9 +398,9 @@ void InlineHook::destroy() {
             UnprotectMemory unprotect{m_target, m_original_bytes.size()};
             std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target);
         },
-        [this](uint32_t, HANDLE, CONTEXT& ctx) {
+        [this](uint32_t, auto& fix_ip) {
             for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_trampoline.data() + i, m_target + i);
+                fix_ip(m_trampoline.data() + i, m_target + i);
             }
         });
 

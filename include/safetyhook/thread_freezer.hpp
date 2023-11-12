@@ -6,9 +6,9 @@
 #include <cstdint>
 #include <functional>
 
-#include <Windows.h>
-
 namespace safetyhook {
+using FixIpFn = std::function<void(uint8_t* old_ip, uint8_t* new_ip)>;
+
 /// @brief Executes a function while all other threads are frozen. Also allows for visiting each frozen thread and
 /// modifying it's context.
 /// @param run_fn The function to run while all other threads are frozen.
@@ -17,11 +17,5 @@ namespace safetyhook {
 /// @note The visit function will be called before the run function.
 /// @note Keep the logic inside run_fn and visit_fn as simple as possible to avoid deadlocks.
 void execute_while_frozen(
-    const std::function<void()>& run_fn, const std::function<void(uint32_t, HANDLE, CONTEXT&)>& visit_fn = {});
-
-/// @brief Will modify the context of a thread's IP to point to a new address if its IP is at the old address.
-/// @param ctx The thread context to modify.
-/// @param old_ip The old IP address.
-/// @param new_ip The new IP address.
-void fix_ip(CONTEXT& ctx, uint8_t* old_ip, uint8_t* new_ip);
+    const std::function<void()>& run_fn, const std::function<void(uint32_t, const FixIpFn&)>& visit_fn = {});
 } // namespace safetyhook
