@@ -6,7 +6,13 @@
 #include <cstdint>
 #include <functional>
 
+#if __has_include(<Windows.h>)
 #include <Windows.h>
+#elif __has_include(<windows.h>)
+#include <windows.h>
+#else
+#error "Windows.h not found"
+#endif
 
 namespace safetyhook {
 /// @brief Executes a function while all other threads are frozen. Also allows for visiting each frozen thread and

@@ -3,7 +3,13 @@
 #include <limits>
 
 #define NOMINMAX
+#if __has_include(<Windows.h>)
 #include <Windows.h>
+#elif __has_include(<windows.h>)
+#include <windows.h>
+#else
+#error "Windows.h not found"
+#endif
 
 #include <safetyhook/allocator.hpp>
 
