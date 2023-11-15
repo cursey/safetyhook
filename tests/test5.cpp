@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <format>
 
 #include <safetyhook.hpp>
 
@@ -94,26 +95,26 @@ void reserve_memory_2gb_around_target(uintptr_t target) {
             const auto wanted_alloc = region.first + i * chunk_size;
             const auto alloced = VirtualAlloc((void*)wanted_alloc, chunk_size, MEM_RESERVE, PAGE_READWRITE);
 
-            printf("Allocated [0x%llX, 0x%llX] 0x%llX\n", (uintptr_t)alloced, (uintptr_t)alloced + chunk_size, chunk_size);
+            std::cout << std::format("Allocated [0x{:x}, 0x{:x}] 0x{:x}\n", (uintptr_t)alloced, (uintptr_t)alloced + chunk_size, chunk_size);
 
             if (alloced == nullptr) {
                 const auto error = GetLastError();
-                printf("Failed to allocate to 0x%llX 0x%llX\n", wanted_alloc, chunk_size);
-                printf("Error: 0x%X\n", error);
+                std::cout << std::format("Failed to allocate to 0x{:x} 0x{:x}\n", wanted_alloc, chunk_size);
+                std::cout << std::format("Error: 0x{:x}\n", error);
             }
         }
 
         // Handle remaining small fragment
         auto remaining = size % chunk_size;
         if (remaining > 0) {
-            printf("Allocating remaining 0x%llX\n", remaining);
+            std::cout << std::format("Allocating remaining 0x{:x}\n", remaining);
             auto last_alloc = region.first + num_chunks * chunk_size;
             auto alloced = VirtualAlloc((void*)last_alloc, remaining, MEM_RESERVE, PAGE_READWRITE);
 
             if (alloced == nullptr) {
                 const auto error = GetLastError();
-                printf("Failed to allocate to 0x%llX 0x%llX\n", last_alloc, remaining);
-                printf("Error: 0x%X\n", error);
+                std::cout << std::format("Failed to allocate to 0x{:x} 0x{:x}\n", last_alloc, remaining);
+                std::cout << std::format("Error: 0x{:x}\n", error);
             }
         }
     }
@@ -122,13 +123,13 @@ void reserve_memory_2gb_around_target(uintptr_t target) {
 int main() {
     reserve_memory_2gb_around_target(reinterpret_cast<uintptr_t>(&say_hi));
 
-    printf("0x%llX\n", (uintptr_t)&say_hi);
+    std::cout << std::format("0x{:x}\n", (uintptr_t)&say_hi);
 
     uintptr_t real_say_hi = (uintptr_t)&say_hi;
 
     if (*(uint8_t*)&say_hi == 0xE9) {
         real_say_hi = (uintptr_t)&say_hi + *(int32_t*)((uintptr_t)&say_hi + 1) + 5;
-        printf("0x%llX\n", real_say_hi);
+        std::cout << std::format("0x{:x}\n", (uintptr_t)real_say_hi);
     }
 
     ZydisDecoder decoder{};
@@ -165,7 +166,7 @@ int main() {
                 bytehex << std::hex << std::setfill('0') << std::setw(2) << (int)*(uint8_t*)(ip + j) << " ";
             }
 
-            printf("0x%llX | %s | %s\n", ip, bytehex.str().c_str(), buffer);
+            std::cout << std::format("0x{:x} | {} | {}\n", ip, bytehex.str(), buffer);
 
             ip += ix.length;
         }
@@ -189,7 +190,6 @@ int main() {
     disassemble_say_hi();
 
     say_hi("world");
-    std::system("pause");
 
     return 0;
 }
