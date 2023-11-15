@@ -1,9 +1,10 @@
-// test5.cpp is test3.cpp but with 2GB of memory reserved around the target address.
+// test5.cpp is test0.cpp but with 2GB of memory reserved around the target address.
 // This is to test if the allocator works correctly when there is no free memory near the target address.
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <format>
+#include <cstdint>
 
 #include <safetyhook.hpp>
 
@@ -81,26 +82,52 @@ void reserve_memory_2gb_around_target(uintptr_t target) {
     SYSTEM_INFO si{};
     GetSystemInfo(&si);
     
-    const auto granularity = (uintptr_t)si.dwAllocationGranularity;
+    const auto granularity = (size_t)si.dwAllocationGranularity;
 
-    // Split the regions into 50mb chunks.
+    std::cout << std::format("Allocation granularity: 0x{:x}\n", granularity);
+
+    // Split the regions into 10mb chunks.
     for (auto& region : new_regions) {
-        region.first = (region.first + granularity - 1) & ~(granularity - 1);
-        const auto size = region.second - region.first;
+        std::cout << std::format("Region: 0x{:x} 0x{:x}\n", region.first, region.second);
 
-        const auto chunk_size = (std::min<size_t>(10_mb, size) + granularity - 1) & ~(granularity - 1);
+        // We do this because when passing a null pointer to VirtualAlloc, it will allocate a region that *isn't* at address 0.
+        // So we need to find the nearest address that is aligned to the allocation granularity instead.
+        if (region.first == 0) {
+            region.first += 1;
+        }
+
+        const auto new_first = (region.first + (granularity - 1)) & ~(granularity - 1);
+
+        if (new_first < region.second) {
+            region.first = new_first;
+        } else {
+            // uh... this shouldn't happen. but it does on 32-bit.
+            std::cout << "Region is too small\n";
+            continue;
+        }
+
+        const auto size = region.second - region.first;
+        const auto tenmb_aligned = (10_mb + (granularity - 1)) & ~(granularity - 1);
+        const auto chunk_size = (std::min<size_t>((size_t)tenmb_aligned, size));
+
+        // uh...
+        if (chunk_size == 0) {
+            std::cout << "Chunk size is 0\n";
+            continue;
+        }
+
         const auto num_chunks = size / chunk_size;
 
         for (size_t i = 0; i < num_chunks; ++i) {
             const auto wanted_alloc = region.first + i * chunk_size;
             const auto alloced = VirtualAlloc((void*)wanted_alloc, chunk_size, MEM_RESERVE, PAGE_READWRITE);
 
-            std::cout << std::format("Allocated [0x{:x}, 0x{:x}] 0x{:x}\n", (uintptr_t)alloced, (uintptr_t)alloced + chunk_size, chunk_size);
-
             if (alloced == nullptr) {
                 const auto error = GetLastError();
                 std::cout << std::format("Failed to allocate to 0x{:x} 0x{:x}\n", wanted_alloc, chunk_size);
                 std::cout << std::format("Error: 0x{:x}\n", error);
+            } else {
+                std::cout << std::format("Allocated [0x{:x}, 0x{:x}] 0x{:x}\n", (uintptr_t)alloced, (uintptr_t)alloced + chunk_size, chunk_size);
             }
         }
 
@@ -115,12 +142,15 @@ void reserve_memory_2gb_around_target(uintptr_t target) {
                 const auto error = GetLastError();
                 std::cout << std::format("Failed to allocate to 0x{:x} 0x{:x}\n", last_alloc, remaining);
                 std::cout << std::format("Error: 0x{:x}\n", error);
+            } else {
+                std::cout << std::format("Allocated [0x{:x}, 0x{:x}] 0x{:x}\n", (uintptr_t)alloced, (uintptr_t)alloced + remaining, remaining);
             }
         }
     }
 }
 
 int main() {
+    // Comment this out to double check the JMP verification that's below.
     reserve_memory_2gb_around_target(reinterpret_cast<uintptr_t>(&say_hi));
 
     std::cout << std::format("0x{:x}\n", (uintptr_t)&say_hi);
@@ -188,6 +218,44 @@ int main() {
 
     std::cout << "After:" << std::endl;
     disassemble_say_hi();
+
+    // Ensure that the jmp at the beginning of real_say_hi points to a nearby address, in the current region of memory.
+    // Because that's the point of this test, to test if the allocator works correctly when there is no free memory near the target address.
+    if (*(uint8_t*)real_say_hi == 0xE9) {
+        const auto jmp_point = real_say_hi + *(int32_t*)(real_say_hi + 1) + 5;
+
+        MEMORY_BASIC_INFORMATION mbi_real_say_hi{};
+        MEMORY_BASIC_INFORMATION mbi_jmp_point{};
+
+        VirtualQuery(reinterpret_cast<void*>(real_say_hi), &mbi_real_say_hi, sizeof(mbi_real_say_hi));
+        VirtualQuery(reinterpret_cast<void*>(jmp_point), &mbi_jmp_point, sizeof(mbi_jmp_point));
+
+        if (mbi_real_say_hi.AllocationBase == mbi_jmp_point.AllocationBase &&
+            mbi_real_say_hi.BaseAddress == mbi_jmp_point.BaseAddress)
+        {
+            std::cout << "JMP points to nearby address: SUCCESS\n";
+        } else {
+            std::cout << "JMP points to nearby address: FAILED\n";
+        }
+    } else if (*(uint8_t*)real_say_hi == 0xFF && *(uint8_t*)(real_say_hi + 1) == 0x25) {
+        const auto displacement = *(int32_t*)(real_say_hi + 2);
+        const auto reference_addr = real_say_hi + displacement + 6;
+        const auto jmp_point = *(uintptr_t*)reference_addr;
+
+        MEMORY_BASIC_INFORMATION mbi_real_say_hi{};
+        MEMORY_BASIC_INFORMATION mbi_jmp_point{};
+
+        VirtualQuery(reinterpret_cast<void*>(real_say_hi), &mbi_real_say_hi, sizeof(mbi_real_say_hi));
+        VirtualQuery(reinterpret_cast<void*>(jmp_point), &mbi_jmp_point, sizeof(mbi_jmp_point));
+
+        if (mbi_real_say_hi.AllocationBase == mbi_jmp_point.AllocationBase &&
+            mbi_real_say_hi.BaseAddress == mbi_jmp_point.BaseAddress)
+        {
+            std::cout << "JMP points to nearby address: SUCCESS\n";
+        } else {
+            std::cout << "JMP points to nearby address: FAILED\n";
+        }
+    }
 
     say_hi("world");
 
