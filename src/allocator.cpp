@@ -131,8 +131,57 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
 
     GetSystemInfo(&si);
 
-    const auto allocation_size = align_up(size, si.dwAllocationGranularity);
-    const auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
+    auto allocation_size = align_up(size, si.dwAllocationGranularity);
+    auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
+
+    // And finally, look for a codecave within int3 padding.
+    // Not just putting this in allocate_nearby_memory because
+    // it passes an aligned size, which is not what we want.
+    if (!allocation_address && !desired_addresses.empty()) {
+        // Locate an address in desired_addresses that has executable permissions.
+        // TODO: We could potentially look through other regions not in the desired_addresses list.
+        MEMORY_BASIC_INFORMATION mbi{};
+        uint8_t* address = nullptr;
+        for (const auto& addr : desired_addresses) {
+            if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) {
+                continue;
+            }
+
+            if (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) {
+                address = reinterpret_cast<uint8_t*>(addr);
+                break;
+            }
+        }
+
+        if (address == nullptr) {
+            return std::unexpected{allocation_address.error()};
+        }
+
+        const auto end = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+
+        // Search for an int3 sled, starting from the target address.
+        for (auto ip = address; reinterpret_cast<uintptr_t>(ip) < end; ++ip) {
+            if (*ip == 0xCC) {
+                auto sled = ip;
+                uint32_t count = 0;
+
+                while (*sled == 0xCC) {
+                    ++sled;
+                    ++count;
+
+                    if (reinterpret_cast<uintptr_t>(sled) >= end) {
+                        break;
+                    }
+                }
+
+                if (count >= 10 && count >= size && in_range(ip, desired_addresses, max_distance)) {
+                    allocation_address = ip;
+                    allocation_size = count;
+                    break;
+                }
+            }
+        }
+    }
 
     if (!allocation_address) {
         return std::unexpected{allocation_address.error()};

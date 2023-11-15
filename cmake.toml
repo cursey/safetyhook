@@ -133,6 +133,10 @@ sources = ["tests/test3.cpp"]
 type = "test-dll"
 sources = ["tests/test4.cpp"]
 
+[target.test5]
+type = "test"
+sources = ["tests/test5.cpp"]
+
 [target.unittest]
 type = "test"
 sources = ["unittest/*.cpp"]

@@ -484,6 +484,64 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	)
 
 endif()
+# Target: test5
+if(SAFETYHOOK_BUILD_TESTS) # build-tests
+	set(test5_SOURCES
+		"tests/test5.cpp"
+		cmake.toml
+	)
+
+	add_executable(test5)
+
+	target_sources(test5 PRIVATE ${test5_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test5_SOURCES})
+
+	target_compile_features(test5 PRIVATE
+		cxx_std_23
+	)
+
+	if(MSVC) # msvc
+		target_compile_options(test5 PRIVATE
+			"/WX"
+			"/permissive-"
+			"/W4"
+			"/w14640"
+			"/EHsc"
+		)
+	endif()
+
+	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+		target_compile_options(test5 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+		target_compile_options(test5 PRIVATE
+			-Werror
+			-Wall
+			-Wextra
+			-Wshadow
+			-Wnon-virtual-dtor
+			-pedantic
+		)
+	endif()
+
+	target_link_libraries(test5 PRIVATE
+		safetyhook::safetyhook
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test5)
+	endif()
+
+endif()
 # Target: unittest
 if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	set(unittest_SOURCES
