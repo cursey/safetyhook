@@ -21,7 +21,7 @@ union Xmm {
 /// @note rip will point to a trampoline containing the replaced instruction(s).
 struct Context64 {
     Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
-    uintptr_t rflags, r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rdx, rcx, rbx, rax, rbp, rsp, rip;
+    uintptr_t rflags, r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rdx, rcx, rbx, rax, rbp, rsp, trampoline_rsp, rip;
 };
 
 /// @brief Context structure for 32-bit MidHook.
@@ -30,7 +30,7 @@ struct Context64 {
 /// @note eip will point to a trampoline containing the replaced instruction(s).
 struct Context32 {
     Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
-    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, eip;
+    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, trampoline_esp, eip;
 };
 
 /// @brief Context structure for MidHook.

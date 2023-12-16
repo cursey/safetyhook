@@ -2,7 +2,8 @@ bits 64
 
 ; save context
 push qword [rel trampoline]
-push rsp
+push rsp ; push trampoline rsp
+push rsp ; push original rsp (this gets fixed later)
 push rbp
 push rax
 push rbx
@@ -36,6 +37,11 @@ movdqu [rsp-48], xmm3
 movdqu [rsp-32], xmm2
 movdqu [rsp-16], xmm1
 movdqu [rsp], xmm0
+
+; fix stored rsp.
+mov rcx, [rsp+384]
+add rcx, 16
+mov [rsp+384], rcx
 
 ; set destination parameter
 lea rcx, [rsp]
@@ -85,6 +91,7 @@ pop rcx
 pop rbx
 pop rax
 pop rbp
+lea rsp, [rsp+8] ; skip original rsp
 pop rsp
 ret
 
