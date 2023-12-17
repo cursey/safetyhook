@@ -2,7 +2,8 @@ bits 32
 
 ; save context
 push dword [trampoline]
-push esp
+push esp ; push trampoline esp
+push esp ; push original esp (this gets fixed later)
 push ebp
 push eax
 push ebx
@@ -20,6 +21,11 @@ movdqu [esp-48], xmm3
 movdqu [esp-32], xmm2
 movdqu [esp-16], xmm1
 movdqu [esp], xmm0
+
+; fix stored esp.
+mov ecx, [esp+192]
+add ecx, 8
+mov [esp+192], ecx
 
 ; call destination
 push esp
@@ -44,6 +50,7 @@ pop ecx
 pop ebx
 pop eax
 pop ebp
+lea esp, [esp+4] ; skip original esp
 pop esp
 ret
 
