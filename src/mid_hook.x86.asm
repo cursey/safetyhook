@@ -23,9 +23,9 @@ movdqu [esp-16], xmm1
 movdqu [esp], xmm0
 
 ; fix stored esp.
-mov ecx, [esp+192]
+mov ecx, [esp+160]
 add ecx, 8
-mov [esp+192], ecx
+mov [esp+160], ecx
 
 ; call destination
 push esp
