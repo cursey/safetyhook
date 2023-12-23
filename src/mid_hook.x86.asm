@@ -13,13 +13,13 @@ push esi
 push edi
 pushfd
 sub esp, 128
-movdqu [esp-112], xmm7
-movdqu [esp-96], xmm6
-movdqu [esp-80], xmm5
-movdqu [esp-64], xmm4
-movdqu [esp-48], xmm3
-movdqu [esp-32], xmm2
-movdqu [esp-16], xmm1
+movdqu [esp+112], xmm7
+movdqu [esp+96], xmm6
+movdqu [esp+80], xmm5
+movdqu [esp+64], xmm4
+movdqu [esp+48], xmm3
+movdqu [esp+32], xmm2
+movdqu [esp+16], xmm1
 movdqu [esp], xmm0
 
 ; fix stored esp.
