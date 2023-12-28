@@ -87,7 +87,18 @@ void execute_while_frozen(
             }
 
             if (visit_fn) {
+                // Unlock the loader lock.
+                if (lock_loader != nullptr && unlock_loader != nullptr) {
+                    unlock_loader(0, loader_magic);
+                }
+
                 visit_fn(thread_id, thread, thread_ctx);
+
+                // Lock it again.
+                if (lock_loader != nullptr && unlock_loader != nullptr) {
+                    loader_magic = 0;
+                    lock_loader(0, NULL, &loader_magic);
+                }
             }
 
             ++num_threads_frozen;
