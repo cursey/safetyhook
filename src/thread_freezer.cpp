@@ -25,6 +25,20 @@ void execute_while_frozen(
     int num_threads_frozen;
     auto first_run = true;
 
+    ULONG_PTR loader_magic = 0;
+
+    typedef NTSTATUS (WINAPI* PFN_LdrLockLoaderLock)(ULONG Flags, ULONG *State, ULONG_PTR *Cookie);
+    typedef NTSTATUS (WINAPI* PFN_LdrUnlockLoaderLock)(ULONG Flags, ULONG_PTR Cookie);
+
+    const auto ntdll = GetModuleHandleW(L"ntdll.dll");
+
+    auto lock_loader = (PFN_LdrLockLoaderLock)GetProcAddress(ntdll, "LdrLockLoaderLock");
+    auto unlock_loader = (PFN_LdrUnlockLoaderLock)GetProcAddress(ntdll, "LdrUnlockLoaderLock");
+
+    if (lock_loader != nullptr && unlock_loader != nullptr) {
+        lock_loader(0, NULL, &loader_magic);
+    }
+
     do {
         num_threads_frozen = 0;
         HANDLE thread{};
@@ -81,6 +95,11 @@ void execute_while_frozen(
 
         first_run = false;
     } while (num_threads_frozen != 0);
+
+    // Unlock the loader lock.
+    if (lock_loader != nullptr && unlock_loader != nullptr) {
+        unlock_loader(0, loader_magic);
+    }
 
     // Run the function.
     if (run_fn) {
