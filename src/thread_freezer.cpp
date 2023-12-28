@@ -36,7 +36,7 @@ void execute_while_frozen(
     auto unlock_loader = (PFN_LdrUnlockLoaderLock)GetProcAddress(ntdll, "LdrUnlockLoaderLock");
 
     if (lock_loader != nullptr && unlock_loader != nullptr) {
-        lock_loader(0, NULL, &loader_magic);
+        lock_loader(0, nullptr, &loader_magic);
     }
 
     do {
@@ -97,7 +97,7 @@ void execute_while_frozen(
                 // Lock it again.
                 if (lock_loader != nullptr && unlock_loader != nullptr) {
                     loader_magic = 0;
-                    lock_loader(0, NULL, &loader_magic);
+                    lock_loader(0, nullptr, &loader_magic);
                 }
             }
 
