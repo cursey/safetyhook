@@ -26,6 +26,8 @@ public:
             SHORT_JUMP_IN_TRAMPOLINE,              ///< The trampoline contains a short jump.
             IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE,  ///< An IP-relative instruction is out of range.
             UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, ///< An unsupported instruction was found in the trampoline.
+            FAILED_TO_UNPROTECT,                   ///< Failed to unprotect memory.
+            NOT_ENOUGH_SPACE,                      ///< Not enough space to create the hook.
         } type;
 
         /// @brief Extra information about the error.
@@ -68,6 +70,16 @@ public:
         [[nodiscard]] static Error unsupported_instruction_in_trampoline(uint8_t* ip) {
             return {.type = UNSUPPORTED_INSTRUCTION_IN_TRAMPOLINE, .ip = ip};
         }
+
+        /// @brief Create a FAILED_TO_UNPROTECT error.
+        /// @param ip The IP of the problematic instruction.
+        /// @return The new FAILED_TO_UNPROTECT error.
+        [[nodiscard]] static Error failed_to_unprotect(uint8_t* ip) { return {.type = FAILED_TO_UNPROTECT, .ip = ip}; }
+
+        /// @brief Create a NOT_ENOUGH_SPACE error.
+        /// @param ip The IP of the problematic instruction.
+        /// @return The new NOT_ENOUGH_SPACE error.
+        [[nodiscard]] static Error not_enough_space(uint8_t* ip) { return {.type = NOT_ENOUGH_SPACE, .ip = ip}; }
     };
 
     /// @brief Create an inline hook.

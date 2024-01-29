@@ -53,4 +53,39 @@ bool is_executable(uint8_t* address) {
 
     return is_page_executable(address);
 }
+
+UnprotectMemory::~UnprotectMemory() {
+    if (m_address != nullptr) {
+        DWORD old_protection;
+        VirtualProtect(m_address, m_size, m_original_protection, &old_protection);
+    }
+}
+
+UnprotectMemory::UnprotectMemory(UnprotectMemory&& other) noexcept {
+    *this = std::move(other);
+}
+
+UnprotectMemory& UnprotectMemory::operator=(UnprotectMemory&& other) noexcept {
+    if (this != &other) {
+        m_address = other.m_address;
+        m_size = other.m_size;
+        m_original_protection = other.m_original_protection;
+        other.m_address = nullptr;
+        other.m_size = 0;
+        other.m_original_protection = 0;
+    }
+
+    return *this;
+}
+
+std::optional<UnprotectMemory> unprotect(uint8_t* address, size_t size) {
+    DWORD old_protection;
+
+    if (!VirtualProtect(address, size, PAGE_EXECUTE_READWRITE, &old_protection)) {
+        return {};
+    }
+
+    return UnprotectMemory{address, size, old_protection};
+}
+
 } // namespace safetyhook
