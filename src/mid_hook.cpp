@@ -83,9 +83,9 @@ void MidHook::reset() {
 }
 
 std::expected<void, MidHook::Error> MidHook::setup(
-    const std::shared_ptr<Allocator>& allocator, uint8_t* target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, uint8_t* target, MidHookFn destination_fn) {
     m_target = target;
-    m_destination = destination;
+    m_destination = destination_fn;
 
     auto stub_allocation = allocator->allocate(asm_data.size());
 

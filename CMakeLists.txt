@@ -215,38 +215,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		cxx_std_23
 	)
 
-	if(MSVC) # msvc
-		target_compile_options(test0 PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(test0 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(test0 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
 	target_link_libraries(test0 PRIVATE
 		safetyhook::safetyhook
 	)
@@ -272,38 +240,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_compile_features(test1 PRIVATE
 		cxx_std_23
 	)
-
-	if(MSVC) # msvc
-		target_compile_options(test1 PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(test1 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(test1 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
 
 	target_link_libraries(test1 PRIVATE
 		safetyhook::safetyhook
@@ -331,38 +267,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		cxx_std_23
 	)
 
-	if(MSVC) # msvc
-		target_compile_options(test2 PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(test2 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(test2 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
 	target_link_libraries(test2 PRIVATE
 		safetyhook::safetyhook
 	)
@@ -388,38 +292,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_compile_features(test3 PRIVATE
 		cxx_std_23
 	)
-
-	if(MSVC) # msvc
-		target_compile_options(test3 PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(test3 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(test3 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
 
 	target_link_libraries(test3 PRIVATE
 		safetyhook::safetyhook
@@ -447,38 +319,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		cxx_std_23
 	)
 
-	if(MSVC) # msvc
-		target_compile_options(test4 PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(test4 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(test4 PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
 	target_link_libraries(test4 PUBLIC
 		safetyhook::safetyhook
 	)
@@ -503,38 +343,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 	target_compile_features(unittest PRIVATE
 		cxx_std_23
 	)
-
-	if(MSVC) # msvc
-		target_compile_options(unittest PRIVATE
-			"/WX"
-			"/permissive-"
-			"/W4"
-			"/w14640"
-			"/EHsc"
-		)
-	endif()
-
-	if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-		target_compile_options(unittest PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
-
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-		target_compile_options(unittest PRIVATE
-			-Werror
-			-Wall
-			-Wextra
-			-Wshadow
-			-Wnon-virtual-dtor
-			-pedantic
-		)
-	endif()
 
 	target_link_libraries(unittest PRIVATE
 		safetyhook::safetyhook
@@ -573,38 +381,6 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		target_compile_features(unittest-amalgamated PRIVATE
 			cxx_std_23
 		)
-
-		if(MSVC) # msvc
-			target_compile_options(unittest-amalgamated PRIVATE
-				"/WX"
-				"/permissive-"
-				"/W4"
-				"/w14640"
-				"/EHsc"
-			)
-		endif()
-
-		if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-			target_compile_options(unittest-amalgamated PRIVATE
-				-Werror
-				-Wall
-				-Wextra
-				-Wshadow
-				-Wnon-virtual-dtor
-				-pedantic
-			)
-		endif()
-
-		if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-			target_compile_options(unittest-amalgamated PRIVATE
-				-Werror
-				-Wall
-				-Wextra
-				-Wshadow
-				-Wnon-virtual-dtor
-				-pedantic
-			)
-		endif()
 
 		target_link_libraries(unittest-amalgamated PRIVATE
 			safetyhook::safetyhook
