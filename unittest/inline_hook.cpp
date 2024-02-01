@@ -1,576 +1,618 @@
 #include <thread>
 
-#include <catch2/catch_test_macros.hpp>
+#include <boost/ut.hpp>
 #include <safetyhook.hpp>
 #include <xbyak/xbyak.h>
 
-TEST_CASE("Function hooked multiple times", "[inline_hook]") {
-    struct Target {
-        __declspec(noinline) static std::string fn(std::string name) { return "hello " + name; }
+using namespace std::literals;
+using namespace boost::ut;
+using namespace Xbyak::util;
+
+static suite<"inline hook"> inline_hook_tests = [] {
+    "Function hooked multiple times"_test = [] {
+        struct Target {
+            __declspec(noinline) static std::string fn(std::string name) { return "hello " + name; }
+        };
+
+        expect(eq(Target::fn("world"), "hello world"sv));
+
+        // First hook.
+        static SafetyHookInline hook0;
+
+        struct Hook0 {
+            static std::string fn(std::string name) { return hook0.call<std::string>(name + " and bob"); }
+        };
+
+        auto hook0_result = SafetyHookInline::create(Target::fn, Hook0::fn);
+
+        expect(hook0_result.has_value());
+
+        hook0 = std::move(*hook0_result);
+
+        expect(eq(Target::fn("world"), "hello world and bob"sv));
+
+        // Second hook.
+        static SafetyHookInline hook1;
+
+        struct Hook1 {
+            static std::string fn(std::string name) { return hook1.call<std::string>(name + " and alice"); }
+        };
+
+        auto hook1_result = SafetyHookInline::create(Target::fn, Hook1::fn);
+
+        expect(hook1_result.has_value());
+
+        hook1 = std::move(*hook1_result);
+
+        expect(eq(Target::fn("world"), "hello world and alice and bob"sv));
+
+        // Third hook.
+        static SafetyHookInline hook2;
+
+        struct Hook2 {
+            static std::string fn(std::string name) { return hook2.call<std::string>(name + " and eve"); }
+        };
+
+        auto hook2_result = SafetyHookInline::create(Target::fn, Hook2::fn);
+
+        expect(hook2_result.has_value());
+
+        hook2 = std::move(*hook2_result);
+
+        expect(eq(Target::fn("world"), "hello world and eve and alice and bob"sv));
+
+        // Fourth hook.
+        static SafetyHookInline hook3;
+
+        struct Hook3 {
+            static std::string fn(std::string name) { return hook3.call<std::string>(name + " and carol"); }
+        };
+
+        auto hook3_result = SafetyHookInline::create(Target::fn, Hook3::fn);
+
+        expect(hook3_result.has_value());
+
+        hook3 = std::move(*hook3_result);
+
+        expect(eq(Target::fn("world"), "hello world and carol and eve and alice and bob"sv));
+
+        // Unhook.
+        hook3.reset();
+        hook2.reset();
+        hook1.reset();
+        hook0.reset();
     };
 
-    REQUIRE(Target::fn("world") == "hello world");
+    "Function with multiple args hooked"_test = [] {
+        struct Target {
+            __declspec(noinline) static int add(int x, int y) { return x + y; }
+        };
 
-    // First hook.
-    static SafetyHookInline hook0;
+        expect(Target::add(2, 3) == 5_i);
 
-    struct Hook0 {
-        static std::string fn(std::string name) { return hook0.call<std::string>(name + " and bob"); }
+        static SafetyHookInline add_hook;
+
+        struct AddHook {
+            static int add(int x, int y) { return add_hook.call<int>(x * 2, y * 2); }
+        };
+
+        auto add_hook_result = SafetyHookInline::create(Target::add, AddHook::add);
+
+        expect(add_hook_result.has_value());
+
+        add_hook = std::move(*add_hook_result);
+
+        expect(Target::add(3, 4) == 14_i);
+
+        add_hook.reset();
+
+        expect(Target::add(5, 6) == 11_i);
     };
 
-    auto hook0_result = SafetyHookInline::create(Target::fn, Hook0::fn);
+    "Active function is hooked and unhooked"_test = [] {
+        static int count = 0;
+        static bool is_running = true;
 
-    REQUIRE(hook0_result);
+        struct Target {
+            __declspec(noinline) static std::string say_hello(int times) { return "Hello #" + std::to_string(times); }
 
-    hook0 = std::move(*hook0_result);
-
-    REQUIRE(Target::fn("world") == "hello world and bob");
-
-    // Second hook.
-    static SafetyHookInline hook1;
-
-    struct Hook1 {
-        static std::string fn(std::string name) { return hook1.call<std::string>(name + " and alice"); }
-    };
-
-    auto hook1_result = SafetyHookInline::create(Target::fn, Hook1::fn);
-
-    REQUIRE(hook1_result);
-
-    hook1 = std::move(*hook1_result);
-
-    REQUIRE(Target::fn("world") == "hello world and alice and bob");
-
-    // Third hook.
-    static SafetyHookInline hook2;
-
-    struct Hook2 {
-        static std::string fn(std::string name) { return hook2.call<std::string>(name + " and eve"); }
-    };
-
-    auto hook2_result = SafetyHookInline::create(Target::fn, Hook2::fn);
-
-    REQUIRE(hook2_result);
-
-    hook2 = std::move(*hook2_result);
-
-    REQUIRE(Target::fn("world") == "hello world and eve and alice and bob");
-
-    // Fourth hook.
-    static SafetyHookInline hook3;
-
-    struct Hook3 {
-        static std::string fn(std::string name) { return hook3.call<std::string>(name + " and carol"); }
-    };
-
-    auto hook3_result = SafetyHookInline::create(Target::fn, Hook3::fn);
-
-    REQUIRE(hook3_result);
-
-    hook3 = std::move(*hook3_result);
-
-    REQUIRE(Target::fn("world") == "hello world and carol and eve and alice and bob");
-
-    // Unhook.
-    hook3.reset();
-    hook2.reset();
-    hook1.reset();
-    hook0.reset();
-}
-
-TEST_CASE("Function with multiple args hooked", "[inline_hook]") {
-    struct Target {
-        __declspec(noinline) static int add(int x, int y) { return x + y; }
-    };
-
-    REQUIRE(Target::add(2, 3) == 5);
-
-    static SafetyHookInline add_hook;
-
-    struct AddHook {
-        static int add(int x, int y) { return add_hook.call<int>(x * 2, y * 2); }
-    };
-
-    auto add_hook_result = SafetyHookInline::create(Target::add, AddHook::add);
-
-    REQUIRE(add_hook_result);
-
-    add_hook = std::move(*add_hook_result);
-
-    REQUIRE(Target::add(3, 4) == 14);
-
-    add_hook.reset();
-
-    REQUIRE(Target::add(5, 6) == 11);
-}
-
-TEST_CASE("Active function is hooked and unhooked", "[inline_hook]") {
-    using namespace std::literals;
-
-    static int count = 0;
-    static bool is_running = true;
-
-    struct Target {
-        __declspec(noinline) static std::string say_hello(int times) { return "Hello #" + std::to_string(times); }
-
-        static void say_hello_infinitely() {
-            while (is_running) {
-                say_hello(count++);
+            static void say_hello_infinitely() {
+                while (is_running) {
+                    say_hello(count++);
+                }
             }
-        }
+        };
+
+        std::thread t{Target::say_hello_infinitely};
+
+        std::this_thread::sleep_for(1s);
+
+        static SafetyHookInline hook;
+
+        struct Hook {
+            static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
+        };
+
+        auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello);
+
+        expect(hook_result.has_value());
+
+        hook = std::move(*hook_result);
+
+        expect(eq(Target::say_hello(0), "Hello #1337"sv));
+
+        std::this_thread::sleep_for(1s);
+        hook.reset();
+
+        is_running = false;
+        t.join();
+
+        expect(eq(Target::say_hello(0), "Hello #0"sv));
+        expect(count > 0_i);
     };
 
-    std::thread t{Target::say_hello_infinitely};
+    "Function with short unconditional branch is hooked"_test = [] {
+        static SafetyHookInline hook;
 
-    std::this_thread::sleep_for(1s);
+        struct Hook {
+            static int __fastcall fn() { return hook.fastcall<int>() + 42; };
+        };
 
-    static SafetyHookInline hook;
+        Xbyak::CodeGenerator cg{};
 
-    struct Hook {
-        static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
-    };
-
-    auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello);
-
-    REQUIRE(hook_result);
-
-    hook = std::move(*hook_result);
-
-    REQUIRE(Target::say_hello(0) == "Hello #1337");
-
-    std::this_thread::sleep_for(1s);
-    hook.reset();
-
-    is_running = false;
-    t.join();
-
-    REQUIRE(Target::say_hello(0) == "Hello #0");
-    REQUIRE(count > 0);
-}
-
-TEST_CASE("Function with short unconditional branch is hooked", "[inline-hook]") {
-    using namespace std::literals;
-    using namespace Xbyak::util;
-
-    static SafetyHookInline hook;
-
-    struct Hook {
-        static int __fastcall fn() { return hook.fastcall<int>() + 42; };
-    };
-
-    Xbyak::CodeGenerator cg{};
-
-    cg.jmp("@f");
-    cg.mov(eax, 0);
-    cg.ret();
-    cg.nop(10, false);
-    cg.L("@@");
-    cg.mov(eax, 1);
-    cg.ret();
-    cg.nop(10, false);
-
-    const auto fn = cg.getCode<int(__fastcall*)()>();
-
-    REQUIRE(fn() == 1);
-
-    hook = safetyhook::create_inline(fn, Hook::fn);
-
-    REQUIRE(fn() == 43);
-
-    hook.reset();
-
-    REQUIRE(fn() == 1);
-}
-
-TEST_CASE("Function with short conditional branch is hooked", "[inline-hook]") {
-    using namespace std::literals;
-    using namespace Xbyak::util;
-
-    static SafetyHookInline hook;
-
-    struct Hook {
-        static int __fastcall fn(int x) { return hook.fastcall<int>(x) + 42; };
-    };
-
-    Xbyak::CodeGenerator cg{};
-    Xbyak::Label label{};
-    const auto finalize = [&cg, &label] {
+        cg.jmp("@f");
         cg.mov(eax, 0);
         cg.ret();
         cg.nop(10, false);
-        cg.L(label);
+        cg.L("@@");
         cg.mov(eax, 1);
         cg.ret();
         cg.nop(10, false);
-        return cg.getCode<int(__fastcall*)(int)>();
+
+        const auto fn = cg.getCode<int(__fastcall*)()>();
+
+        expect(fn() == 1_i);
+
+        hook = safetyhook::create_inline(fn, Hook::fn);
+
+        expect(fn() == 43_i);
+
+        hook.reset();
+
+        expect(fn() == 1_i);
     };
 
-    cg.cmp(ecx, 8);
+    "Function with short conditional branch is hooked"_test = [] {
+        static SafetyHookInline hook;
 
-    SECTION("JB") {
-        cg.jb(label);
-        const auto fn = finalize();
+        struct Hook {
+            static int __fastcall fn(int x) { return hook.fastcall<int>(x) + 42; };
+        };
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
+        Xbyak::CodeGenerator cg{};
+        Xbyak::Label label{};
+        const auto finalize = [&cg, &label] {
+            cg.mov(eax, 0);
+            cg.ret();
+            cg.nop(10, false);
+            cg.L(label);
+            cg.mov(eax, 1);
+            cg.ret();
+            cg.nop(10, false);
+            return cg.getCode<int(__fastcall*)(int)>();
+        };
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+        "JB"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jb(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 42);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-        hook.reset();
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
-    }
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 42_i);
 
-    SECTION("JBE") {
-        cg.jbe(label);
-        const auto fn = finalize();
+            hook.reset();
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 42);
+        "JBE"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jbe(label);
+            const auto fn = finalize();
 
-        hook.reset();
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
-    }
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-    SECTION("JL") {
-        cg.jl(label);
-        const auto fn = finalize();
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 42_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
+            hook.reset();
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 42);
+            cg.reset();
+        };
 
-        hook.reset();
+        "JL"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jl(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
-    }
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-    SECTION("JLE") {
-        cg.jle(label);
-        const auto fn = finalize();
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 42_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            hook.reset();
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 42);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-        hook.reset();
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
-    }
+        "JLE"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jle(label);
+            const auto fn = finalize();
 
-    SECTION("JNB") {
-        cg.jnb(label);
-        const auto fn = finalize();
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 42_i);
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 43);
+            hook.reset();
 
-        hook.reset();
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
-    }
+            cg.reset();
+        };
 
-    SECTION("JNBE") {
-        cg.jnbe(label);
-        const auto fn = finalize();
+        "JNB"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnb(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 43);
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 43_i);
 
-        hook.reset();
+            hook.reset();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
-    }
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-    SECTION("JNL") {
-        cg.jnl(label);
-        const auto fn = finalize();
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
+        "JNBE"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnbe(label);
+            const auto fn = finalize();
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 43);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        hook.reset();
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 43_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
-    }
+            hook.reset();
 
-    SECTION("JNLE") {
-        cg.jnle(label);
-        const auto fn = finalize();
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
+            cg.reset();
+        };
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+        "JNL"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnl(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 43);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-        hook.reset();
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
-    }
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 43_i);
 
-    SECTION("JNO") {
-        cg.jno(label);
-        const auto fn = finalize();
+            hook.reset();
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 43);
+        "JNLE"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnle(label);
+            const auto fn = finalize();
 
-        hook.reset();
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
-    }
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-    SECTION("JNP") {
-        cg.jnp(label);
-        const auto fn = finalize();
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 43_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
+            hook.reset();
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 43);
+            cg.reset();
+        };
 
-        hook.reset();
+        "JNO"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jno(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
-    }
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-    SECTION("JNS") {
-        cg.jns(label);
-        const auto fn = finalize();
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 43_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            hook.reset();
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 43);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-        hook.reset();
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 1);
-    }
+        "JNP"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnp(label);
+            const auto fn = finalize();
 
-    SECTION("JNZ") {
-        cg.jnz(label);
-        const auto fn = finalize();
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 43_i);
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 43);
+            hook.reset();
 
-        hook.reset();
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 1);
-    }
+            cg.reset();
+        };
 
-    SECTION("JO") {
-        cg.jo(label);
-        const auto fn = finalize();
+        "JNS"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jns(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 42);
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 43_i);
 
-        hook.reset();
+            hook.reset();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
-    }
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 1_i);
 
-    SECTION("JP") {
-        cg.jp(label);
-        const auto fn = finalize();
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
+        "JNZ"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jnz(label);
+            const auto fn = finalize();
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 42);
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        hook.reset();
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 43_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
-    }
+            hook.reset();
 
-    SECTION("JS") {
-        cg.js(label);
-        const auto fn = finalize();
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 1_i);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
+            cg.reset();
+        };
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+        "JO"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jo(label);
+            const auto fn = finalize();
 
-        CHECK(fn(7) == 43);
-        CHECK(fn(8) == 42);
-        CHECK(fn(9) == 42);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-        hook.reset();
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-        CHECK(fn(7) == 1);
-        CHECK(fn(8) == 0);
-        CHECK(fn(9) == 0);
-    }
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 42_i);
 
-    SECTION("JZ") {
-        cg.jz(label);
-        const auto fn = finalize();
+            hook.reset();
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-        hook = safetyhook::create_inline(fn, Hook::fn);
+            cg.reset();
+        };
 
-        CHECK(fn(7) == 42);
-        CHECK(fn(8) == 43);
-        CHECK(fn(9) == 42);
+        "JP"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jp(label);
+            const auto fn = finalize();
 
-        hook.reset();
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-        CHECK(fn(7) == 0);
-        CHECK(fn(8) == 1);
-        CHECK(fn(9) == 0);
-    }
-}
+            hook = safetyhook::create_inline(fn, Hook::fn);
 
-TEST_CASE("Function with short jump inside trampoline", "[inline-hook]") {
-    using namespace Xbyak::util;
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 42_i);
 
-    Xbyak::CodeGenerator cg{};
+            hook.reset();
 
-    cg.jmp("@f");
-    cg.ret();
-    cg.L("@@");
-    cg.mov(eax, 42);
-    cg.ret();
-    cg.nop(10, false);
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
 
-    const auto fn = cg.getCode<int (*)()>();
+            cg.reset();
+        };
 
-    REQUIRE(fn() == 42);
+        "JS"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.js(label);
+            const auto fn = finalize();
 
-    static SafetyHookInline hook;
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
 
-    struct Hook {
-        static int fn() { return hook.call<int>() + 1; }
+            hook = safetyhook::create_inline(fn, Hook::fn);
+
+            expect(fn(7) == 43_i);
+            expect(fn(8) == 42_i);
+            expect(fn(9) == 42_i);
+
+            hook.reset();
+
+            expect(fn(7) == 1_i);
+            expect(fn(8) == 0_i);
+            expect(fn(9) == 0_i);
+
+            cg.reset();
+        };
+
+        "JZ"_test = [&] {
+            cg.cmp(ecx, 8);
+            cg.jz(label);
+            const auto fn = finalize();
+
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
+
+            hook = safetyhook::create_inline(fn, Hook::fn);
+
+            expect(fn(7) == 42_i);
+            expect(fn(8) == 43_i);
+            expect(fn(9) == 42_i);
+
+            hook.reset();
+
+            expect(fn(7) == 0_i);
+            expect(fn(8) == 1_i);
+            expect(fn(9) == 0_i);
+
+            cg.reset();
+        };
     };
 
-    hook = safetyhook::create_inline(fn, Hook::fn);
+    "Function with short jump inside trampoline"_test = [] {
+        Xbyak::CodeGenerator cg{};
 
-    REQUIRE(fn() == 43);
+        cg.jmp("@f");
+        cg.ret();
+        cg.L("@@");
+        cg.mov(eax, 42);
+        cg.ret();
+        cg.nop(10, false);
 
-    hook.reset();
+        const auto fn = cg.getCode<int (*)()>();
 
-    REQUIRE(fn() == 42);
-}
+        expect(fn() == 42_i);
+
+        static SafetyHookInline hook;
+
+        struct Hook {
+            static int fn() { return hook.call<int>() + 1; }
+        };
+
+        hook = safetyhook::create_inline(fn, Hook::fn);
+
+        expect(fn() == 43_i);
+
+        hook.reset();
+
+        expect(fn() == 42_i);
+    };
+};

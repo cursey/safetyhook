@@ -15,10 +15,10 @@ amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-tests = "SAFETYHOOK_BUILD_TESTS AND SAFETYHOOK_AMALGAMATE"
 fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
 
-[fetch-content.Catch2]
+[fetch-content.ut]
 condition = "build-tests"
-git = "https://github.com/catchorg/Catch2.git"
-tag = "v3.3.2"
+git = "https://github.com/boost-ext/ut.git"
+tag = "v2.0.1"
 shallow = true
 
 [fetch-content.xbyak]
@@ -130,14 +130,16 @@ sources = ["tests/test4.cpp"]
 [target.unittest]
 type = "test"
 sources = ["unittest/*.cpp"]
-link-libraries = ["Catch2::Catch2WithMain", "safetyhook::safetyhook", "xbyak::xbyak"]
+link-libraries = ["Boost::ut", "safetyhook::safetyhook", "xbyak::xbyak"]
+compile-definitions = ["BOOST_UT_DISABLE_MODULE"]
 
 [target.unittest-amalgamated]
 condition = "build-amalgamate-tests"
 type = "test"
 sources = ["unittest/*.cpp", "amalgamated-dist/safetyhook.cpp"]
 include-directories = ["amalgamated-dist/"]
-link-libraries = ["Zydis", "Catch2::Catch2WithMain", "xbyak::xbyak"]
+link-libraries = ["Zydis", "Boost::ut", "xbyak::xbyak"]
+compile-definitions = ["BOOST_UT_DISABLE_MODULE"]
 cmake-after = """
 add_dependencies(unittest-amalgamated Amalgamate)
 """

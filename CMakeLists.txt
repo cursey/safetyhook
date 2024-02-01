@@ -35,16 +35,16 @@ project(safetyhook)
 include(FetchContent)
 
 if(SAFETYHOOK_BUILD_TESTS) # build-tests
-	message(STATUS "Fetching Catch2 (v3.3.2)...")
-	FetchContent_Declare(Catch2
+	message(STATUS "Fetching ut (v2.0.1)...")
+	FetchContent_Declare(ut
 		GIT_REPOSITORY
-			"https://github.com/catchorg/Catch2.git"
+			"https://github.com/boost-ext/ut.git"
 		GIT_TAG
-			v3.3.2
+			v2.0.1
 		GIT_SHALLOW
 			ON
 	)
-	FetchContent_MakeAvailable(Catch2)
+	FetchContent_MakeAvailable(ut)
 
 endif()
 if(SAFETYHOOK_BUILD_TESTS) # build-tests
@@ -330,6 +330,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		"unittest/allocator.cpp"
 		"unittest/inline_hook.cpp"
 		"unittest/inline_hook.x86_64.cpp"
+		"unittest/main.cpp"
 		"unittest/mid_hook.cpp"
 		"unittest/vmt_hook.cpp"
 		cmake.toml
@@ -348,8 +349,12 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 		safetyhook::safetyhook
 	)
 
+	target_compile_definitions(unittest PRIVATE
+		BOOST_UT_DISABLE_MODULE
+	)
+
 	target_link_libraries(unittest PRIVATE
-		Catch2::Catch2WithMain
+		Boost::ut
 		safetyhook::safetyhook
 		xbyak::xbyak
 	)
@@ -367,6 +372,7 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			"unittest/allocator.cpp"
 			"unittest/inline_hook.cpp"
 			"unittest/inline_hook.x86_64.cpp"
+			"unittest/main.cpp"
 			"unittest/mid_hook.cpp"
 			"unittest/vmt_hook.cpp"
 			"amalgamated-dist/safetyhook.cpp"
@@ -386,13 +392,17 @@ if(SAFETYHOOK_BUILD_TESTS) # build-tests
 			safetyhook::safetyhook
 		)
 
+		target_compile_definitions(unittest-amalgamated PRIVATE
+			BOOST_UT_DISABLE_MODULE
+		)
+
 		target_include_directories(unittest-amalgamated PRIVATE
 			"amalgamated-dist/"
 		)
 
 		target_link_libraries(unittest-amalgamated PRIVATE
 			Zydis
-			Catch2::Catch2WithMain
+			Boost::ut
 			xbyak::xbyak
 		)
 
