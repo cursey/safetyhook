@@ -51,7 +51,7 @@ jobs:
           dest: safetyhook-amalgamated.zip
 
       - name: Upload amalgamate
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.3.0
         with:
           name: safetyhook-amalgamated
           path: amalgamated-dist/
@@ -70,7 +70,7 @@ jobs:
           dest: safetyhook-amalgamated-zydis.zip
 
       - name: Upload amalgamate with Zydis
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.3.0
         with:
           name: safetyhook-amalgamated-zydis
           path: amalgamated-dist/
