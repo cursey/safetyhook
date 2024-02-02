@@ -129,6 +129,10 @@ sources = ["example/threadsafe.cpp"]
 type = "example-dll"
 sources = ["example/dll.cpp"]
 
+[target.example-vmthook]
+type = "example"
+sources = ["example/vmthook.cpp"]
+
 [target.test]
 type = "executable"
 sources = ["test/*.cpp"]

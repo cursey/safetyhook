@@ -1,4 +1,4 @@
-#include <iostream>
+#include <print>
 
 #if __has_include(<Zydis/Zydis.h>)
 #include <Zydis/Zydis.h>
@@ -25,7 +25,7 @@ void hooked_add_42(SafetyHookContext& ctx) {
 SafetyHookMid g_hook{};
 
 int main() {
-    std::cout << add_42(2) << "\n";
+    std::println("unhooked add_42(2) = {}", add_42(2));
 
     // Let's disassemble add_42 and hook its RET.
     ZydisDecoder decoder{};
@@ -55,11 +55,11 @@ int main() {
 
     g_hook = safetyhook::create_mid(ip, hooked_add_42);
 
-    std::cout << add_42(3) << "\n";
+    std::println("hooked add_42(3) = {}", add_42(3));
 
-    g_hook.reset();
+    g_hook = {};
 
-    std::cout << add_42(4) << "\n";
+    std::println("unhooked add_42(4) = {}", add_42(4));
 
     return 0;
 }
