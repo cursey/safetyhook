@@ -325,6 +325,32 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 	)
 
 endif()
+# Target: example-vmthook
+if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
+	set(example-vmthook_SOURCES
+		"example/vmthook.cpp"
+		cmake.toml
+	)
+
+	add_executable(example-vmthook)
+
+	target_sources(example-vmthook PRIVATE ${example-vmthook_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example-vmthook_SOURCES})
+
+	target_compile_features(example-vmthook PRIVATE
+		cxx_std_23
+	)
+
+	target_link_libraries(example-vmthook PRIVATE
+		safetyhook::safetyhook
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example-vmthook)
+	endif()
+
+endif()
 # Target: test
 set(test_SOURCES
 	"test/allocator.cpp"

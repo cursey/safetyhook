@@ -1,11 +1,11 @@
-#include <iostream>
+#include <print>
 
 #include <safetyhook.hpp>
 
 SafetyHookInline hook0, hook1, hook2, hook3;
 
 __declspec(noinline) void say_hi(const std::string& name) {
-    std::cout << "hello " << name << "\n";
+    std::println("hello {}", name);
 }
 
 void hook0_fn(const std::string& name) {
