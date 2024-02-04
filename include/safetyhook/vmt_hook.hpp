@@ -7,8 +7,8 @@
 #include <expected>
 #include <unordered_map>
 
-#include <safetyhook/allocator.hpp>
-#include <safetyhook/utility.hpp>
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/utility.hpp"
 
 namespace safetyhook {
 /// @brief A hook class that allows for hooking a single method in a VMT.

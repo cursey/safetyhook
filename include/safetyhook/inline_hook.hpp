@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include <safetyhook/allocator.hpp>
-#include <safetyhook/utility.hpp>
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/utility.hpp"
 
 namespace safetyhook {
 /// @brief An inline hook.
@@ -294,7 +294,7 @@ private:
         const std::shared_ptr<Allocator>& allocator, uint8_t* target, uint8_t* destination);
     std::expected<void, Error> e9_hook(const std::shared_ptr<Allocator>& allocator);
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     std::expected<void, Error> ff_hook(const std::shared_ptr<Allocator>& allocator);
 #endif
 

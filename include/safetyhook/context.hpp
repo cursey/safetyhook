@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "safetyhook/common.hpp"
+
 namespace safetyhook {
 union Xmm {
     uint8_t u8[16];
@@ -42,9 +44,9 @@ struct Context32 {
 /// to the registers at the moment the hook is called.
 /// @note The structure is different depending on architecture.
 /// @note The structure only provides access to integer registers.
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
 using Context = Context64;
-#else
+#elif SAFETYHOOK_ARCH_X86_32
 using Context = Context32;
 #endif
 

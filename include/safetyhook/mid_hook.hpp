@@ -6,10 +6,10 @@
 #include <cstdint>
 #include <memory>
 
-#include <safetyhook/allocator.hpp>
-#include <safetyhook/context.hpp>
-#include <safetyhook/inline_hook.hpp>
-#include <safetyhook/utility.hpp>
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/context.hpp"
+#include "safetyhook/inline_hook.hpp"
+#include "safetyhook/utility.hpp"
 
 namespace safetyhook {
 

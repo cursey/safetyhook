@@ -6,9 +6,9 @@
 #error "Windows.h not found"
 #endif
 
-#include <safetyhook/thread_freezer.hpp>
+#include "safetyhook/thread_freezer.hpp"
 
-#include <safetyhook/vmt_hook.hpp>
+#include "safetyhook/vmt_hook.hpp"
 
 namespace safetyhook {
 VmHook::VmHook(VmHook&& other) noexcept {

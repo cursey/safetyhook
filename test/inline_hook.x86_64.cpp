@@ -1,8 +1,8 @@
-#if defined(_M_X64)
-
 #include <boost/ut.hpp>
 #include <safetyhook.hpp>
 #include <xbyak/xbyak.h>
+
+#if SAFETYHOOK_ARCH_X86_64
 
 using namespace std::literals;
 using namespace boost::ut;

@@ -6,7 +6,7 @@
 #error "Windows.h not found"
 #endif
 
-#include <safetyhook/utility.hpp>
+#include "safetyhook/utility.hpp"
 
 namespace safetyhook {
 bool is_page_executable(uint8_t* address) {

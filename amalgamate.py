@@ -105,7 +105,7 @@ def merge_sources(*, source_dir: Path, covered_headers: Set[Path]):
     output = [
         '#define NOMINMAX',
         '',
-        '#include <safetyhook.hpp>',
+        '#include "safetyhook.hpp"',
         '',
     ]
 

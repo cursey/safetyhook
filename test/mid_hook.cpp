@@ -15,12 +15,10 @@ static suite<"mid hook"> mid_hook_tests = [] {
 
         struct Hook {
             static void add_42(SafetyHookContext& ctx) {
-#if defined(_M_X64)
+#if SAFETYHOOK_ARCH_X86_64
                 ctx.rcx = 1337 - 42;
-#elif defined(_M_IX86)
+#elif SAFETYHOOK_ARCH_X86_32
                 ctx.ecx = 1337 - 42;
-#else
-#error "Unsupported architecture"
 #endif
             }
         };
@@ -38,7 +36,7 @@ static suite<"mid hook"> mid_hook_tests = [] {
         expect(Target::add_42(2) == 44_i);
     };
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     "Mid hook to change an XMM register"_test = [] {
         struct Target {
             __declspec(noinline) static float __fastcall add_42(float a) { return a + 0.42f; }

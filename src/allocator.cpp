@@ -11,7 +11,7 @@
 #error "Windows.h not found"
 #endif
 
-#include <safetyhook/allocator.hpp>
+#include "safetyhook/allocator.hpp"
 
 namespace safetyhook {
 template <typename T> constexpr T align_up(T address, size_t align) {
