@@ -2,6 +2,8 @@
 
 #if SAFETYHOOK_OS_LINUX
 
+#include <cstdio>
+
 #include <sys/mman.h>
 #include <unistd.h>
 
