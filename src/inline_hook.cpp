@@ -8,19 +8,20 @@
 #error "Windows.h not found"
 #endif
 
-#if __has_include(<Zydis/Zydis.h>)
-#include <Zydis/Zydis.h>
-#elif __has_include(<Zydis.h>)
-#include <Zydis.h>
+#if __has_include("Zydis/Zydis.h")
+#include "Zydis/Zydis.h"
+#elif __has_include("Zydis.h")
+#include "Zydis.h"
 #else
 #error "Zydis not found"
 #endif
 
-#include <safetyhook/allocator.hpp>
-#include <safetyhook/thread_freezer.hpp>
-#include <safetyhook/utility.hpp>
+#include "safetyhook/allocator.hpp"
+#include "safetyhook/common.hpp"
+#include "safetyhook/thread_freezer.hpp"
+#include "safetyhook/utility.hpp"
 
-#include <safetyhook/inline_hook.hpp>
+#include "safetyhook/inline_hook.hpp"
 
 namespace safetyhook {
 
@@ -30,7 +31,7 @@ struct JmpE9 {
     uint32_t offset{0};
 };
 
-#if defined(_M_X64)
+#if SAFETYHOOK_ARCH_X86_64
 struct JmpFF {
     uint8_t opcode0{0xFF};
     uint8_t opcode1{0x25};
@@ -47,7 +48,7 @@ struct TrampolineEpilogueFF {
     JmpFF jmp_to_original{};
     uint64_t original_address{};
 };
-#elif defined(_M_IX86)
+#elif SAFETYHOOK_ARCH_X86_32
 struct TrampolineEpilogueE9 {
     JmpE9 jmp_to_original{};
     JmpE9 jmp_to_destination{};
@@ -55,7 +56,7 @@ struct TrampolineEpilogueE9 {
 #endif
 #pragma pack(pop)
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
 static auto make_jmp_ff(uint8_t* src, uint8_t* dst, uint8_t* data) {
     JmpFF jmp{};
 
@@ -120,12 +121,10 @@ static bool decode(ZydisDecodedInstruction* ix, uint8_t* ip) {
     ZydisDecoder decoder{};
     ZyanStatus status;
 
-#if defined(_M_X64)
+#if SAFETYHOOK_ARCH_X86_64
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-#elif defined(_M_IX86)
+#elif SAFETYHOOK_ARCH_X86_32
     status = ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
-#else
-#error "Unsupported architecture"
 #endif
 
     if (!ZYAN_SUCCESS(status)) {
@@ -190,11 +189,11 @@ std::expected<void, InlineHook::Error> InlineHook::setup(
     m_destination = destination;
 
     if (auto e9_result = e9_hook(allocator); !e9_result) {
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
         if (auto ff_result = ff_hook(allocator); !ff_result) {
             return ff_result;
         }
-#else
+#elif SAFETYHOOK_ARCH_X86_32
         return e9_result;
 #endif
     }
@@ -314,13 +313,13 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     src = reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination);
     dst = m_destination;
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     auto data = reinterpret_cast<uint8_t*>(&trampoline_epilogue->destination_address);
 
     if (auto result = emit_jmp_ff(src, dst, data); !result) {
         return std::unexpected{result.error()};
     }
-#else
+#elif SAFETYHOOK_ARCH_X86_32
     if (auto result = emit_jmp_e9(src, dst); !result) {
         return std::unexpected{result.error()};
     }
@@ -350,7 +349,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     return {};
 }
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
 std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr<Allocator>& allocator) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueFF);

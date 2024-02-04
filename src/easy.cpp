@@ -1,4 +1,4 @@
-#include <safetyhook/easy.hpp>
+#include "safetyhook/easy.hpp"
 
 namespace safetyhook {
 InlineHook create_inline(void* target, void* destination) {

@@ -7,7 +7,9 @@
 #endif
 #include <winternl.h>
 
-#include <safetyhook/thread_freezer.hpp>
+#include "safetyhook/common.hpp"
+
+#include "safetyhook/thread_freezer.hpp"
 
 #pragma comment(lib, "ntdll")
 
@@ -120,9 +122,9 @@ void execute_while_frozen(
 void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {
     auto* ctx = reinterpret_cast<CONTEXT*>(thread_ctx);
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     auto ip = ctx->Rip;
-#else
+#elif SAFETYHOOK_ARCH_X86_32
     auto ip = ctx->Eip;
 #endif
 
@@ -130,9 +132,9 @@ void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {
         ip = reinterpret_cast<uintptr_t>(new_ip);
     }
 
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     ctx->Rip = ip;
-#else
+#elif SAFETYHOOK_ARCH_X86_32
     ctx->Eip = ip;
 #endif
 }

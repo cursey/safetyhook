@@ -1,9 +1,9 @@
 #include <print>
 
-#if __has_include(<Zydis/Zydis.h>)
-#include <Zydis/Zydis.h>
-#elif __has_include(<Zydis.h>)
-#include <Zydis.h>
+#if __has_include("Zydis/Zydis.h")
+#include "Zydis/Zydis.h"
+#elif __has_include("Zydis.h")
+#include "Zydis.h"
 #else
 #error "Zydis not found"
 #endif
@@ -15,9 +15,9 @@ __declspec(noinline) int add_42(int a) {
 }
 
 void hooked_add_42(SafetyHookContext& ctx) {
-#ifdef _M_X64
+#if SAFETYHOOK_ARCH_X86_64
     ctx.rax = 1337;
-#else
+#elif SAFETYHOOK_ARCH_X86_32
     ctx.eax = 1337;
 #endif
 }
@@ -30,12 +30,10 @@ int main() {
     // Let's disassemble add_42 and hook its RET.
     ZydisDecoder decoder{};
 
-#if defined(_M_X64)
+#if SAFETYHOOK_ARCH_X86_64
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-#elif defined(_M_IX86)
+#elif SAFETYHOOK_ARCH_X86_32
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
-#else
-#error "Unsupported architecture"
 #endif
 
     auto ip = reinterpret_cast<uint8_t*>(add_42);
