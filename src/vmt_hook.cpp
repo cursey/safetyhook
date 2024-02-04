@@ -1,12 +1,4 @@
-#if __has_include(<Windows.h>)
-#include <Windows.h>
-#elif __has_include(<windows.h>)
-#include <windows.h>
-#else
-#error "Windows.h not found"
-#endif
-
-#include "safetyhook/thread_freezer.hpp"
+#include "safetyhook/os.hpp"
 
 #include "safetyhook/vmt_hook.hpp"
 
@@ -113,7 +105,7 @@ void VmtHook::remove(void* object) {
     const auto original_vmt = search->second;
 
     execute_while_frozen([&] {
-        if (IsBadWritePtr(object, sizeof(void*))) {
+        if (!vm_is_writable(reinterpret_cast<uint8_t*>(object), sizeof(void*))) {
             return;
         }
 
@@ -134,7 +126,7 @@ void VmtHook::reset() {
 void VmtHook::destroy() {
     execute_while_frozen([this] {
         for (const auto [object, original_vmt] : m_objects) {
-            if (IsBadWritePtr(object, sizeof(void*))) {
+            if (!vm_is_writable(reinterpret_cast<uint8_t*>(object), sizeof(void*))) {
                 return;
             }
 

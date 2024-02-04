@@ -93,7 +93,7 @@ set(safetyhook_SOURCES
 	"src/easy.cpp"
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"
-	"src/thread_freezer.cpp"
+	"src/os.windows.cpp"
 	"src/utility.cpp"
 	"src/vmt_hook.cpp"
 	cmake.toml
@@ -143,7 +143,6 @@ target_include_directories(safetyhook PUBLIC
 
 target_link_libraries(safetyhook PUBLIC
 	Zydis
-	ntdll
 )
 
 # Target: docs
