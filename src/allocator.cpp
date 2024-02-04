@@ -3,22 +3,11 @@
 #include <limits>
 
 #include "safetyhook/os.hpp"
+#include "safetyhook/utility.hpp"
 
 #include "safetyhook/allocator.hpp"
 
 namespace safetyhook {
-template <typename T> constexpr T align_up(T address, size_t align) {
-    const auto unaligned_address = (uintptr_t)address;
-    const auto aligned_address = (unaligned_address + align - 1) & ~(align - 1);
-    return (T)aligned_address;
-}
-
-template <typename T> constexpr T align_down(T address, size_t align) {
-    const auto unaligned_address = (uintptr_t)address;
-    const auto aligned_address = unaligned_address & ~(align - 1);
-    return (T)aligned_address;
-}
-
 Allocation::Allocation(Allocation&& other) noexcept {
     *this = std::move(other);
 }
