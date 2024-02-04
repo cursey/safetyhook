@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "safetyhook/allocator.hpp"
+#include "safetyhook/common.hpp"
 #include "safetyhook/utility.hpp"
 
 namespace safetyhook {
