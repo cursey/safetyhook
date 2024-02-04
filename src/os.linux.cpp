@@ -103,7 +103,8 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     int dev_minor;
     unsigned long inode;
     char path[256];
-    unsigned long last_end = 0x1000; // Track the end address of the last mapping.
+    unsigned long last_end =
+        reinterpret_cast<unsigned long>(system_info().min_address); // Track the end address of the last mapping.
     auto addr = reinterpret_cast<unsigned long>(address);
     std::optional<VmBasicInfo> info = std::nullopt;
 
@@ -123,6 +124,8 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
 
             break;
         }
+
+        last_end = end;
 
         if (addr >= start && addr < end) {
             info = {
