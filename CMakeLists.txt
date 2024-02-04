@@ -352,40 +352,42 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 endif()
 # Target: test
-set(test_SOURCES
-	"test/allocator.cpp"
-	"test/inline_hook.cpp"
-	"test/inline_hook.x86_64.cpp"
-	"test/main.cpp"
-	"test/mid_hook.cpp"
-	"test/vmt_hook.cpp"
-	cmake.toml
-)
+if(SAFETYHOOK_BUILD_TEST) # build-test
+	set(test_SOURCES
+		"test/allocator.cpp"
+		"test/inline_hook.cpp"
+		"test/inline_hook.x86_64.cpp"
+		"test/main.cpp"
+		"test/mid_hook.cpp"
+		"test/vmt_hook.cpp"
+		cmake.toml
+	)
 
-add_executable(test)
+	add_executable(test)
 
-target_sources(test PRIVATE ${test_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test_SOURCES})
+	target_sources(test PRIVATE ${test_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test_SOURCES})
 
-target_compile_definitions(test PRIVATE
-	BOOST_UT_DISABLE_MODULE
-)
+	target_compile_definitions(test PRIVATE
+		BOOST_UT_DISABLE_MODULE
+	)
 
-target_compile_features(test PRIVATE
-	cxx_std_23
-)
+	target_compile_features(test PRIVATE
+		cxx_std_23
+	)
 
-target_link_libraries(test PRIVATE
-	Boost::ut
-	safetyhook::safetyhook
-	xbyak::xbyak
-)
+	target_link_libraries(test PRIVATE
+		Boost::ut
+		safetyhook::safetyhook
+		xbyak::xbyak
+	)
 
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT test)
+	endif()
+
 endif()
-
 # Target: test-amalgamated
 if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 	set(test-amalgamated_SOURCES

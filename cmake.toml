@@ -134,6 +134,7 @@ type = "example"
 sources = ["example/vmthook.cpp"]
 
 [target.test]
+condition = "build-test"
 type = "executable"
 sources = ["test/*.cpp"]
 link-libraries = ["Boost::ut", "safetyhook::safetyhook", "xbyak::xbyak"]
