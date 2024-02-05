@@ -140,13 +140,7 @@ public:
     [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, FnPtr auto new_function) {
         VmHook hook{};
 
-        // Skip RTTI pointer.
-#if SAFETYHOOK_OS_WINDOWS
-        ++index;
-#elif SAFETYHOOK_OS_LINUX
-        index += 2;
-#endif
-
+        ++index; // Skip RTTI pointer.
         hook.m_original_vm = m_new_vmt[index];
         store(reinterpret_cast<uint8_t*>(&hook.m_new_vm), new_function);
         hook.m_vmt_entry = &m_new_vmt[index];

@@ -45,15 +45,8 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
 
     // Count the number of virtual method pointers. We start at one to account for the RTTI pointer.
     auto num_vmt_entries = 1;
-    auto start_vmt = original_vmt;
 
-#if SAFETYHOOK_OS_LINUX
-    // Skip the RTTI pointer.
-    ++start_vmt;
-    ++num_vmt_entries;
-#endif
-
-    for (auto vm = start_vmt; is_executable(*vm); ++vm) {
+    for (auto vm = original_vmt; is_executable(*vm); ++vm) {
         ++num_vmt_entries;
     }
 
