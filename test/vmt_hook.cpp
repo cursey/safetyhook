@@ -11,7 +11,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -52,8 +52,8 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
-            __declspec(noinline) int add_43(int a) override { return a + 43; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_43(int a) override { return a + 43; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -105,7 +105,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -133,7 +133,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         add_42_hook = std::move(*vm_result);
 
         expect(target->add_42(1) == 1380_i);
-        expect(dynamic_cast<Target*>(target.get()) != nullptr);
+        expect(neq(dynamic_cast<Target*>(target.get()), nullptr));
     };
 
     "Can safely destroy VmtHook after object is deleted"_test = [] {
@@ -143,7 +143,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -182,7 +182,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -235,7 +235,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -309,7 +309,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
