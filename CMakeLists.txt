@@ -305,7 +305,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 endif()
 # Target: example-dll
-if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
+if(SAFETYHOOK_BUILD_EXAMPLES AND WIN32) # windows-only-example
 	set(example-dll_SOURCES
 		"example/dll.cpp"
 		cmake.toml

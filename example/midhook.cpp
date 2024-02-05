@@ -10,7 +10,7 @@
 
 #include <safetyhook.hpp>
 
-__declspec(noinline) int add_42(int a) {
+SAFETYHOOK_NOINLINE int add_42(int a) {
     return a + 42;
 }
 
@@ -28,6 +28,8 @@ int main() {
     std::println("unhooked add_42(2) = {}", add_42(2));
 
     // Let's disassemble add_42 and hook its RET.
+    // NOTE: On Linux we should specify -falign-functions=32 to add some padding to the function otherwise we'll
+    // end up hooking the next function's prologue. This is pretty hacky in general but it's just an example.
     ZydisDecoder decoder{};
 
 #if SAFETYHOOK_ARCH_X86_64

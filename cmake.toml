@@ -13,6 +13,7 @@ SAFETYHOOK_FETCH_ZYDIS = false
 build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-test = "SAFETYHOOK_BUILD_TEST"
 build-examples = "SAFETYHOOK_BUILD_EXAMPLES"
+windows-only-example = "SAFETYHOOK_BUILD_EXAMPLES AND WIN32"
 amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-test = "SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE"
 fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
@@ -104,7 +105,7 @@ link-libraries = ["safetyhook::safetyhook"]
 compile-features = ["cxx_std_23"]
 
 [template.example-dll]
-condition = "build-examples"
+condition = "windows-only-example"
 type = "shared"
 link-libraries = ["safetyhook::safetyhook"]
 compile-features = ["cxx_std_23"]
