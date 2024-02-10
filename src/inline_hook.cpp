@@ -72,12 +72,6 @@ static auto make_jmp_ff(uint8_t* src, uint8_t* dst, uint8_t* data) {
         return std::unexpected{InlineHook::Error::not_enough_space(dst)};
     }
 
-    auto um = unprotect(src, size);
-
-    if (!um) {
-        return std::unexpected{InlineHook::Error::failed_to_unprotect(src)};
-    }
-
     if (size > sizeof(JmpFF)) {
         std::fill_n(src, size, static_cast<uint8_t>(0x90));
     }
@@ -100,12 +94,6 @@ constexpr auto make_jmp_e9(uint8_t* src, uint8_t* dst) {
     uint8_t* src, uint8_t* dst, size_t size = sizeof(JmpE9)) {
     if (size < sizeof(JmpE9)) {
         return std::unexpected{InlineHook::Error::not_enough_space(dst)};
-    }
-
-    auto um = unprotect(src, size);
-
-    if (!um) {
-        return std::unexpected{InlineHook::Error::failed_to_unprotect(src)};
     }
 
     if (size > sizeof(JmpE9)) {
@@ -328,19 +316,13 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     std::optional<Error> error;
 
     // jmp from original to trampoline.
-    execute_while_frozen(
-        [this, &trampoline_epilogue, &error] {
-            if (auto result = emit_jmp_e9(m_target,
-                    reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination), m_original_bytes.size());
-                !result) {
-                error = result.error();
-            }
-        },
-        [this](auto, auto, auto ctx) {
-            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
-            }
-        });
+    trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &trampoline_epilogue, &error] {
+        if (auto result = emit_jmp_e9(m_target, reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination),
+                m_original_bytes.size());
+            !result) {
+            error = result.error();
+        }
+    });
 
     if (error) {
         return std::unexpected{*error};
@@ -396,18 +378,12 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
     std::optional<Error> error;
 
     // jmp from original to trampoline.
-    execute_while_frozen(
-        [this, &error] {
-            if (auto result = emit_jmp_ff(m_target, m_destination, m_target + sizeof(JmpFF), m_original_bytes.size());
-                !result) {
-                error = result.error();
-            }
-        },
-        [this](auto, auto, auto ctx) {
-            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_target + i, m_trampoline.data() + i);
-            }
-        });
+    trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error] {
+        if (auto result = emit_jmp_ff(m_target, m_destination, m_target + sizeof(JmpFF), m_original_bytes.size());
+            !result) {
+            error = result.error();
+        }
+    });
 
     if (error) {
         return std::unexpected{*error};
@@ -424,17 +400,8 @@ void InlineHook::destroy() {
         return;
     }
 
-    execute_while_frozen(
-        [this] {
-            if (auto um = unprotect(m_target, m_original_bytes.size())) {
-                std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target);
-            }
-        },
-        [this](auto, auto, auto ctx) {
-            for (size_t i = 0; i < m_original_bytes.size(); ++i) {
-                fix_ip(ctx, m_trampoline.data() + i, m_target + i);
-            }
-        });
+    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
+        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
 
     m_trampoline.free();
 }

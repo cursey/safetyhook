@@ -112,17 +112,17 @@ void VmtHook::remove(void* object) {
 
     const auto original_vmt = search->second;
 
-    execute_while_frozen([&] {
-        if (IsBadWritePtr(object, sizeof(void*))) {
-            return;
-        }
+    if (IsBadWritePtr(object, sizeof(void*))) {
+        m_objects.erase(search);
+        return;
+    }
 
-        if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
-            return;
-        }
+    if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+        m_objects.erase(search);
+        return;
+    }
 
-        *reinterpret_cast<uint8_t***>(object) = original_vmt;
-    });
+    *reinterpret_cast<uint8_t***>(object) = original_vmt;
 
     m_objects.erase(search);
 }
@@ -132,19 +132,17 @@ void VmtHook::reset() {
 }
 
 void VmtHook::destroy() {
-    execute_while_frozen([this] {
-        for (const auto [object, original_vmt] : m_objects) {
-            if (IsBadWritePtr(object, sizeof(void*))) {
-                return;
-            }
-
-            if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
-                return;
-            }
-
-            *reinterpret_cast<uint8_t***>(object) = original_vmt;
+    for (const auto [object, original_vmt] : m_objects) {
+        if (IsBadWritePtr(object, sizeof(void*))) {
+            continue;
         }
-    });
+
+        if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+            continue;
+        }
+
+        *reinterpret_cast<uint8_t***>(object) = original_vmt;
+    }
 
     m_objects.clear();
     m_new_vmt_allocation.reset();

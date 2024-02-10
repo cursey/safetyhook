@@ -11,15 +11,7 @@ using ThreadId = uint32_t;
 using ThreadHandle = void*;
 using ThreadContext = void*;
 
-/// @brief Executes a function while all other threads are frozen. Also allows for visiting each frozen thread and
-/// modifying it's context.
-/// @param run_fn The function to run while all other threads are frozen.
-/// @param visit_fn The function that will be called for each frozen thread.
-/// @note The visit function will be called in the order that the threads were frozen.
-/// @note The visit function will be called before the run function.
-/// @note Keep the logic inside run_fn and visit_fn as simple as possible to avoid deadlocks.
-void execute_while_frozen(const std::function<void()>& run_fn,
-    const std::function<void(ThreadId, ThreadHandle, ThreadContext)>& visit_fn = {});
+void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn);
 
 /// @brief Will modify the context of a thread's IP to point to a new address if its IP is at the old address.
 /// @param ctx The thread context to modify.
