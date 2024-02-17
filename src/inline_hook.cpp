@@ -1,13 +1,5 @@
 #include <iterator>
 
-#if __has_include(<Windows.h>)
-#include <Windows.h>
-#elif __has_include(<windows.h>)
-#include <windows.h>
-#else
-#error "Windows.h not found"
-#endif
-
 #if __has_include("Zydis/Zydis.h")
 #include "Zydis/Zydis.h"
 #elif __has_include("Zydis.h")
@@ -18,7 +10,7 @@
 
 #include "safetyhook/allocator.hpp"
 #include "safetyhook/common.hpp"
-#include "safetyhook/thread_freezer.hpp"
+#include "safetyhook/os.hpp"
 #include "safetyhook/utility.hpp"
 
 #include "safetyhook/inline_hook.hpp"

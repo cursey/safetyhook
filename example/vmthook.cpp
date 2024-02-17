@@ -28,13 +28,18 @@ int main() {
     std::println("unhooked target->add_42(1) = {}", target->add_42(1));
 
     g_target_hook = safetyhook::create_vmt(target.get());
-    g_add_42_hook = safetyhook::create_vm(g_target_hook, 1, &Hook::hooked_add_42);
 
-    std::println("hooked target->add_42(2) = {}", target->add_42(1));
+#if SAFETYHOOK_OS_WINDOWS
+    g_add_42_hook = safetyhook::create_vm(g_target_hook, 1, &Hook::hooked_add_42);
+#elif SAFETYHOOK_OS_LINUX
+    g_add_42_hook = safetyhook::create_vm(g_target_hook, 2, &Hook::hooked_add_42);
+#endif
+
+    std::println("hooked target->add_42(2) = {}", target->add_42(2));
 
     g_target_hook = {};
 
-    std::println("unhooked target->add_42(3) = {}", target->add_42(1));
+    std::println("unhooked target->add_42(3) = {}", target->add_42(3));
 
     return 0;
 }

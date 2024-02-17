@@ -5,7 +5,7 @@
 
 SafetyHookInline g_hook{};
 
-__declspec(noinline) void SayHello(int times) {
+SAFETYHOOK_NOINLINE void SayHello(int times) {
     std::println("Hello #{}", times);
 }
 

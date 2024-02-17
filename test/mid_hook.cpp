@@ -6,7 +6,7 @@ using namespace boost::ut;
 static suite<"mid hook"> mid_hook_tests = [] {
     "Mid hook to change a register"_test = [] {
         struct Target {
-            __declspec(noinline) static int __fastcall add_42(int a) { return a + 42; }
+            SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL add_42(int a) { return a + 42; }
         };
 
         expect(Target::add_42(0) == 42_i);
@@ -15,10 +15,18 @@ static suite<"mid hook"> mid_hook_tests = [] {
 
         struct Hook {
             static void add_42(SafetyHookContext& ctx) {
+#if SAFETYHOOK_OS_WINDOWS
 #if SAFETYHOOK_ARCH_X86_64
                 ctx.rcx = 1337 - 42;
 #elif SAFETYHOOK_ARCH_X86_32
                 ctx.ecx = 1337 - 42;
+#endif
+#elif SAFETYHOOK_OS_LINUX
+#if SAFETYHOOK_ARCH_X86_64
+                ctx.rdi = 1337 - 42;
+#elif SAFETYHOOK_ARCH_X86_32
+                ctx.edi = 1337 - 42;
+#endif
 #endif
             }
         };
@@ -39,7 +47,7 @@ static suite<"mid hook"> mid_hook_tests = [] {
 #if SAFETYHOOK_ARCH_X86_64
     "Mid hook to change an XMM register"_test = [] {
         struct Target {
-            __declspec(noinline) static float __fastcall add_42(float a) { return a + 0.42f; }
+            SAFETYHOOK_NOINLINE static float SAFETYHOOK_FASTCALL add_42(float a) { return a + 0.42f; }
         };
 
         expect(Target::add_42(0.0f) == 0.42_f);
