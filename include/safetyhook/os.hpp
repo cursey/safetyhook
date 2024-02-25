@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <expected>
 #include <functional>
-#elif
+#else
 import std.compat;
 #endif
 

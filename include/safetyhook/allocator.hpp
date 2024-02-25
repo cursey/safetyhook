@@ -9,7 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-#elif 
+#else
 import std.compat;
 #endif
 

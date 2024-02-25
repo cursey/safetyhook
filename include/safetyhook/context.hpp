@@ -5,7 +5,7 @@
 
 #ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
-#elif
+#else
 import std.compat;
 #endif
 

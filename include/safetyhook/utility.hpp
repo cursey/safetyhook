@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <type_traits>
-#elif 
+#else
 import std.compat;
 #endif
 

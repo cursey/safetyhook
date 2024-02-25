@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <expected>
 #include <unordered_map>
-#elif
+#else
 import std.compat;
 #endif
 
