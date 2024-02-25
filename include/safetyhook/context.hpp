@@ -3,7 +3,11 @@
 
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
+#elif
+import std.compat;
+#endif
 
 #include "safetyhook/common.hpp"
 

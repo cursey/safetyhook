@@ -1,9 +1,13 @@
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <type_traits>
+#elif 
+import std.compat;
+#endif
 
 namespace safetyhook {
 template <typename T> constexpr void store(uint8_t* address, const T& value) {
