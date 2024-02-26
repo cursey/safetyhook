@@ -30,6 +30,7 @@ option(SAFETYHOOK_BUILD_TEST "" OFF)
 option(SAFETYHOOK_BUILD_EXAMPLES "" OFF)
 option(SAFETYHOOK_AMALGAMATE "" OFF)
 option(SAFETYHOOK_FETCH_ZYDIS "" OFF)
+option(SAFETYHOOK_USE_CXXMODULES "" OFF)
 
 project(safetyhook)
 
@@ -145,6 +146,11 @@ target_include_directories(safetyhook PUBLIC
 target_link_libraries(safetyhook PUBLIC
 	Zydis
 )
+
+set(CMKR_TARGET safetyhook)
+if(SAFETYHOOK_USE_CXXMODULES)
+    target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
+endif()
 
 # Target: docs
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
