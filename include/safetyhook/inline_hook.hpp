@@ -3,12 +3,16 @@
 
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
 #include <expected>
 #include <memory>
 #include <mutex>
 #include <utility>
 #include <vector>
+#else
+import std.compat;
+#endif
 
 #include "safetyhook/allocator.hpp"
 #include "safetyhook/common.hpp"

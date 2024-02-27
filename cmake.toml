@@ -8,6 +8,7 @@ SAFETYHOOK_BUILD_TEST = false
 SAFETYHOOK_BUILD_EXAMPLES = false
 SAFETYHOOK_AMALGAMATE = false
 SAFETYHOOK_FETCH_ZYDIS = false
+SAFETYHOOK_USE_CXXMODULES = false
 
 [conditions]
 build-docs = "SAFETYHOOK_BUILD_DOCS"
@@ -59,6 +60,11 @@ link-libraries = ["Zydis"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+cmake-after = """
+if(SAFETYHOOK_USE_CXXMODULES)
+    target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
+endif()
+"""
 
 [target.docs]
 condition = "build-docs"

@@ -3,9 +3,13 @@
 
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
 #include <expected>
 #include <unordered_map>
+#else
+import std.compat;
+#endif
 
 #include "safetyhook/allocator.hpp"
 #include "safetyhook/common.hpp"
