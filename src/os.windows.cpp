@@ -216,6 +216,8 @@ void execute_while_frozen(
                     static_cast<ThreadContext>(&thread_ctx));
             }
 
+            SetThreadContext(thread, &thread_ctx);
+
             ++num_threads_frozen;
         }
 
