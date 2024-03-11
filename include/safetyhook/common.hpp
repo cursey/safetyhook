@@ -38,7 +38,7 @@
 #endif
 #endif
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #define SAFETYHOOK_OS_WINDOWS 1
 #define SAFETYHOOK_OS_LINUX 0
 #elif defined(__linux__)
