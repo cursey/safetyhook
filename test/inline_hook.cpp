@@ -11,7 +11,7 @@ using namespace Xbyak::util;
 static suite<"inline hook"> inline_hook_tests = [] {
     "Function hooked multiple times"_test = [] {
         struct Target {
-            __declspec(noinline) static std::string fn(std::string name) { return "hello " + name; }
+            SAFETYHOOK_NOINLINE static std::string fn(std::string name) { return "hello " + name; }
         };
 
         expect(eq(Target::fn("world"), "hello world"sv));
@@ -85,7 +85,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
 
     "Function with multiple args hooked"_test = [] {
         struct Target {
-            __declspec(noinline) static int add(int x, int y) { return x + y; }
+            SAFETYHOOK_NOINLINE static int add(int x, int y) { return x + y; }
         };
 
         expect(Target::add(2, 3) == 5_i);
@@ -109,12 +109,13 @@ static suite<"inline hook"> inline_hook_tests = [] {
         expect(Target::add(5, 6) == 11_i);
     };
 
+#if SAFETYHOOK_OS_WINDOWS
     "Active function is hooked and unhooked"_test = [] {
         static int count = 0;
         static bool is_running = true;
 
         struct Target {
-            __declspec(noinline) static std::string say_hello(int times) { return "Hello #" + std::to_string(times); }
+            SAFETYHOOK_NOINLINE static std::string say_hello(int times) { return "Hello #" + std::to_string(times); }
 
             static void say_hello_infinitely() {
                 while (is_running) {
@@ -150,12 +151,13 @@ static suite<"inline hook"> inline_hook_tests = [] {
         expect(eq(Target::say_hello(0), "Hello #0"sv));
         expect(count > 0_i);
     };
+#endif
 
     "Function with short unconditional branch is hooked"_test = [] {
         static SafetyHookInline hook;
 
         struct Hook {
-            static int __fastcall fn() { return hook.fastcall<int>() + 42; };
+            static int SAFETYHOOK_FASTCALL fn() { return hook.fastcall<int>() + 42; };
         };
 
         Xbyak::CodeGenerator cg{};
@@ -169,7 +171,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         cg.ret();
         cg.nop(10, false);
 
-        const auto fn = cg.getCode<int(__fastcall*)()>();
+        const auto fn = cg.getCode<int(SAFETYHOOK_FASTCALL*)()>();
 
         expect(fn() == 1_i);
 
@@ -186,7 +188,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         static SafetyHookInline hook;
 
         struct Hook {
-            static int __fastcall fn(int x) { return hook.fastcall<int>(x) + 42; };
+            static int SAFETYHOOK_FASTCALL fn(int x) { return hook.fastcall<int>(x) + 42; };
         };
 
         Xbyak::CodeGenerator cg{};
@@ -199,11 +201,17 @@ static suite<"inline hook"> inline_hook_tests = [] {
             cg.mov(eax, 1);
             cg.ret();
             cg.nop(10, false);
-            return cg.getCode<int(__fastcall*)(int)>();
+            return cg.getCode<int(SAFETYHOOK_FASTCALL*)(int)>();
         };
 
+#if SAFETYHOOK_OS_WINDOWS
+        constexpr auto param = ecx;
+#elif SAFETYHOOK_OS_LINUX
+        constexpr auto param = edi;
+#endif
+
         "JB"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jb(label);
             const auto fn = finalize();
 
@@ -227,7 +235,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JBE"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jbe(label);
             const auto fn = finalize();
 
@@ -251,7 +259,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JL"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jl(label);
             const auto fn = finalize();
 
@@ -275,7 +283,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JLE"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jle(label);
             const auto fn = finalize();
 
@@ -299,7 +307,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNB"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnb(label);
             const auto fn = finalize();
 
@@ -323,7 +331,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNBE"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnbe(label);
             const auto fn = finalize();
 
@@ -347,7 +355,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNL"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnl(label);
             const auto fn = finalize();
 
@@ -371,7 +379,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNLE"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnle(label);
             const auto fn = finalize();
 
@@ -395,7 +403,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNO"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jno(label);
             const auto fn = finalize();
 
@@ -419,7 +427,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNP"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnp(label);
             const auto fn = finalize();
 
@@ -443,7 +451,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNS"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jns(label);
             const auto fn = finalize();
 
@@ -467,7 +475,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JNZ"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jnz(label);
             const auto fn = finalize();
 
@@ -491,7 +499,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JO"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jo(label);
             const auto fn = finalize();
 
@@ -515,7 +523,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JP"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jp(label);
             const auto fn = finalize();
 
@@ -539,7 +547,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JS"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.js(label);
             const auto fn = finalize();
 
@@ -563,7 +571,7 @@ static suite<"inline hook"> inline_hook_tests = [] {
         };
 
         "JZ"_test = [&] {
-            cg.cmp(ecx, 8);
+            cg.cmp(param, 8);
             cg.jz(label);
             const auto fn = finalize();
 

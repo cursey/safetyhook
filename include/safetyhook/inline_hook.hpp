@@ -3,12 +3,16 @@
 
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
 #include <expected>
 #include <memory>
 #include <mutex>
 #include <utility>
 #include <vector>
+#else
+import std.compat;
+#endif
 
 #include "safetyhook/allocator.hpp"
 #include "safetyhook/common.hpp"
@@ -185,7 +189,7 @@ public:
     /// @note This function will use the __cdecl calling convention.
     template <typename RetT = void, typename... Args> RetT ccall(Args... args) {
         std::scoped_lock lock{m_mutex};
-        return m_trampoline ? original<RetT(__cdecl*)(Args...)>()(args...) : RetT();
+        return m_trampoline ? original<RetT(SAFETYHOOK_CCALL*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -196,7 +200,7 @@ public:
     /// @note This function will use the __thiscall calling convention.
     template <typename RetT = void, typename... Args> RetT thiscall(Args... args) {
         std::scoped_lock lock{m_mutex};
-        return m_trampoline ? original<RetT(__thiscall*)(Args...)>()(args...) : RetT();
+        return m_trampoline ? original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -207,7 +211,7 @@ public:
     /// @note This function will use the __stdcall calling convention.
     template <typename RetT = void, typename... Args> RetT stdcall(Args... args) {
         std::scoped_lock lock{m_mutex};
-        return m_trampoline ? original<RetT(__stdcall*)(Args...)>()(args...) : RetT();
+        return m_trampoline ? original<RetT(SAFETYHOOK_STDCALL*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -218,7 +222,7 @@ public:
     /// @note This function will use the __fastcall calling convention.
     template <typename RetT = void, typename... Args> RetT fastcall(Args... args) {
         std::scoped_lock lock{m_mutex};
-        return m_trampoline ? original<RetT(__fastcall*)(Args...)>()(args...) : RetT();
+        return m_trampoline ? original<RetT(SAFETYHOOK_FASTCALL*)(Args...)>()(args...) : RetT();
     }
 
     /// @brief Calls the original function.
@@ -242,7 +246,7 @@ public:
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_ccall(Args... args) {
-        return original<RetT(__cdecl*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_CCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original function.
@@ -254,7 +258,7 @@ public:
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_thiscall(Args... args) {
-        return original<RetT(__thiscall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original function.
@@ -266,7 +270,7 @@ public:
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_stdcall(Args... args) {
-        return original<RetT(__stdcall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_STDCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original function.
@@ -278,7 +282,7 @@ public:
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     /// safety or are worried about the performance cost of locking the mutex.
     template <typename RetT = void, typename... Args> RetT unsafe_fastcall(Args... args) {
-        return original<RetT(__fastcall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_FASTCALL*)(Args...)>()(args...);
     }
 
 private:

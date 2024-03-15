@@ -3,6 +3,12 @@
 
 using namespace boost::ut;
 
+#if SAFETYHOOK_OS_WINDOWS
+static constexpr auto VMT_OFFSET = 0;
+#elif SAFETYHOOK_OS_LINUX
+static constexpr auto VMT_OFFSET = 1;
+#endif
+
 static suite<"vmt hook"> vmt_hook_tests = [] {
     "VMT hook an object instance"_test = [] {
         struct Interface {
@@ -11,7 +17,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -31,7 +37,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
@@ -52,8 +58,8 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
-            __declspec(noinline) int add_43(int a) override { return a + 43; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_43(int a) override { return a + 43; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -76,7 +82,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
@@ -84,7 +90,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(target->add_42(1) == 1380_i);
 
-        vm_result = target_hook.hook_method(2, &Hook::hooked_add_43);
+        vm_result = target_hook.hook_method(2 + VMT_OFFSET, &Hook::hooked_add_43);
 
         expect(vm_result.has_value());
 
@@ -105,13 +111,13 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
+        auto target = std::make_unique<Target>();
 
         expect(target->add_42(0) == 42_i);
-        expect(neq(dynamic_cast<Target*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
@@ -126,14 +132,14 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
         add_42_hook = std::move(*vm_result);
 
         expect(target->add_42(1) == 1380_i);
-        expect(dynamic_cast<Target*>(target.get()) != nullptr);
+        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
     };
 
     "Can safely destroy VmtHook after object is deleted"_test = [] {
@@ -143,7 +149,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -163,7 +169,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
@@ -182,7 +188,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -205,7 +211,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
@@ -235,7 +241,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -258,7 +264,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target_hook = std::move(*vmt_result);
 
-        auto vm_result = target_hook.hook_method(1, &Hook::hooked_add_42);
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(vm_result.has_value());
 
@@ -309,7 +315,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         struct Target : Interface {
-            __declspec(noinline) int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
         };
 
         std::unique_ptr<Interface> target = std::make_unique<Target>();
@@ -324,7 +330,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         };
 
         target_hook = safetyhook::create_vmt(target.get());
-        add_42_hook = safetyhook::create_vm(target_hook, 1, &Hook::hooked_add_42);
+        add_42_hook = safetyhook::create_vm(target_hook, 1 + VMT_OFFSET, &Hook::hooked_add_42);
 
         expect(target->add_42(1) == 1380_i);
 

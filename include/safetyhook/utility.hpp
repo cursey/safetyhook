@@ -1,8 +1,13 @@
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
+#else
+import std.compat;
+#endif
 
 namespace safetyhook {
 template <typename T> constexpr void store(uint8_t* address, const T& value) {
@@ -47,5 +52,4 @@ template <typename T> constexpr T align_down(T address, size_t align) {
     const auto aligned_address = unaligned_address & ~(align - 1);
     return (T)aligned_address;
 }
-
 } // namespace safetyhook

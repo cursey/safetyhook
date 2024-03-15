@@ -4,7 +4,7 @@
 
 SafetyHookInline hook0, hook1, hook2, hook3;
 
-__declspec(noinline) void say_hi(const std::string& name) {
+SAFETYHOOK_NOINLINE void say_hi(const std::string& name) {
     std::println("hello {}", name);
 }
 

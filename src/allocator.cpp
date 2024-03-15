@@ -2,14 +2,8 @@
 #include <functional>
 #include <limits>
 
-#define NOMINMAX
-#if __has_include(<Windows.h>)
-#include <Windows.h>
-#elif __has_include(<windows.h>)
-#include <windows.h>
-#else
-#error "Windows.h not found"
-#endif
+#include "safetyhook/os.hpp"
+#include "safetyhook/utility.hpp"
 
 #include "safetyhook/utility.hpp"
 
@@ -117,18 +111,14 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     }
 
     // If we didn't find a free block, we need to allocate a new one.
-    SYSTEM_INFO si{};
-
-    GetSystemInfo(&si);
-
-    const auto allocation_size = align_up(size, si.dwAllocationGranularity);
-    const auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
+    auto allocation_size = align_up(size, system_info().allocation_granularity);
+    auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
     if (!allocation_address) {
         return std::unexpected{allocation_address.error()};
     }
 
-    const auto& allocation = m_memory.emplace_back(new Memory);
+    auto& allocation = m_memory.emplace_back(new Memory);
 
     allocation->address = *allocation_address;
     allocation->size = allocation_size;
@@ -189,9 +179,8 @@ void Allocator::combine_adjacent_freenodes(Memory& memory) {
 std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
     if (desired_addresses.empty()) {
-        if (const auto result = VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-            result != nullptr) {
-            return static_cast<uint8_t*>(result);
+        if (auto result = vm_allocate(nullptr, size, VM_ACCESS_RWX)) {
+            return result.value();
         }
 
         return std::unexpected{Error::BAD_VIRTUAL_ALLOC};
@@ -202,16 +191,17 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
             return nullptr;
         }
 
-        return static_cast<uint8_t*>(VirtualAlloc(p, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+        if (auto result = vm_allocate(p, size, VM_ACCESS_RWX)) {
+            return result.value();
+        }
+
+        return nullptr;
     };
 
-    SYSTEM_INFO si{};
-
-    GetSystemInfo(&si);
-
+    auto si = system_info();
     auto desired_address = desired_addresses[0];
-    auto search_start = reinterpret_cast<uint8_t*>(std::numeric_limits<uintptr_t>::min());
-    auto search_end = reinterpret_cast<uint8_t*>(std::numeric_limits<uintptr_t>::max());
+    auto search_start = si.min_address;
+    auto search_end = si.max_address;
 
     if (static_cast<size_t>(desired_address - search_start) > max_distance) {
         search_start = desired_address - max_distance;
@@ -221,35 +211,42 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
         search_end = desired_address + max_distance;
     }
 
-    search_start = std::max(search_start, static_cast<uint8_t*>(si.lpMinimumApplicationAddress));
-    search_end = std::min(search_end, static_cast<uint8_t*>(si.lpMaximumApplicationAddress));
-    desired_address = align_up(desired_address, si.dwAllocationGranularity);
-    MEMORY_BASIC_INFORMATION mbi{};
+    search_start = std::max(search_start, si.min_address);
+    search_end = std::min(search_end, si.max_address);
+    desired_address = align_up(desired_address, si.allocation_granularity);
+    VmBasicInfo mbi{};
 
     // Search backwards from the desired_address.
     for (auto p = desired_address; p > search_start && in_range(p, desired_addresses, max_distance);
-         p = align_down(static_cast<uint8_t*>(mbi.AllocationBase) - 1, si.dwAllocationGranularity)) {
-        if (VirtualQuery(p, &mbi, sizeof(mbi)) == 0) {
+         p = align_down(mbi.address - 1, si.allocation_granularity)) {
+        auto result = vm_query(p);
+
+        if (!result) {
             break;
         }
 
-        if (mbi.State != MEM_FREE) {
+        mbi = result.value();
+
+        if (!mbi.is_free) {
             continue;
         }
 
-        if (auto allocation_address = attempt_allocation(p); allocation_address != 0) {
+        if (auto allocation_address = attempt_allocation(p); allocation_address != nullptr) {
             return allocation_address;
         }
     }
 
     // Search forwards from the desired_address.
-    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance);
-         p += mbi.RegionSize) {
-        if (VirtualQuery(p, &mbi, sizeof(mbi)) == 0) {
+    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance); p += mbi.size) {
+        auto result = vm_query(p);
+
+        if (!result) {
             break;
         }
 
-        if (mbi.State != MEM_FREE) {
+        mbi = result.value();
+
+        if (!mbi.is_free) {
             continue;
         }
 
@@ -269,6 +266,6 @@ bool Allocator::in_range(uint8_t* address, const std::vector<uint8_t*>& desired_
 }
 
 Allocator::Memory::~Memory() {
-    VirtualFree(address, 0, MEM_RELEASE);
+    vm_free(address);
 }
 } // namespace safetyhook

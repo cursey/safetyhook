@@ -30,6 +30,7 @@ option(SAFETYHOOK_BUILD_TEST "" OFF)
 option(SAFETYHOOK_BUILD_EXAMPLES "" OFF)
 option(SAFETYHOOK_AMALGAMATE "" OFF)
 option(SAFETYHOOK_FETCH_ZYDIS "" OFF)
+option(SAFETYHOOK_USE_CXXMODULES "" OFF)
 
 project(safetyhook)
 
@@ -93,7 +94,8 @@ set(safetyhook_SOURCES
 	"src/easy.cpp"
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"
-	"src/thread_freezer.cpp"
+	"src/os.linux.cpp"
+	"src/os.windows.cpp"
 	"src/utility.cpp"
 	"src/vmt_hook.cpp"
 	cmake.toml
@@ -143,8 +145,12 @@ target_include_directories(safetyhook PUBLIC
 
 target_link_libraries(safetyhook PUBLIC
 	Zydis
-	ntdll
 )
+
+set(CMKR_TARGET safetyhook)
+if(SAFETYHOOK_USE_CXXMODULES)
+    target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
+endif()
 
 # Target: docs
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
@@ -305,7 +311,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 endif()
 # Target: example-dll
-if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
+if(SAFETYHOOK_BUILD_EXAMPLES AND WIN32) # windows-only-example
 	set(example-dll_SOURCES
 		"example/dll.cpp"
 		cmake.toml

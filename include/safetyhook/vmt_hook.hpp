@@ -3,11 +3,16 @@
 
 #pragma once
 
+#ifndef SAFETYHOOK_USE_CXXMODULES
 #include <cstdint>
 #include <expected>
 #include <unordered_map>
+#else
+import std.compat;
+#endif
 
 #include "safetyhook/allocator.hpp"
+#include "safetyhook/common.hpp"
 #include "safetyhook/utility.hpp"
 
 namespace safetyhook {
@@ -43,7 +48,7 @@ public:
     /// @param args The arguments to pass to the method.
     /// @return The return value of the method.
     template <typename RetT = void, typename... Args> RetT ccall(Args... args) {
-        return original<RetT(__cdecl*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_CCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original method with the __thiscall calling convention.
@@ -52,7 +57,7 @@ public:
     /// @param args The arguments to pass to the method.
     /// @return The return value of the method.
     template <typename RetT = void, typename... Args> RetT thiscall(Args... args) {
-        return original<RetT(__thiscall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original method with the __stdcall calling convention.
@@ -61,7 +66,7 @@ public:
     /// @param args The arguments to pass to the method.
     /// @return The return value of the method.
     template <typename RetT = void, typename... Args> RetT stdcall(Args... args) {
-        return original<RetT(__stdcall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_STDCALL*)(Args...)>()(args...);
     }
 
     /// @brief Calls the original method with the __fastcall calling convention.
@@ -70,7 +75,7 @@ public:
     /// @param args The arguments to pass to the method.
     /// @return The return value of the method.
     template <typename RetT = void, typename... Args> RetT fastcall(Args... args) {
-        return original<RetT(__fastcall*)(Args...)>()(args...);
+        return original<RetT(SAFETYHOOK_FASTCALL*)(Args...)>()(args...);
     }
 
 private:
