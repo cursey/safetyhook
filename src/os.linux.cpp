@@ -185,8 +185,8 @@ SystemInfo system_info() {
     };
 }
 
-void execute_while_frozen(const std::function<void()>& run_fn,
-    [[maybe_unused]] const std::function<void(ThreadId, ThreadHandle, ThreadContext)>& visit_fn) {
+void trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
+    const std::function<void()>& run_fn) {
     run_fn();
 }
 
