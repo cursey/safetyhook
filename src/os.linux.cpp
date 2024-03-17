@@ -187,7 +187,11 @@ SystemInfo system_info() {
 
 void trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
     const std::function<void()>& run_fn) {
+    auto from_protect = vm_protect(from, len, VM_ACCESS_RWX).value_or(0);
+    auto to_protect = vm_protect(to, len, VM_ACCESS_RWX).value_or(0);
     run_fn();
+    vm_protect(to, len, to_protect);
+    vm_protect(from, len, from_protect);
 }
 
 void fix_ip([[maybe_unused]] ThreadContext ctx, [[maybe_unused]] uint8_t* old_ip, [[maybe_unused]] uint8_t* new_ip) {
