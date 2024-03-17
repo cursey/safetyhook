@@ -5,6 +5,8 @@
 #include "safetyhook/os.hpp"
 #include "safetyhook/utility.hpp"
 
+#include "safetyhook/utility.hpp"
+
 #include "safetyhook/allocator.hpp"
 
 namespace safetyhook {
