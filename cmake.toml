@@ -53,6 +53,7 @@ required = true
 
 [find-package.Zydis]
 condition = "find-zydis"
+config = true
 required = true
 
 [target.safetyhook]
