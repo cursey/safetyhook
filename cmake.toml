@@ -18,6 +18,7 @@ windows-only-example = "SAFETYHOOK_BUILD_EXAMPLES AND WIN32"
 amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-test = "SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE"
 fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
+find-zydis = "(NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)"
 
 [fetch-content.ut]
 condition = "build-test"
@@ -48,6 +49,10 @@ required = true
 
 [find-package.Python3]
 condition = "amalgamate"
+required = true
+
+[find-package.Zydis]
+condition = "find-zydis"
 required = true
 
 [target.safetyhook]
