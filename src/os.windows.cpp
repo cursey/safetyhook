@@ -153,9 +153,11 @@ SystemInfo system_info() {
 }
 
 struct TrapInfo {
-    uint8_t* page_start;
-    uint8_t* page_end;
+    uint8_t* from_page_start;
+    uint8_t* from_page_end;
     uint8_t* from;
+    uint8_t* to_page_start;
+    uint8_t* to_page_end;
     uint8_t* to;
     size_t len;
 };
@@ -185,20 +187,31 @@ public:
     }
 
     TrapInfo* find_trap_page(uint8_t* address) {
-        auto search = std::find_if(m_traps.begin(), m_traps.end(),
-            [address](auto& trap) { return address >= trap.second.page_start && address < trap.second.page_end; });
+        auto search = std::find_if(m_traps.begin(), m_traps.end(), [address](auto& trap) {
+            return address >= trap.second.from_page_start && address < trap.second.from_page_end;
+        });
 
-        if (search == m_traps.end()) {
-            return nullptr;
+        if (search != m_traps.end()) {
+            return &search->second;
         }
 
-        return &search->second;
+        search = std::find_if(m_traps.begin(), m_traps.end(), [address](auto& trap) {
+            return address >= trap.second.to_page_start && address < trap.second.to_page_end;
+        });
+
+        if (search != m_traps.end()) {
+            return &search->second;
+        }
+
+        return nullptr;
     }
 
     void add_trap(uint8_t* from, uint8_t* to, size_t len) {
-        m_traps.insert_or_assign(from, TrapInfo{.page_start = align_down(from, 0x1000),
-                                           .page_end = align_up(from + len, 0x1000),
+        m_traps.insert_or_assign(from, TrapInfo{.from_page_start = align_down(from, 0x1000),
+                                           .from_page_end = align_up(from + len, 0x1000),
                                            .from = from,
+                                           .to_page_start = align_down(to, 0x1000),
+                                           .to_page_end = align_up(to + len, 0x1000),
                                            .to = to,
                                            .len = len});
     }
