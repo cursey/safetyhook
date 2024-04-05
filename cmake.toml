@@ -42,6 +42,9 @@ option(ZYDIS_BUILD_EXAMPLES "" OFF)
 option(ZYDIS_BUILD_TOOLS "" OFF)
 option(ZYDIS_BUILD_DOXYGEN "" OFF)
 """
+cmake-after = """
+add_library(Zydis::Zydis ALIAS Zydis)
+"""
 
 [find-package.Doxygen]
 condition = "build-docs"
@@ -62,7 +65,7 @@ sources = ["src/*.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_23"]
 alias = "safetyhook::safetyhook"
-link-libraries = ["Zydis"]
+link-libraries = ["Zydis::Zydis"]
 msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
@@ -159,7 +162,7 @@ condition = "build-amalgamate-test"
 type = "executable"
 sources = ["test/*.cpp", "amalgamated-dist/safetyhook.cpp"]
 include-directories = ["amalgamated-dist/"]
-link-libraries = ["Zydis", "Boost::ut", "xbyak::xbyak"]
+link-libraries = ["Zydis::Zydis", "Boost::ut", "xbyak::xbyak"]
 compile-definitions = ["BOOST_UT_DISABLE_MODULE"]
 compile-features = ["cxx_std_23"]
 cmake-after = """
