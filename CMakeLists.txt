@@ -89,7 +89,7 @@ if(SAFETYHOOK_AMALGAMATE) # amalgamate
 
 endif()
 if((NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)) # find-zydis
-	find_package(Zydis REQUIRED)
+	find_package(Zydis REQUIRED CONFIG)
 
 endif()
 # Target: safetyhook
