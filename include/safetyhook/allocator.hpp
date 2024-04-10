@@ -13,11 +13,13 @@
 import std.compat;
 #endif
 
+#include "safetyhook/common.hpp"
+
 namespace safetyhook {
 class Allocator;
 
 /// @brief A memory allocation.
-class Allocation final {
+class SAFETYHOOK_API Allocation final {
 public:
     Allocation() = default;
     Allocation(const Allocation&) = delete;
@@ -58,7 +60,7 @@ private:
 };
 
 /// @brief Allocates memory near target addresses.
-class Allocator final : public std::enable_shared_from_this<Allocator> {
+class SAFETYHOOK_API Allocator final : public std::enable_shared_from_this<Allocator> {
 public:
     /// @brief Returns the global Allocator.
     /// @return The global Allocator.

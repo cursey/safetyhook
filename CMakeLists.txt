@@ -107,12 +107,24 @@ set(safetyhook_SOURCES
 	cmake.toml
 )
 
-add_library(safetyhook STATIC)
+add_library(safetyhook)
 
 target_sources(safetyhook PRIVATE ${safetyhook_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${safetyhook_SOURCES})
 
 add_library(safetyhook::safetyhook ALIAS safetyhook)
+if(BUILD_SHARED_LIBS) # shared
+	target_compile_definitions(safetyhook PUBLIC
+		SAFETYHOOK_SHARED_LIB
+	)
+endif()
+
+if(BUILD_SHARED_LIBS) # shared
+	target_compile_definitions(safetyhook PRIVATE
+		SAFETYHOOK_BUILDING
+	)
+endif()
+
 target_compile_features(safetyhook PUBLIC
 	cxx_std_23
 )
@@ -122,6 +134,7 @@ if(MSVC) # msvc
 		"/permissive-"
 		"/W4"
 		"/w14640"
+		"/wd4251"
 	)
 endif()
 

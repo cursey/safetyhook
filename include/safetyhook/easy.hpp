@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "safetyhook/common.hpp"
 #include "safetyhook/inline_hook.hpp"
 #include "safetyhook/mid_hook.hpp"
 #include "safetyhook/utility.hpp"
@@ -13,7 +14,7 @@ namespace safetyhook {
 /// @param target The address of the function to hook.
 /// @param destination The address of the destination function.
 /// @return The InlineHook object.
-[[nodiscard]] InlineHook create_inline(void* target, void* destination);
+[[nodiscard]] InlineHook SAFETYHOOK_API create_inline(void* target, void* destination);
 
 /// @brief Easy to use API for creating an InlineHook.
 /// @param target The address of the function to hook.
@@ -27,7 +28,7 @@ namespace safetyhook {
 /// @param target the address of the function to hook.
 /// @param destination The destination function.
 /// @return The MidHook object.
-[[nodiscard]] MidHook create_mid(void* target, MidHookFn destination);
+[[nodiscard]] MidHook SAFETYHOOK_API create_mid(void* target, MidHookFn destination);
 
 /// @brief Easy to use API for creating a MidHook.
 /// @param target the address of the function to hook.
@@ -40,7 +41,7 @@ namespace safetyhook {
 /// @brief Easy to use API for creating a VmtHook.
 /// @param object The object to hook.
 /// @return The VmtHook object.
-[[nodiscard]] VmtHook create_vmt(void* object);
+[[nodiscard]] VmtHook SAFETYHOOK_API create_vmt(void* object);
 
 /// @brief Easy to use API for creating a VmHook.
 /// @param vmt The VmtHook to use to create the VmHook.
