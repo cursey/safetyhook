@@ -11,6 +11,7 @@ import std.compat;
 #endif
 
 #include "safetyhook/allocator.hpp"
+#include "safetyhook/common.hpp"
 #include "safetyhook/context.hpp"
 #include "safetyhook/inline_hook.hpp"
 #include "safetyhook/utility.hpp"
@@ -21,7 +22,7 @@ namespace safetyhook {
 using MidHookFn = void (*)(Context& ctx);
 
 /// @brief A mid function hook.
-class MidHook final {
+class SAFETYHOOK_API MidHook final {
 public:
     /// @brief Error type for MidHook.
     struct Error {
