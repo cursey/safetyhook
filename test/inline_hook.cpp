@@ -623,4 +623,51 @@ static suite<"inline hook"> inline_hook_tests = [] {
 
         expect(fn() == 42_i);
     };
+
+    "Function hook can be enable and disabled"_test = [] {
+        struct Target {
+            SAFETYHOOK_NOINLINE static int fn(int a) {
+                volatile int b = a;
+                return b * 2;
+            }
+        };
+
+        expect(Target::fn(1) == 2_i);
+        expect(Target::fn(2) == 4_i);
+        expect(Target::fn(3) == 6_i);
+
+        static SafetyHookInline hook;
+
+        struct Hook {
+            static int fn(int a) { return hook.call<int>(a + 1); }
+        };
+
+        auto hook0_result = SafetyHookInline::create(Target::fn, Hook::fn, SafetyHookInline::StartDisabled);
+
+        expect(hook0_result.has_value());
+
+        hook = std::move(*hook0_result);
+
+        expect(Target::fn(1) == 2_i);
+        expect(Target::fn(2) == 4_i);
+        expect(Target::fn(3) == 6_i);
+
+        expect(hook.enable().has_value());
+
+        expect(Target::fn(1) == 4_i);
+        expect(Target::fn(2) == 6_i);
+        expect(Target::fn(3) == 8_i);
+
+        expect(hook.disable().has_value());
+
+        expect(Target::fn(1) == 2_i);
+        expect(Target::fn(2) == 4_i);
+        expect(Target::fn(3) == 6_i);
+
+        hook.reset();
+
+        expect(Target::fn(1) == 2_i);
+        expect(Target::fn(2) == 4_i);
+        expect(Target::fn(3) == 6_i);
+    };
 };
