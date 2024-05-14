@@ -161,7 +161,7 @@ def merge_sources(*, source_dir: Path, covered_headers: Set[Path]):
     return output
 
 def do_polyfill(content):
-    return content.replace('<expected>', '<expected.hpp>') \
+    return content.replace('#include <expected>', '#if __has_include("expected.hpp")\n#include <expected.hpp>\n#else\n#include <tl/expected.hpp>\n#endif\n') \
                   .replace('std::expected', 'tl::expected') \
                   .replace('std::unexpected', 'tl::unexpected')
 
