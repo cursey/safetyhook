@@ -68,17 +68,23 @@ constexpr std::array<uint8_t, 171> asm_data = {0xFF, 0x35, 0xA7, 0x00, 0x00, 0x0
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
 
-std::expected<MidHook, MidHook::Error> MidHook::create(void* target, MidHookFn destination) {
-    return create(Allocator::global(), target, destination);
+std::expected<MidHook, MidHook::Error> MidHook::create(void* target, MidHookFn destination, Flags flags) {
+    return create(Allocator::global(), target, destination, flags);
 }
 
 std::expected<MidHook, MidHook::Error> MidHook::create(
-    const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination) {
+    const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination, Flags flags) {
     MidHook hook{};
 
     if (const auto setup_result = hook.setup(allocator, reinterpret_cast<uint8_t*>(target), destination);
         !setup_result) {
         return std::unexpected{setup_result.error()};
+    }
+
+    if (!(flags & StartDisabled)) {
+        if (auto enable_result = hook.enable(); !enable_result) {
+            return std::unexpected{enable_result.error()};
+        }
     }
 
     return hook;
@@ -131,7 +137,7 @@ std::expected<void, MidHook::Error> MidHook::setup(
     store(m_stub.data() + 0x59, m_stub.data() + m_stub.size() - 8);
 #endif
 
-    auto hook_result = InlineHook::create(allocator, m_target, m_stub.data());
+    auto hook_result = InlineHook::create(allocator, m_target, m_stub.data(), InlineHook::StartDisabled);
 
     if (!hook_result) {
         m_stub.free();
@@ -145,6 +151,22 @@ std::expected<void, MidHook::Error> MidHook::setup(
 #elif SAFETYHOOK_ARCH_X86_32
     store(m_stub.data() + sizeof(asm_data) - 4, m_hook.trampoline().data());
 #endif
+
+    return {};
+}
+
+std::expected<void, MidHook::Error> MidHook::enable() {
+    if (auto enable_result = m_hook.enable(); !enable_result) {
+        return std::unexpected{Error::bad_inline_hook(enable_result.error())};
+    }
+
+    return {};
+}
+
+std::expected<void, MidHook::Error> MidHook::disable() {
+    if (auto disable_result = m_hook.disable(); !disable_result) {
+        return std::unexpected{Error::bad_inline_hook(disable_result.error())};
+    }
 
     return {};
 }
