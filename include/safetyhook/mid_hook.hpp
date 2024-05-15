@@ -52,43 +52,55 @@ public:
         }
     };
 
-    /// @brief Creates a new MidHook object.
-    /// @param target The address of the function to hook.
-    /// @param destination_fn The destination function.
-    /// @return The MidHook object or a MidHook::Error if an error occurred.
-    /// @note This will use the default global Allocator.
-    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
-    [[nodiscard]] static std::expected<MidHook, Error> create(void* target, MidHookFn destination_fn);
+    /// @brief Flags for MidHook.
+    enum Flags : int {
+        Default = 0,       ///< Default flags.
+        StartDisabled = 1, ///< Start the hook disabled.
+    };
 
     /// @brief Creates a new MidHook object.
     /// @param target The address of the function to hook.
     /// @param destination_fn The destination function.
+    /// @param flags The flags to use.
     /// @return The MidHook object or a MidHook::Error if an error occurred.
     /// @note This will use the default global Allocator.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
-    [[nodiscard]] static std::expected<MidHook, Error> create(FnPtr auto target, MidHookFn destination_fn) {
-        return create(reinterpret_cast<void*>(target), destination_fn);
+    [[nodiscard]] static std::expected<MidHook, Error> create(
+        void* target, MidHookFn destination_fn, Flags flags = Default);
+
+    /// @brief Creates a new MidHook object.
+    /// @param target The address of the function to hook.
+    /// @param destination_fn The destination function.
+    /// @param flags The flags to use.
+    /// @return The MidHook object or a MidHook::Error if an error occurred.
+    /// @note This will use the default global Allocator.
+    /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
+    [[nodiscard]] static std::expected<MidHook, Error> create(
+        FnPtr auto target, MidHookFn destination_fn, Flags flags = Default) {
+        return create(reinterpret_cast<void*>(target), destination_fn, flags);
     }
 
     /// @brief Creates a new MidHook object with a given Allocator.
     /// @param allocator The Allocator to use.
     /// @param target The address of the function to hook.
     /// @param destination_fn The destination function.
+    /// @param flags The flags to use.
     /// @return The MidHook object or a MidHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
     [[nodiscard]] static std::expected<MidHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination_fn);
+        const std::shared_ptr<Allocator>& allocator, void* target, MidHookFn destination_fn, Flags flags = Default);
 
     /// @brief Creates a new MidHook object with a given Allocator.
     /// @tparam T The type of the function to hook.
     /// @param allocator The Allocator to use.
     /// @param target The address of the function to hook.
     /// @param destination_fn The destination function.
+    /// @param flags The flags to use.
     /// @return The MidHook object or a MidHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_mid).
-    [[nodiscard]] static std::expected<MidHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, FnPtr auto target, MidHookFn destination_fn) {
-        return create(allocator, reinterpret_cast<void*>(target), destination_fn);
+    [[nodiscard]] static std::expected<MidHook, Error> create(const std::shared_ptr<Allocator>& allocator,
+        FnPtr auto target, MidHookFn destination_fn, Flags flags = Default) {
+        return create(allocator, reinterpret_cast<void*>(target), destination_fn, flags);
     }
 
     MidHook() = default;
@@ -122,6 +134,15 @@ public:
     /// @brief Tests if the hook is valid.
     /// @return true if the hook is valid, false otherwise.
     explicit operator bool() const { return static_cast<bool>(m_stub); }
+
+    /// @brief Enable the hook.
+    [[nodiscard]] std::expected<void, Error> enable();
+
+    /// @brief Disable the hook.
+    [[nodiscard]] std::expected<void, Error> disable();
+
+    /// @brief Check if the hook is enabled.
+    [[nodiscard]] bool enabled() const { return m_hook.enabled(); }
 
 private:
     InlineHook m_hook{};

@@ -114,18 +114,24 @@ static bool decode(ZydisDecodedInstruction* ix, uint8_t* ip) {
     return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, ip, 15, ix));
 }
 
-std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, void* destination) {
-    return create(Allocator::global(), target, destination);
+std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, void* destination, Flags flags) {
+    return create(Allocator::global(), target, destination, flags);
 }
 
 std::expected<InlineHook, InlineHook::Error> InlineHook::create(
-    const std::shared_ptr<Allocator>& allocator, void* target, void* destination) {
+    const std::shared_ptr<Allocator>& allocator, void* target, void* destination, Flags flags) {
     InlineHook hook{};
 
     if (const auto setup_result =
             hook.setup(allocator, reinterpret_cast<uint8_t*>(target), reinterpret_cast<uint8_t*>(destination));
         !setup_result) {
         return std::unexpected{setup_result.error()};
+    }
+
+    if (!(flags & StartDisabled)) {
+        if (auto enable_result = hook.enable(); !enable_result) {
+            return std::unexpected{enable_result.error()};
+        }
     }
 
     return hook;
@@ -146,10 +152,14 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
         m_trampoline = std::move(other.m_trampoline);
         m_trampoline_size = other.m_trampoline_size;
         m_original_bytes = std::move(other.m_original_bytes);
+        m_enabled = other.m_enabled;
+        m_type = other.m_type;
 
         other.m_target = nullptr;
         other.m_destination = nullptr;
         other.m_trampoline_size = 0;
+        other.m_enabled = false;
+        other.m_type = Type::Unset;
     }
 
     return *this;
@@ -305,20 +315,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
     }
 #endif
 
-    std::optional<Error> error;
-
-    // jmp from original to trampoline.
-    trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &trampoline_epilogue, &error] {
-        if (auto result = emit_jmp_e9(m_target, reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination),
-                m_original_bytes.size());
-            !result) {
-            error = result.error();
-        }
-    });
-
-    if (error) {
-        return std::unexpected{*error};
-    }
+    m_type = Type::E9;
 
     return {};
 }
@@ -367,33 +364,76 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
         return std::unexpected{result.error()};
     }
 
+    m_type = Type::FF;
+
+    return {};
+}
+#endif
+
+std::expected<void, InlineHook::Error> InlineHook::enable() {
+    std::scoped_lock lock{m_mutex};
+
+    if (m_enabled) {
+        return {};
+    }
+
     std::optional<Error> error;
 
     // jmp from original to trampoline.
     trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error] {
-        if (auto result = emit_jmp_ff(m_target, m_destination, m_target + sizeof(JmpFF), m_original_bytes.size());
-            !result) {
-            error = result.error();
+        if (m_type == Type::E9) {
+            auto trampoline_epilogue = reinterpret_cast<TrampolineEpilogueE9*>(
+                m_trampoline.address() + m_trampoline_size - sizeof(TrampolineEpilogueE9));
+
+            if (auto result = emit_jmp_e9(m_target,
+                    reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_destination), m_original_bytes.size());
+                !result) {
+                error = result.error();
+            }
         }
+
+#if SAFETYHOOK_ARCH_X86_64
+        if (m_type == Type::FF) {
+            if (auto result = emit_jmp_ff(m_target, m_destination, m_target + sizeof(JmpFF), m_original_bytes.size());
+                !result) {
+                error = result.error();
+            }
+        }
+#endif
     });
 
     if (error) {
         return std::unexpected{*error};
     }
 
+    m_enabled = true;
+
     return {};
 }
-#endif
+
+std::expected<void, InlineHook::Error> InlineHook::disable() {
+    std::scoped_lock lock{m_mutex};
+
+    if (!m_enabled) {
+        return {};
+    }
+
+    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
+        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
+
+    m_enabled = false;
+
+    return {};
+}
 
 void InlineHook::destroy() {
+    [[maybe_unused]] auto disable_result = disable();
+
     std::scoped_lock lock{m_mutex};
 
     if (!m_trampoline) {
         return;
     }
-
-    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
-        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
 
     m_trampoline.free();
 }
