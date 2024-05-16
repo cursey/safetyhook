@@ -178,6 +178,13 @@ void Allocator::combine_adjacent_freenodes(Memory& memory) {
 
 std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
+#if SAFETYHOOK_ARCH_X86_32
+    if (auto result = vm_allocate(nullptr, size, VM_ACCESS_RWX)) {
+        return result.value();
+    }
+
+    return std::unexpected{Error::BAD_VIRTUAL_ALLOC};
+#else
     if (desired_addresses.empty()) {
         if (auto result = vm_allocate(nullptr, size, VM_ACCESS_RWX)) {
             return result.value();
@@ -256,6 +263,7 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
     }
 
     return std::unexpected{Error::NO_MEMORY_IN_RANGE};
+#endif
 }
 
 bool Allocator::in_range(uint8_t* address, const std::vector<uint8_t*>& desired_addresses, size_t max_distance) {
