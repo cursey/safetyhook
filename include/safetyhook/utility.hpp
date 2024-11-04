@@ -14,6 +14,14 @@ template <typename T> constexpr void store(uint8_t* address, const T& value) {
     std::copy_n(reinterpret_cast<const uint8_t*>(&value), sizeof(T), address);
 }
 
+template <typename T> constexpr T address_cast(auto address) {
+    if constexpr (std::is_integral_v<T> && std::is_integral_v<decltype(address)>) {
+        return static_cast<T>(address);
+    } else {
+        return reinterpret_cast<T>(address);
+    }
+}
+
 template <typename T>
 concept FnPtr = requires(T f) { std::is_pointer_v<T>&& std::is_function_v<std::remove_pointer_t<T>>; };
 
@@ -42,14 +50,14 @@ private:
 [[nodiscard]] std::optional<UnprotectMemory> unprotect(uint8_t* address, size_t size);
 
 template <typename T> constexpr T align_up(T address, size_t align) {
-    const auto unaligned_address = (uintptr_t)address;
+    const auto unaligned_address = address_cast<uintptr_t>(address);
     const auto aligned_address = (unaligned_address + align - 1) & ~(align - 1);
-    return (T)aligned_address;
+    return address_cast<T>(aligned_address);
 }
 
 template <typename T> constexpr T align_down(T address, size_t align) {
-    const auto unaligned_address = (uintptr_t)address;
+    const auto unaligned_address = address_cast<uintptr_t>(address);
     const auto aligned_address = unaligned_address & ~(align - 1);
-    return (T)aligned_address;
+    return address_cast<T>(aligned_address);
 }
 } // namespace safetyhook

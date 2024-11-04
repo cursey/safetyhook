@@ -36,7 +36,7 @@ public:
 
     /// @brief Returns the address of the allocation.
     /// @return The address of the allocation.
-    [[nodiscard]] uintptr_t address() const noexcept { return (uintptr_t)m_address; }
+    [[nodiscard]] uintptr_t address() const noexcept { return reinterpret_cast<uintptr_t>(m_address); }
 
     /// @brief Returns the size of the allocation.
     /// @return The size of the allocation.
