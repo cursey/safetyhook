@@ -84,6 +84,10 @@ void Allocator::free(uint8_t* address, size_t size) {
 
 std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
+    // Align to 2 bytes to pass MFP virtual method check
+    // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#member-function-pointers
+    size = align_up(size, 2);
+
     // First search through our list of allocations for a free block that is large
     // enough.
     for (const auto& allocation : m_memory) {
