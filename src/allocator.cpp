@@ -84,16 +84,20 @@ void Allocator::free(uint8_t* address, size_t size) {
 
 std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
+    // Align to 2 bytes to pass MFP virtual method check
+    // See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#member-function-pointers
+    size_t aligned_size = align_up(size, 2);
+
     // First search through our list of allocations for a free block that is large
     // enough.
     for (const auto& allocation : m_memory) {
-        if (allocation->size < size) {
+        if (allocation->size < aligned_size) {
             continue;
         }
 
         for (auto node = allocation->freelist.get(); node != nullptr; node = node->next.get()) {
             // Enough room?
-            if (static_cast<size_t>(node->end - node->start) < size) {
+            if (static_cast<size_t>(node->end - node->start) < aligned_size) {
                 continue;
             }
 
@@ -104,14 +108,14 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
                 continue;
             }
 
-            node->start += size;
+            node->start += aligned_size;
 
             return Allocation{shared_from_this(), address, size};
         }
     }
 
     // If we didn't find a free block, we need to allocate a new one.
-    auto allocation_size = align_up(size, system_info().allocation_granularity);
+    auto allocation_size = align_up(aligned_size, system_info().allocation_granularity);
     auto allocation_address = allocate_nearby_memory(desired_addresses, allocation_size, max_distance);
 
     if (!allocation_address) {
@@ -123,13 +127,16 @@ std::expected<Allocation, Allocator::Error> Allocator::internal_allocate_near(
     allocation->address = *allocation_address;
     allocation->size = allocation_size;
     allocation->freelist = std::make_unique<FreeNode>();
-    allocation->freelist->start = *allocation_address + size;
+    allocation->freelist->start = *allocation_address + aligned_size;
     allocation->freelist->end = *allocation_address + allocation_size;
 
     return Allocation{shared_from_this(), *allocation_address, size};
 }
 
 void Allocator::internal_free(uint8_t* address, size_t size) {
+    // See internal_allocate_near
+    size = align_up(size, 2);
+
     for (const auto& allocation : m_memory) {
         if (allocation->address > address || allocation->address + allocation->size < address) {
             continue;
