@@ -15,7 +15,7 @@ template <typename T> constexpr void store(uint8_t* address, const T& value) {
 }
 
 template <typename T, typename U> constexpr T address_cast(U address) {
-    if constexpr (std::is_integral_v<T> && std::is_integral_v<decltype(address)>) {
+    if constexpr (std::is_integral_v<T> && std::is_integral_v<U>) {
         return static_cast<T>(address);
     } else {
         return reinterpret_cast<T>(address);
