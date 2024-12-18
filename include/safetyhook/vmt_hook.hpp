@@ -141,7 +141,7 @@ public:
     /// @brief Hooks a method in the VMT.
     /// @param index The index of the method to hook.
     /// @param new_function The new function to use.
-    [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, FnPtr auto new_function) {
+    template <typename T> [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, T new_function) {
         VmHook hook{};
 
         ++index; // Skip RTTI pointer.
