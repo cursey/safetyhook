@@ -14,16 +14,13 @@ template <typename T> constexpr void store(uint8_t* address, const T& value) {
     std::copy_n(reinterpret_cast<const uint8_t*>(&value), sizeof(T), address);
 }
 
-template <typename T> constexpr T address_cast(auto address) {
-    if constexpr (std::is_integral_v<T> && std::is_integral_v<decltype(address)>) {
+template <typename T, typename U> constexpr T address_cast(U address) {
+    if constexpr (std::is_integral_v<T> && std::is_integral_v<U>) {
         return static_cast<T>(address);
     } else {
         return reinterpret_cast<T>(address);
     }
 }
-
-template <typename T>
-concept FnPtr = requires(T f) { std::is_pointer_v<T>&& std::is_function_v<std::remove_pointer_t<T>>; };
 
 bool is_executable(uint8_t* address);
 
