@@ -110,8 +110,8 @@ public:
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note This will use the default global Allocator.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    template <typename T>
-    [[nodiscard]] static std::expected<InlineHook, Error> create(T target, T destination, Flags flags = Default) {
+    template <typename T, typename U>
+    [[nodiscard]] static std::expected<InlineHook, Error> create(T target, U destination, Flags flags = Default) {
         return create(reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination), flags);
     }
 
@@ -132,9 +132,9 @@ public:
     /// @param flags The flags to use.
     /// @return The InlineHook or an InlineHook::Error if an error occurred.
     /// @note If you don't care about error handling, use the easy API (safetyhook::create_inline).
-    template <typename T>
+    template <typename T, typename U>
     [[nodiscard]] static std::expected<InlineHook, Error> create(
-        const std::shared_ptr<Allocator>& allocator, T target, T destination, Flags flags = Default) {
+        const std::shared_ptr<Allocator>& allocator, T target, U destination, Flags flags = Default) {
         return create(allocator, reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination), flags);
     }
 

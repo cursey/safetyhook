@@ -21,8 +21,8 @@ namespace safetyhook {
 /// @param destination The address of the destination function.
 /// @param flags The flags to use.
 /// @return The InlineHook object.
-template <typename T>
-[[nodiscard]] InlineHook create_inline(T target, T destination, InlineHook::Flags flags = InlineHook::Default) {
+template <typename T, typename U>
+[[nodiscard]] InlineHook create_inline(T target, U destination, InlineHook::Flags flags = InlineHook::Default) {
     return create_inline(reinterpret_cast<void*>(target), reinterpret_cast<void*>(destination), flags);
 }
 
