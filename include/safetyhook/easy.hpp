@@ -31,7 +31,7 @@ template <typename T, typename U>
 /// @param destination The destination function.
 /// @param flags The flags to use.
 /// @return The MidHook object.
-[[nodiscard]] MidHook create_mid(void* target, MidHookFn destination, MidHook::Flags = MidHook::Default);
+[[nodiscard]] MidHook create_mid(void* target, MidHookFn destination, MidHook::Flags flags = MidHook::Default);
 
 /// @brief Easy to use API for creating a MidHook.
 /// @param target the address of the function to hook.
