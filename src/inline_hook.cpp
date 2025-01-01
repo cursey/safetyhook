@@ -262,7 +262,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
             auto new_disp = target_address - (tramp_ip + 6);
 
             // Handle the case where the target is now in the trampoline.
-            if (target_address < m_target + m_original_bytes.size()) {
+            if (target_address >= m_target && target_address < m_target + m_original_bytes.size()) {
                 new_disp = static_cast<ptrdiff_t>(ix.raw.imm[0].value.s);
             }
 
