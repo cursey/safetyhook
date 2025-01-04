@@ -166,12 +166,14 @@ class TrapManager final {
 public:
     static std::mutex mutex;
     static std::unique_ptr<TrapManager> instance;
+    static bool is_destructed;
 
     TrapManager() { m_trap_veh = AddVectoredExceptionHandler(1, trap_handler); }
     ~TrapManager() {
         if (m_trap_veh != nullptr) {
             RemoveVectoredExceptionHandler(m_trap_veh);
         }
+        is_destructed = true;
     }
 
     TrapInfo* find_trap(uint8_t* address) {
@@ -251,6 +253,7 @@ private:
 
 std::mutex TrapManager::mutex;
 std::unique_ptr<TrapManager> TrapManager::instance;
+bool TrapManager::is_destructed = false;
 
 void find_me() {
 }
@@ -280,13 +283,15 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
-    std::scoped_lock lock{TrapManager::mutex};
+    if (!TrapManager::is_destructed) {
+        std::scoped_lock lock{TrapManager::mutex};
 
-    if (TrapManager::instance == nullptr) {
-        TrapManager::instance = std::make_unique<TrapManager>();
+        if (TrapManager::instance == nullptr) {
+            TrapManager::instance = std::make_unique<TrapManager>();
+        }
+
+        TrapManager::instance->add_trap(from, to, len);
     }
-
-    TrapManager::instance->add_trap(from, to, len);
 
     DWORD from_protect;
     DWORD to_protect;
