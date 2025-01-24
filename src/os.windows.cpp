@@ -272,8 +272,8 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
-    if (from_mbi.AllocationBase == virtual_protect_mbi.AllocationBase ||
-        to_mbi.AllocationBase == virtual_protect_mbi.AllocationBase) {
+    if (from_mbi.BaseAddress == virtual_protect_mbi.BaseAddress ||
+        to_mbi.BaseAddress == virtual_protect_mbi.BaseAddress) {
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
