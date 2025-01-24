@@ -259,14 +259,21 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     MEMORY_BASIC_INFORMATION find_me_mbi{};
     MEMORY_BASIC_INFORMATION from_mbi{};
     MEMORY_BASIC_INFORMATION to_mbi{};
+    MEMORY_BASIC_INFORMATION virtual_protect_mbi{};
 
     VirtualQuery(reinterpret_cast<void*>(find_me), &find_me_mbi, sizeof(find_me_mbi));
     VirtualQuery(from, &from_mbi, sizeof(from_mbi));
     VirtualQuery(to, &to_mbi, sizeof(to_mbi));
+    VirtualQuery(reinterpret_cast<void*>(VirtualProtect), &virtual_protect_mbi, sizeof(virtual_protect_mbi));
 
     auto new_protect = PAGE_READWRITE;
 
     if (from_mbi.AllocationBase == find_me_mbi.AllocationBase || to_mbi.AllocationBase == find_me_mbi.AllocationBase) {
+        new_protect = PAGE_EXECUTE_READWRITE;
+    }
+
+    if (from_mbi.AllocationBase == virtual_protect_mbi.AllocationBase ||
+        to_mbi.AllocationBase == virtual_protect_mbi.AllocationBase) {
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
