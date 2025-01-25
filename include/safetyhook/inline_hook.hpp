@@ -20,7 +20,7 @@ import std.compat;
 
 namespace safetyhook {
 /// @brief An inline hook.
-class InlineHook final {
+class SAFETYHOOK_API InlineHook final {
 public:
     /// @brief Error type for InlineHook.
     struct Error {

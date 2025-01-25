@@ -7,13 +7,14 @@ SAFETYHOOK_BUILD_DOCS = false
 SAFETYHOOK_BUILD_TEST = false
 SAFETYHOOK_BUILD_EXAMPLES = false
 SAFETYHOOK_AMALGAMATE = false
-SAFETYHOOK_FETCH_ZYDIS = false
+SAFETYHOOK_FETCH_ZYDIS = true
 SAFETYHOOK_USE_CXXMODULES = false
 
 [conditions]
 build-docs = "SAFETYHOOK_BUILD_DOCS"
 build-test = "SAFETYHOOK_BUILD_TEST"
 build-examples = "SAFETYHOOK_BUILD_EXAMPLES"
+shared = "BUILD_SHARED_LIBS"
 windows-only-example = "SAFETYHOOK_BUILD_EXAMPLES AND WIN32"
 amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-test = "SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE"
@@ -35,7 +36,7 @@ shallow = true
 [fetch-content.Zydis]
 condition = "fetch-zydis"
 git = "https://github.com/zyantific/zydis.git"
-tag = "v4.0.0"
+tag = "v4.1.0"
 shallow = true
 cmake-before = """
 option(ZYDIS_BUILD_EXAMPLES "" OFF)
@@ -60,15 +61,17 @@ config = true
 required = true
 
 [target.safetyhook]
-type = "static"
+type = "library"
 sources = ["src/*.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_23"]
 alias = "safetyhook::safetyhook"
 link-libraries = ["Zydis::Zydis"]
-msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
+msvc.private-compile-options = ["/permissive-", "/W4", "/w14640", "/wd4251"]
 clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+shared.compile-definitions = ["SAFETYHOOK_SHARED_LIB"]
+shared.private-compile-definitions = ["SAFETYHOOK_BUILDING"]
 cmake-after = """
 if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)

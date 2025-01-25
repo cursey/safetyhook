@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "safetyhook/common.hpp"
 #include "safetyhook/inline_hook.hpp"
 #include "safetyhook/mid_hook.hpp"
 #include "safetyhook/utility.hpp"
@@ -14,7 +15,7 @@ namespace safetyhook {
 /// @param destination The address of the destination function.
 /// @param flags The flags to use.
 /// @return The InlineHook object.
-[[nodiscard]] InlineHook create_inline(void* target, void* destination, InlineHook::Flags flags = InlineHook::Default);
+[[nodiscard]] InlineHook SAFETYHOOK_API create_inline(void* target, void* destination, InlineHook::Flags flags = InlineHook::Default);
 
 /// @brief Easy to use API for creating an InlineHook.
 /// @param target The address of the function to hook.
@@ -31,7 +32,7 @@ template <typename T, typename U>
 /// @param destination The destination function.
 /// @param flags The flags to use.
 /// @return The MidHook object.
-[[nodiscard]] MidHook create_mid(void* target, MidHookFn destination, MidHook::Flags flags = MidHook::Default);
+[[nodiscard]] MidHook SAFETYHOOK_API create_mid(void* target, MidHookFn destination, MidHook::Flags flags = MidHook::Default);
 
 /// @brief Easy to use API for creating a MidHook.
 /// @param target the address of the function to hook.
@@ -46,7 +47,7 @@ template <typename T>
 /// @brief Easy to use API for creating a VmtHook.
 /// @param object The object to hook.
 /// @return The VmtHook object.
-[[nodiscard]] VmtHook create_vmt(void* object);
+[[nodiscard]] VmtHook SAFETYHOOK_API create_vmt(void* object);
 
 /// @brief Easy to use API for creating a VmHook.
 /// @param vmt The VmtHook to use to create the VmHook.
