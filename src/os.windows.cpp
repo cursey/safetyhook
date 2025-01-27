@@ -271,10 +271,12 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     }
 
     auto si = system_info();
-
-    // Check if the target shares a memory page with VirtualProtect
-    if (reinterpret_cast<uint8_t*>(&VirtualProtect) <= align_up(from + len, si.page_size) &&
-        align_down(from, si.page_size) <= reinterpret_cast<uint8_t*>(&VirtualProtect) + 0x20) {
+    auto *from_page_start = align_down(from, si.page_size);
+    auto *from_page_end = align_up(from + len, si.page_size);
+    auto *vp_start = reinterpret_cast<uint8_t*>(&VirtualProtect);
+    auto *vp_end = vp_start + 0x20;
+    
+    if (!(from_page_end < vp_start || vp_end < from_page_start)){
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
