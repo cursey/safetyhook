@@ -29,7 +29,7 @@ option(SAFETYHOOK_BUILD_DOCS "" OFF)
 option(SAFETYHOOK_BUILD_TEST "" OFF)
 option(SAFETYHOOK_BUILD_EXAMPLES "" OFF)
 option(SAFETYHOOK_AMALGAMATE "" OFF)
-option(SAFETYHOOK_FETCH_ZYDIS "" OFF)
+option(SAFETYHOOK_FETCH_ZYDIS "" ON)
 option(SAFETYHOOK_USE_CXXMODULES "" OFF)
 
 project(safetyhook)
@@ -67,16 +67,18 @@ if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
 	option(ZYDIS_BUILD_TOOLS "" OFF)
 	option(ZYDIS_BUILD_DOXYGEN "" OFF)
 
-	message(STATUS "Fetching Zydis (v4.0.0)...")
+	message(STATUS "Fetching Zydis (v4.1.0)...")
 	FetchContent_Declare(Zydis
 		GIT_REPOSITORY
 			"https://github.com/zyantific/zydis.git"
 		GIT_TAG
-			v4.0.0
+			v4.1.0
 		GIT_SHALLOW
 			ON
 	)
 	FetchContent_MakeAvailable(Zydis)
+
+	add_library(Zydis::Zydis ALIAS Zydis)
 
 endif()
 # Packages
@@ -86,6 +88,10 @@ if(SAFETYHOOK_BUILD_DOCS) # build-docs
 endif()
 if(SAFETYHOOK_AMALGAMATE) # amalgamate
 	find_package(Python3 REQUIRED)
+
+endif()
+if((NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)) # find-zydis
+	find_package(Zydis REQUIRED CONFIG)
 
 endif()
 # Target: safetyhook
@@ -101,12 +107,24 @@ set(safetyhook_SOURCES
 	cmake.toml
 )
 
-add_library(safetyhook STATIC)
+add_library(safetyhook)
 
 target_sources(safetyhook PRIVATE ${safetyhook_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${safetyhook_SOURCES})
 
 add_library(safetyhook::safetyhook ALIAS safetyhook)
+if(BUILD_SHARED_LIBS) # shared
+	target_compile_definitions(safetyhook PUBLIC
+		SAFETYHOOK_SHARED_LIB
+	)
+endif()
+
+if(BUILD_SHARED_LIBS) # shared
+	target_compile_definitions(safetyhook PRIVATE
+		SAFETYHOOK_BUILDING
+	)
+endif()
+
 target_compile_features(safetyhook PUBLIC
 	cxx_std_23
 )
@@ -116,6 +134,7 @@ if(MSVC) # msvc
 		"/permissive-"
 		"/W4"
 		"/w14640"
+		"/wd4251"
 	)
 endif()
 
@@ -144,7 +163,7 @@ target_include_directories(safetyhook PUBLIC
 )
 
 target_link_libraries(safetyhook PUBLIC
-	Zydis
+	Zydis::Zydis
 )
 
 set(CMKR_TARGET safetyhook)
@@ -425,7 +444,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 	)
 
 	target_link_libraries(test-amalgamated PRIVATE
-		Zydis
+		Zydis::Zydis
 		Boost::ut
 		xbyak::xbyak
 	)

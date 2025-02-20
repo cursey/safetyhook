@@ -9,6 +9,8 @@
 import std.compat;
 #endif
 
+#include "safetyhook/common.hpp"
+
 namespace safetyhook {
 
 enum class OsError {
@@ -45,14 +47,14 @@ struct VmBasicInfo {
     bool is_free;
 };
 
-std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAccess access);
-void vm_free(uint8_t* address);
-std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, VmAccess access);
-std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, uint32_t access);
-std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address);
-bool vm_is_readable(uint8_t* address, size_t size);
-bool vm_is_writable(uint8_t* address, size_t size);
-bool vm_is_executable(uint8_t* address);
+std::expected<uint8_t*, OsError> SAFETYHOOK_API vm_allocate(uint8_t* address, size_t size, VmAccess access);
+void SAFETYHOOK_API vm_free(uint8_t* address);
+std::expected<uint32_t, OsError> SAFETYHOOK_API vm_protect(uint8_t* address, size_t size, VmAccess access);
+std::expected<uint32_t, OsError> SAFETYHOOK_API vm_protect(uint8_t* address, size_t size, uint32_t access);
+std::expected<VmBasicInfo, OsError> SAFETYHOOK_API vm_query(uint8_t* address);
+bool SAFETYHOOK_API vm_is_readable(uint8_t* address, size_t size);
+bool SAFETYHOOK_API vm_is_writable(uint8_t* address, size_t size);
+bool SAFETYHOOK_API vm_is_executable(uint8_t* address);
 
 struct SystemInfo {
     uint32_t page_size;
@@ -61,16 +63,16 @@ struct SystemInfo {
     uint8_t* max_address;
 };
 
-SystemInfo system_info();
+SystemInfo SAFETYHOOK_API system_info();
 
 using ThreadContext = void*;
 
-void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn);
+void SAFETYHOOK_API trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn);
 
 /// @brief Will modify the context of a thread's IP to point to a new address if its IP is at the old address.
 /// @param ctx The thread context to modify.
 /// @param old_ip The old IP address.
 /// @param new_ip The new IP address.
-void fix_ip(ThreadContext ctx, uint8_t* old_ip, uint8_t* new_ip);
+void SAFETYHOOK_API fix_ip(ThreadContext ctx, uint8_t* old_ip, uint8_t* new_ip);
 
 } // namespace safetyhook
