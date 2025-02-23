@@ -45,6 +45,8 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 			v2.0.1
 		GIT_SHALLOW
 			ON
+		EXCLUDE_FROM_ALL
+			ON
 	)
 	FetchContent_MakeAvailable(ut)
 
@@ -57,6 +59,8 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 		GIT_TAG
 			v6.69
 		GIT_SHALLOW
+			ON
+		EXCLUDE_FROM_ALL
 			ON
 	)
 	FetchContent_MakeAvailable(xbyak)
@@ -74,6 +78,8 @@ if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
 		GIT_TAG
 			v4.1.0
 		GIT_SHALLOW
+			ON
+		EXCLUDE_FROM_ALL
 			ON
 	)
 	FetchContent_MakeAvailable(Zydis)
@@ -159,7 +165,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") #
 endif()
 
 target_include_directories(safetyhook PUBLIC
-	"include/"
+	"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
 target_link_libraries(safetyhook PUBLIC
@@ -170,6 +177,29 @@ set(CMKR_TARGET safetyhook)
 if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
 endif()
+
+include(GNUInstallDirs)
+
+install(
+    TARGETS safetyhook
+    EXPORT safetyhook-export
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(
+    EXPORT safetyhook-export
+    FILE safetyhook-config.cmake
+    NAMESPACE safetyhook::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/safetyhook
+)
 
 # Target: docs
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
