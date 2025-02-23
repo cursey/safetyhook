@@ -35,10 +35,10 @@ struct VmAccess {
     }
 };
 
-constexpr VmAccess VM_ACCESS_R{.read = true, .write = false, .execute = false};
-constexpr VmAccess VM_ACCESS_RW{.read = true, .write = true, .execute = false};
-constexpr VmAccess VM_ACCESS_RX{.read = true, .write = false, .execute = true};
-constexpr VmAccess VM_ACCESS_RWX{.read = true, .write = true, .execute = true};
+constexpr VmAccess VM_ACCESS_R{true, false, false};
+constexpr VmAccess VM_ACCESS_RW{true, true, false};
+constexpr VmAccess VM_ACCESS_RX{true, false, true};
+constexpr VmAccess VM_ACCESS_RWX{true, true, true};
 
 struct VmBasicInfo {
     uint8_t* address;

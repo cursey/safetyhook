@@ -117,12 +117,10 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
             &inode, path);
 
         if (last_end < start && addr >= last_end && addr < start) {
-            info = {
-                .address = reinterpret_cast<uint8_t*>(last_end),
-                .size = start - last_end,
-                .access = VmAccess{},
-                .is_free = true,
-            };
+            info.address = reinterpret_cast<uint8_t*>(last_end);
+            info.size = start - last_end;
+            info.access = VmAccess{};
+            info.is_free = true;
 
             break;
         }
@@ -130,12 +128,10 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
         last_end = end;
 
         if (addr >= start && addr < end) {
-            info = {
-                .address = reinterpret_cast<uint8_t*>(start),
-                .size = end - start,
-                .access = VmAccess{},
-                .is_free = false,
-            };
+            info.address = reinterpret_cast<uint8_t*>(start);
+            info.size = end - start;
+            info.access = VmAccess{};
+            info.is_free = false;
 
             if (perms[0] == 'r') {
                 info->access.read = true;
@@ -177,12 +173,13 @@ bool vm_is_executable(uint8_t* address) {
 SystemInfo system_info() {
     auto page_size = static_cast<uint32_t>(sysconf(_SC_PAGESIZE));
 
-    return {
-        .page_size = page_size,
-        .allocation_granularity = page_size,
-        .min_address = reinterpret_cast<uint8_t*>(0x10000),
-        .max_address = reinterpret_cast<uint8_t*>(1ull << 47),
-    };
+    SystemInfo info{};
+    info.page_size = page_size;
+    info.allocation_granularity = page_size;
+    info.min_address = reinterpret_cast<uint8_t*>(0x10000);
+    info.max_address = reinterpret_cast<uint8_t*>(1ull << 47);
+
+    return info;
 }
 
 void trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
