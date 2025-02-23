@@ -110,7 +110,10 @@ public:
         /// @param err The Allocator::Error that failed.
         /// @return The new BAD_ALLOCATION error.
         [[nodiscard]] static Error bad_allocation(Allocator::Error err) {
-            return {.type = BAD_ALLOCATION, .allocator_error = err};
+            Error error{};
+            error.type = BAD_ALLOCATION;
+            error.allocator_error = err;
+            return error;
         }
     };
 

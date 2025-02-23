@@ -83,18 +83,18 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
         return std::unexpected{OsError::FAILED_TO_QUERY};
     }
 
-    VmAccess access{
-        .read = (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0,
-        .write = (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE)) != 0,
-        .execute = (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0,
-    };
+    VmAccess access{};
+    access.read = (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
+    access.write = (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE)) != 0;
+    access.execute = (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
 
-    return VmBasicInfo{
-        .address = static_cast<uint8_t*>(mbi.AllocationBase),
-        .size = mbi.RegionSize,
-        .access = access,
-        .is_free = mbi.State == MEM_FREE,
-    };
+    VmBasicInfo info{};
+    info.address = static_cast<uint8_t*>(mbi.AllocationBase);
+    info.size = mbi.RegionSize;
+    info.access = access;
+    info.is_free = mbi.State == MEM_FREE;
+
+    return info;
 }
 
 bool vm_is_readable(uint8_t* address, size_t size) {
@@ -209,13 +209,16 @@ public:
     }
 
     void add_trap(uint8_t* from, uint8_t* to, size_t len) {
-        m_traps.insert_or_assign(from, TrapInfo{.from_page_start = align_down(from, 0x1000),
-                                           .from_page_end = align_up(from + len, 0x1000),
-                                           .from = from,
-                                           .to_page_start = align_down(to, 0x1000),
-                                           .to_page_end = align_up(to + len, 0x1000),
-                                           .to = to,
-                                           .len = len});
+        TrapInfo info{};
+        info.from_page_start = align_down(from, 0x1000);
+        info.from_page_end = align_up(from + len, 0x1000);
+        info.from = from;
+        info.to_page_start = align_down(to, 0x1000);
+        info.to_page_end = align_up(to + len, 0x1000);
+        info.to = to;
+        info.len = len;
+
+        m_traps.insert_or_assign(from, std::move(info));
     }
 
 private:
@@ -274,12 +277,12 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     }
 
     auto si = system_info();
-    auto *from_page_start = align_down(from, si.page_size);
-    auto *from_page_end = align_up(from + len, si.page_size);
-    auto *vp_start = reinterpret_cast<uint8_t*>(&VirtualProtect);
-    auto *vp_end = vp_start + 0x20;
-    
-    if (!(from_page_end < vp_start || vp_end < from_page_start)){
+    auto* from_page_start = align_down(from, si.page_size);
+    auto* from_page_end = align_up(from + len, si.page_size);
+    auto* vp_start = reinterpret_cast<uint8_t*>(&VirtualProtect);
+    auto* vp_end = vp_start + 0x20;
+
+    if (!(from_page_end < vp_start || vp_end < from_page_start)) {
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
