@@ -15,7 +15,7 @@ SAFETYHOOK_ROOT = Path(__file__).resolve().parent
 PUBLIC_INCLUDE_PATHS = [
     SAFETYHOOK_ROOT / 'include',
     SAFETYHOOK_ROOT / 'include' / 'safetyhook',
-    ]
+]
 INTERNAL_INCLUDE_PATHS = [SAFETYHOOK_ROOT / 'src']
 INCLUDE_REGEXP = re.compile(r'^#\s*include\s*"((?:safety).*)"\s*$')
 OUTPUT_DIR = SAFETYHOOK_ROOT / 'amalgamated-dist'

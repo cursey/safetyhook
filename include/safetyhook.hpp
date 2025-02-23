@@ -1,5 +1,6 @@
 #pragma once
 
+#include "safetyhook/os.hpp"
 #include "safetyhook/easy.hpp"
 #include "safetyhook/inline_hook.hpp"
 #include "safetyhook/mid_hook.hpp"
