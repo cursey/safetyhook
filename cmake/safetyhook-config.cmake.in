@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(zydis CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/safetyhook-targets.cmake")
+check_required_components(safetyhook)

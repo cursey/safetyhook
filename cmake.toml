@@ -84,10 +84,17 @@ if(SAFETYHOOK_USE_CXXMODULES)
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/safetyhook-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/safetyhook-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/safetyhook
+)
 
 install(
     TARGETS safetyhook
-    EXPORT safetyhook-export
+    EXPORT safetyhook-targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -100,9 +107,14 @@ install(
 )
 
 install(
-    EXPORT safetyhook-export
-    FILE safetyhook-config.cmake
+    EXPORT safetyhook-targets
+    FILE safetyhook-targets.cmake
     NAMESPACE safetyhook::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/safetyhook
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/safetyhook-config.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/safetyhook
 )
 """
