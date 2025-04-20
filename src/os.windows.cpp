@@ -107,14 +107,15 @@ bool vm_is_writable(uint8_t* address, size_t size) {
 
 bool vm_is_executable(uint8_t* address) {
     // Check if the address is in a valid module allowing us to potentially skip a heavier memory query.
-    HMODULE image_base_ptr{};
-    GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPTSTR>(address), &image_base_ptr);
-    if (image_base_ptr == nullptr) {
+    HMODULE image{};
+    if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPTSTR>(address), &image) ||
+        image == nullptr) {
         return vm_query(address).value_or(VmBasicInfo{}).access.execute;
     }
 
     // Just check if the section is executable.
-    const auto* image_base = reinterpret_cast<uint8_t*>(image_base_ptr);
+    const auto* image_base = reinterpret_cast<uint8_t*>(image);
     const auto* dos_hdr = reinterpret_cast<const IMAGE_DOS_HEADER*>(image_base);
 
     if (dos_hdr->e_magic != IMAGE_DOS_SIGNATURE) {
