@@ -263,7 +263,7 @@ bool TrapManager::is_destructed = false;
 void find_me() {
 }
 
-static std::recursive_mutex virtualProtectMutex;
+static std::recursive_mutex virtual_protect_mutex;
 
 void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
     MEMORY_BASIC_INFORMATION find_me_mbi{};
@@ -301,7 +301,7 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     }
 
     // Make sure we aren't working on a different address in the same memory page on a different thread.
-    std::scoped_lock vpLock{virtualProtectMutex};
+    std::scoped_lock vp_lock{virtual_protect_mutex};
 
     DWORD from_protect;
     DWORD to_protect;
