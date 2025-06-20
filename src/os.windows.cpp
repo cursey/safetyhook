@@ -263,7 +263,7 @@ bool TrapManager::is_destructed = false;
 void find_me() {
 }
 
-static std::recursive_mutex virtual_protect_mutex;
+static std::mutex virtual_protect_mutex;
 
 void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
     MEMORY_BASIC_INFORMATION find_me_mbi{};
