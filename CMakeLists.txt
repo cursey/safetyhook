@@ -96,7 +96,7 @@ if(SAFETYHOOK_AMALGAMATE) # amalgamate
 	find_package(Python3 REQUIRED)
 
 endif()
-if((NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)) # find-zydis
+if((NOT SAFETYHOOK_FETCH_ZYDIS)) # find-zydis
 	find_package(Zydis REQUIRED CONFIG)
 
 endif()
