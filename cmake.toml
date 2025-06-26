@@ -19,7 +19,7 @@ windows-only-example = "SAFETYHOOK_BUILD_EXAMPLES AND WIN32"
 amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-test = "SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE"
 fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
-find-zydis = "(NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)"
+find-zydis = "(NOT SAFETYHOOK_FETCH_ZYDIS)"
 
 [fetch-content.ut]
 condition = "build-test"
