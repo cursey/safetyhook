@@ -486,7 +486,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 	)
 
 	target_link_libraries(test-amalgamated PRIVATE
-		Zydis::Zydis
+		Zydis
 		Boost::ut
 		xbyak::xbyak
 	)
