@@ -170,7 +170,7 @@ target_include_directories(safetyhook PUBLIC
 )
 
 target_link_libraries(safetyhook PUBLIC
-	Zydis::Zydis
+	Zydis
 )
 
 set(CMKR_TARGET safetyhook)
