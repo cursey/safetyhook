@@ -84,8 +84,6 @@ if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
 	)
 	FetchContent_MakeAvailable(Zydis)
 
-	add_library(Zydis::Zydis ALIAS Zydis)
-
 endif()
 # Packages
 if(SAFETYHOOK_BUILD_DOCS) # build-docs

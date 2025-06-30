@@ -45,9 +45,6 @@ option(ZYDIS_BUILD_EXAMPLES "" OFF)
 option(ZYDIS_BUILD_TOOLS "" OFF)
 option(ZYDIS_BUILD_DOXYGEN "" OFF)
 """
-cmake-after = """
-add_library(Zydis::Zydis ALIAS Zydis)
-"""
 EXCLUDE_FROM_ALL = true
 
 [find-package.Doxygen]
