@@ -84,8 +84,6 @@ if(SAFETYHOOK_FETCH_ZYDIS) # fetch-zydis
 	)
 	FetchContent_MakeAvailable(Zydis)
 
-	add_library(Zydis::Zydis ALIAS Zydis)
-
 endif()
 # Packages
 if(SAFETYHOOK_BUILD_DOCS) # build-docs
@@ -96,7 +94,7 @@ if(SAFETYHOOK_AMALGAMATE) # amalgamate
 	find_package(Python3 REQUIRED)
 
 endif()
-if((NOT SAFETYHOOK_FETCH_ZYDIS) AND NOT (TARGET Zydis)) # find-zydis
+if((NOT SAFETYHOOK_FETCH_ZYDIS)) # find-zydis
 	find_package(Zydis REQUIRED CONFIG)
 
 endif()
@@ -170,7 +168,7 @@ target_include_directories(safetyhook PUBLIC
 )
 
 target_link_libraries(safetyhook PUBLIC
-	Zydis::Zydis
+	Zydis
 )
 
 set(CMKR_TARGET safetyhook)
@@ -486,7 +484,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 	)
 
 	target_link_libraries(test-amalgamated PRIVATE
-		Zydis::Zydis
+		Zydis
 		Boost::ut
 		xbyak::xbyak
 	)
