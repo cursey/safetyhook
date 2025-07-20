@@ -75,6 +75,11 @@ clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-
 gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 shared.compile-definitions = ["SAFETYHOOK_SHARED_LIB"]
 shared.private-compile-definitions = ["SAFETYHOOK_BUILDING"]
+cmake-before = """
+if(TARGET Zydis::Zydis AND NOT TARGET Zydis)
+    add_library(Zydis ALIAS Zydis::Zydis)
+endif()
+"""
 cmake-after = """
 if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
