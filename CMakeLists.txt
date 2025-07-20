@@ -99,6 +99,11 @@ if((NOT SAFETYHOOK_FETCH_ZYDIS)) # find-zydis
 
 endif()
 # Target: safetyhook
+set(CMKR_TARGET safetyhook)
+if(TARGET Zydis::Zydis AND NOT TARGET Zydis)
+    add_library(Zydis ALIAS Zydis::Zydis)
+endif()
+
 set(safetyhook_SOURCES
 	"src/allocator.cpp"
 	"src/easy.cpp"
@@ -171,7 +176,6 @@ target_link_libraries(safetyhook PUBLIC
 	Zydis
 )
 
-set(CMKR_TARGET safetyhook)
 if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
 endif()
