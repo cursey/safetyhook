@@ -9,6 +9,7 @@ SAFETYHOOK_BUILD_EXAMPLES = false
 SAFETYHOOK_AMALGAMATE = false
 SAFETYHOOK_FETCH_ZYDIS = true
 SAFETYHOOK_USE_CXXMODULES = false
+SAFETYHOOK_BUILD_MODULE = false
 
 [conditions]
 build-docs = "SAFETYHOOK_BUILD_DOCS"
@@ -20,6 +21,7 @@ amalgamate = "SAFETYHOOK_AMALGAMATE"
 build-amalgamate-test = "SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE"
 fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
 find-zydis = "(NOT SAFETYHOOK_FETCH_ZYDIS)"
+build-module = "SAFETYHOOK_BUILD_MODULE"
 
 [fetch-content.ut]
 condition = "build-test"
@@ -159,6 +161,19 @@ add_custom_command(
 add_custom_target(Amalgamate ALL DEPENDS ${AMALGAMATED_FILE} ${AMALGAMATED_HEADER})
 """
 
+[target.safetyhook-module]
+condition = "build-module"
+type = "static"
+sources = ["module/safetyhook.cppm"]
+link-libraries = ["safetyhook::safetyhook"]
+alias = "safetyhook::safetyhook-module"
+cmake-after = """
+target_sources(safetyhook-module PUBLIC
+    FILE_SET CXX_MODULES
+    FILES module/safetyhook.cppm
+)
+"""
+
 [template.example]
 condition = "build-examples"
 type = "executable"
@@ -194,6 +209,13 @@ sources = ["example/dll.cpp"]
 [target.example-vmthook]
 type = "example"
 sources = ["example/vmthook.cpp"]
+
+[target.example-module]
+condition = "build-module"
+type = "example"
+sources = ["example/module.cpp"]
+link-libraries = ["safetyhook::safetyhook-module"]
+properties.CXX_SCAN_FOR_MODULES = true
 
 [target.test]
 condition = "build-test"

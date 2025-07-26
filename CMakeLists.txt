@@ -31,6 +31,7 @@ option(SAFETYHOOK_BUILD_EXAMPLES "" OFF)
 option(SAFETYHOOK_AMALGAMATE "" OFF)
 option(SAFETYHOOK_FETCH_ZYDIS "" ON)
 option(SAFETYHOOK_USE_CXXMODULES "" OFF)
+option(SAFETYHOOK_BUILD_MODULE "" OFF)
 
 project(safetyhook)
 
@@ -269,6 +270,30 @@ if(SAFETYHOOK_AMALGAMATE) # amalgamate
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${amalgamation_SOURCES})
 
 endif()
+# Target: safetyhook-module
+if(SAFETYHOOK_BUILD_MODULE) # build-module
+	set(safetyhook-module_SOURCES
+		"module/safetyhook.cppm"
+		cmake.toml
+	)
+
+	add_library(safetyhook-module STATIC)
+
+	target_sources(safetyhook-module PRIVATE ${safetyhook-module_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${safetyhook-module_SOURCES})
+
+	add_library(safetyhook::safetyhook-module ALIAS safetyhook-module)
+	target_link_libraries(safetyhook-module PUBLIC
+		safetyhook::safetyhook
+	)
+
+	set(CMKR_TARGET safetyhook-module)
+	target_sources(safetyhook-module PUBLIC
+	    FILE_SET CXX_MODULES
+	    FILES module/safetyhook.cppm
+	)
+
+endif()
 # Target: example-minimal
 if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 	set(example-minimal_SOURCES
@@ -419,6 +444,43 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example-vmthook)
 	endif()
 
+endif()
+# Target: example-module
+if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
+	if(SAFETYHOOK_BUILD_MODULE) # build-module
+		set(example-module_SOURCES
+			"example/module.cpp"
+			cmake.toml
+		)
+
+		add_executable(example-module)
+
+		target_sources(example-module PRIVATE ${example-module_SOURCES})
+		source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example-module_SOURCES})
+
+		target_compile_features(example-module PRIVATE
+			cxx_std_23
+		)
+
+		target_link_libraries(example-module PRIVATE
+			safetyhook::safetyhook
+		)
+
+		target_link_libraries(example-module PRIVATE
+			safetyhook::safetyhook-module
+		)
+
+		set_target_properties(example-module PROPERTIES
+			CXX_SCAN_FOR_MODULES
+				ON
+		)
+
+		get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+		if(NOT CMKR_VS_STARTUP_PROJECT)
+			set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example-module)
+		endif()
+
+	endif()
 endif()
 # Target: test
 if(SAFETYHOOK_BUILD_TEST) # build-test
