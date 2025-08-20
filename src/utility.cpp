@@ -9,7 +9,7 @@ bool is_executable(uint8_t* address) {
 
 UnprotectMemory::~UnprotectMemory() {
     if (m_address != nullptr) {
-        vm_protect(m_address, m_size, m_original_protection);
+        [[maybe_unused]] auto old_protection = vm_protect(m_address, m_size, m_original_protection);
     }
 }
 
