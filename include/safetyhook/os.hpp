@@ -35,10 +35,10 @@ struct VmAccess {
     }
 };
 
-constexpr VmAccess VM_ACCESS_R{true, false, false};
-constexpr VmAccess VM_ACCESS_RW{true, true, false};
-constexpr VmAccess VM_ACCESS_RX{true, false, true};
-constexpr VmAccess VM_ACCESS_RWX{true, true, true};
+inline constexpr VmAccess VM_ACCESS_R{true, false, false};
+inline constexpr VmAccess VM_ACCESS_RW{true, true, false};
+inline constexpr VmAccess VM_ACCESS_RX{true, false, true};
+inline constexpr VmAccess VM_ACCESS_RWX{true, true, true};
 
 struct VmBasicInfo {
     uint8_t* address;
