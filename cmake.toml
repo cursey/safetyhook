@@ -1,4 +1,7 @@
 # Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[cmake]
+version = "3.28"
+
 [project]
 name = "safetyhook"
 
