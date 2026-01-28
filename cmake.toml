@@ -34,7 +34,7 @@ EXCLUDE_FROM_ALL = true
 [fetch-content.xbyak]
 condition = "build-test"
 git = "https://github.com/herumi/xbyak.git"
-tag = "v6.69"
+tag = "v7.30"
 shallow = true
 EXCLUDE_FROM_ALL = true
 
