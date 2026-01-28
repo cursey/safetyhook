@@ -52,12 +52,12 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 
 endif()
 if(SAFETYHOOK_BUILD_TEST) # build-test
-	message(STATUS "Fetching xbyak (v6.69)...")
+	message(STATUS "Fetching xbyak (v7.30)...")
 	FetchContent_Declare(xbyak
 		GIT_REPOSITORY
 			"https://github.com/herumi/xbyak.git"
 		GIT_TAG
-			v6.69
+			v7.30
 		GIT_SHALLOW
 			ON
 		EXCLUDE_FROM_ALL
