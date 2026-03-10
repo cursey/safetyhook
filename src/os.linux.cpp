@@ -82,6 +82,8 @@ std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, uint3
 
     auto* addr = align_down(address, static_cast<size_t>(sysconf(_SC_PAGESIZE)));
 
+    size = size + static_cast<size_t>(address - addr);
+    
     if (mprotect(addr, size, static_cast<int>(protect)) == -1) {
         return std::unexpected{OsError::FAILED_TO_PROTECT};
     }
