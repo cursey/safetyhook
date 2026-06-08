@@ -274,6 +274,10 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     VirtualQuery(from, &from_mbi, sizeof(from_mbi));
     VirtualQuery(to, &to_mbi, sizeof(to_mbi));
 
+    if (to_mbi.State != MEM_COMMIT) {
+        return;
+    }
+
     auto new_protect = PAGE_READWRITE;
 
     if (from_mbi.AllocationBase == find_me_mbi.AllocationBase || to_mbi.AllocationBase == find_me_mbi.AllocationBase) {
