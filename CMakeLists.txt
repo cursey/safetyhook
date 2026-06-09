@@ -292,6 +292,16 @@ if(SAFETYHOOK_BUILD_MODULE) # build-module
 	    FILE_SET CXX_MODULES
 	    FILES module/safetyhook.cppm
 	)
+	
+install(
+	    TARGETS safetyhook-module
+	    EXPORT safetyhook-targets
+	    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	    FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/safetyhook
+	)
 
 endif()
 # Target: example-minimal
