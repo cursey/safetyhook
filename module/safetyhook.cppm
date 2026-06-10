@@ -42,6 +42,7 @@ export {
     using safetyhook::VM_ACCESS_RWX;
     using safetyhook::VM_ACCESS_RX;
     using safetyhook::vm_allocate;
+    using safetyhook::vm_free;
     using safetyhook::vm_is_executable;
     using safetyhook::vm_is_readable;
     using safetyhook::vm_is_writable;
