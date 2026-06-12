@@ -338,4 +338,46 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(target->add_42(2) == 44_i);
     };
+
+    "VMT hook preserves dynamic_cast"_test = [] {
+        struct Interface {
+            virtual ~Interface() = default;
+            virtual int add_42(int a) = 0;
+        };
+
+        struct Target : Interface {
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+        };
+
+        auto target = std::make_unique<Target>();
+
+        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<Target*>(target.get()), nullptr));
+
+        static SafetyHookVmt target_hook{};
+        static SafetyHookVm add_42_hook{};
+
+        struct Hook : Target {
+            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+        };
+
+        auto vmt_result = SafetyHookVmt::create(target.get());
+        expect(vmt_result.has_value());
+        target_hook = std::move(*vmt_result);
+
+        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+        expect(vm_result.has_value());
+        add_42_hook = std::move(*vm_result);
+
+        expect(target->add_42(1) == 1380_i);
+
+        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<Target*>(target.get()), nullptr));
+
+        add_42_hook.reset();
+        target_hook.reset();
+
+        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<Target*>(target.get()), nullptr));
+    };
 };
