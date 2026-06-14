@@ -18,7 +18,7 @@ import std.compat;
 namespace safetyhook {
 /// @brief Number of ABI-specific non-function entries preceding the first virtual function pointer
 /// in the vtable layout for the current compiler/ABI.
-#if SAFETYHOOK_COMPILER_MSVC
+#if SAFETYHOOK_COMPILER_MSVC || (SAFETYHOOK_COMPILER_CLANG && SAFETYHOOK_OS_WINDOWS)
 constexpr size_t VMT_HEADER = 1; // RTTICompleteObjectLocator*
 #elif SAFETYHOOK_COMPILER_GCC || SAFETYHOOK_COMPILER_CLANG
 constexpr size_t VMT_HEADER = 2; // offset-to-top + RTTI ptr
