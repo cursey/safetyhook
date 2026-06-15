@@ -338,4 +338,52 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(target->add_42(2) == 44_i);
     };
+
+    "VMT hook preserves dynamic_cast with cross-cast"_test = [] {
+        struct Base1 {
+            virtual ~Base1() = default;
+            virtual int add_42(int a) = 0;
+        };
+
+        struct Base2 {
+            virtual ~Base2() = default;
+            virtual int add_1337(int a) = 0;
+        };
+
+        struct Target : Base1, Base2 {
+            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+            SAFETYHOOK_NOINLINE int add_1337(int a) override { return a + 1337; }
+        };
+
+        auto target = std::make_unique<Target>();
+
+        Base2* base2 = target.get();
+
+        static SafetyHookVmt base2_hook{};
+        static SafetyHookVm add_1337_hook{};
+
+        struct Hook : Target {
+            int hooked_add_1337(int a) { return add_1337_hook.thiscall<int>(this, a) + 42; }
+        };
+
+        auto vmt_result = SafetyHookVmt::create(base2);
+        expect(vmt_result.has_value());
+        base2_hook = std::move(*vmt_result);
+
+        auto vm_result = base2_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_1337);
+        expect(vm_result.has_value());
+        add_1337_hook = std::move(*vm_result);
+
+        expect(base2->add_1337(1) == 1380_i);
+
+        // Cross-cast: Base2* -> Base1*
+        // Runtime reads offset-to-top from Base2's vptr[-2]
+        // Without the fix this is garbage and will crash or return wrong pointer
+        Base1* base1 = dynamic_cast<Base1*>(base2);
+        expect(neq(base1, nullptr));
+        expect(base1->add_42(1) == 43_i);
+
+        add_1337_hook.reset();
+        base2_hook.reset();
+    };
 };

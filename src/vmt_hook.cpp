@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "safetyhook/os.hpp"
 
 #include "safetyhook/vmt_hook.hpp"
@@ -43,15 +45,18 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     const auto original_vmt = *reinterpret_cast<uint8_t***>(object);
     hook.m_objects.emplace(object, original_vmt);
 
-    // Count the number of virtual method pointers. We start at one to account for the RTTI pointer.
-    auto num_vmt_entries = 1;
+    // Count the number of virtual method pointers. We start at VMT_HEADER to account for
+    // the vtable prefix entries (offset-to-top + RTTI ptr on Itanium, RTTICompleteObjectLocator* on MSVC).
+    auto num_vmt_entries = VMT_HEADER;
 
     for (auto vm = original_vmt; is_executable(*vm); ++vm) {
         ++num_vmt_entries;
     }
 
+    auto size = num_vmt_entries * sizeof(uint8_t*);
+
     // Allocate memory for the new VMT.
-    auto allocation = Allocator::global()->allocate(num_vmt_entries * sizeof(uint8_t*));
+    auto allocation = Allocator::global()->allocate(size);
 
     if (!allocation) {
         return std::unexpected{Error::bad_allocation(allocation.error())};
@@ -60,15 +65,10 @@ std::expected<VmtHook, VmtHook::Error> VmtHook::create(void* object) {
     hook.m_new_vmt_allocation = std::make_shared<Allocation>(std::move(*allocation));
     hook.m_new_vmt = reinterpret_cast<uint8_t**>(hook.m_new_vmt_allocation->data());
 
-    // Copy pointer to RTTI.
-    hook.m_new_vmt[0] = original_vmt[-1];
+    // Copy RTTI header and virtual method pointers.
+    std::memcpy(hook.m_new_vmt, original_vmt - VMT_HEADER, size);
 
-    // Copy virtual method pointers.
-    for (auto i = 0; i < num_vmt_entries - 1; ++i) {
-        hook.m_new_vmt[i + 1] = original_vmt[i];
-    }
-
-    *reinterpret_cast<uint8_t***>(object) = &hook.m_new_vmt[1];
+    *reinterpret_cast<uint8_t***>(object) = &hook.m_new_vmt[VMT_HEADER];
 
     return hook;
 }
@@ -92,7 +92,7 @@ VmtHook::~VmtHook() {
 
 void VmtHook::apply(void* object) {
     m_objects.emplace(object, *reinterpret_cast<uint8_t***>(object));
-    *reinterpret_cast<uint8_t***>(object) = &m_new_vmt[1];
+    *reinterpret_cast<uint8_t***>(object) = &m_new_vmt[VMT_HEADER];
 }
 
 void VmtHook::remove(void* object) {
@@ -109,7 +109,7 @@ void VmtHook::remove(void* object) {
         return;
     }
 
-    if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+    if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[VMT_HEADER]) {
         m_objects.erase(search);
         return;
     }
@@ -129,7 +129,7 @@ void VmtHook::destroy() {
             continue;
         }
 
-        if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[1]) {
+        if (*reinterpret_cast<uint8_t***>(object) != &m_new_vmt[VMT_HEADER]) {
             continue;
         }
 

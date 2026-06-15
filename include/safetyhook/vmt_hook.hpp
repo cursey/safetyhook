@@ -16,6 +16,16 @@ import std.compat;
 #include "safetyhook/utility.hpp"
 
 namespace safetyhook {
+/// @brief Number of ABI-specific non-function entries preceding the first virtual function pointer
+/// in the vtable layout for the current compiler/ABI.
+#if SAFETYHOOK_COMPILER_MSVC || (SAFETYHOOK_COMPILER_CLANG && SAFETYHOOK_OS_WINDOWS)
+constexpr size_t VMT_HEADER = 1; // RTTICompleteObjectLocator*
+#elif SAFETYHOOK_COMPILER_GCC || SAFETYHOOK_COMPILER_CLANG
+constexpr size_t VMT_HEADER = 2; // offset-to-top + RTTI ptr
+#else
+constexpr size_t VMT_HEADER = 0;
+#endif
+
 /// @brief A hook class that allows for hooking a single method in a VMT.
 class SAFETYHOOK_API VmHook final {
 public:
@@ -147,7 +157,7 @@ public:
     template <typename T> [[nodiscard]] std::expected<VmHook, Error> hook_method(size_t index, T new_function) {
         VmHook hook{};
 
-        ++index; // Skip RTTI pointer.
+        index += VMT_HEADER; // Skip RTTI header.
         hook.m_original_vm = m_new_vmt[index];
         store(reinterpret_cast<uint8_t*>(&hook.m_new_vm), new_function);
         hook.m_vmt_entry = &m_new_vmt[index];
