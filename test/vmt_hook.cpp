@@ -3,9 +3,9 @@
 
 using namespace boost::ut;
 
-#if SAFETYHOOK_OS_WINDOWS
+#if SAFETYHOOK_COMPILER_MSVC || (SAFETYHOOK_COMPILER_CLANG && SAFETYHOOK_OS_WINDOWS)
 static constexpr auto VMT_OFFSET = 0;
-#elif SAFETYHOOK_OS_LINUX
+#elif SAFETYHOOK_COMPILER_GCC || SAFETYHOOK_COMPILER_CLANG
 static constexpr auto VMT_OFFSET = 1;
 #endif
 

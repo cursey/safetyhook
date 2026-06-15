@@ -190,7 +190,10 @@ install(
 [template.example]
 condition = "build-examples"
 type = "executable"
-link-libraries = ["safetyhook::safetyhook"]
+link-libraries = [
+    "safetyhook::safetyhook",
+    "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
+]
 compile-features = ["cxx_std_23"]
 
 [template.example-dll]
