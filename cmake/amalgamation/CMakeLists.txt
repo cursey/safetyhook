@@ -11,4 +11,4 @@ add_custom_command(
     MAIN_DEPENDENCY "${AMALGAMATE_SCRIPT}"
     COMMENT "Amalgamating"
 )
-add_custom_target(Amalgamate ALL DEPENDS "${AMALGAMATED_FILE}" "${AMALGAMATED_HEADER}")
+add_custom_target(safetyhook-amalgamate ALL DEPENDS "${AMALGAMATED_FILE}" "${AMALGAMATED_HEADER}")
