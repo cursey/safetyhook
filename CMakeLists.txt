@@ -322,6 +322,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 	target_link_libraries(example-minimal PRIVATE
 		safetyhook::safetyhook
+		"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -348,6 +349,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 	target_link_libraries(example-multiple PRIVATE
 		safetyhook::safetyhook
+		"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -374,6 +376,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 	target_link_libraries(example-midhook PRIVATE
 		safetyhook::safetyhook
+		"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -400,6 +403,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 	target_link_libraries(example-threadsafe PRIVATE
 		safetyhook::safetyhook
+		"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -447,6 +451,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 	target_link_libraries(example-vmthook PRIVATE
 		safetyhook::safetyhook
+		"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
@@ -474,6 +479,7 @@ if(SAFETYHOOK_BUILD_EXAMPLES) # build-examples
 
 		target_link_libraries(example-module PRIVATE
 			safetyhook::safetyhook
+			"$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
 		)
 
 		target_link_libraries(example-module PRIVATE

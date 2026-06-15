@@ -3,9 +3,9 @@
 
 using namespace boost::ut;
 
-#if SAFETYHOOK_OS_WINDOWS
+#if SAFETYHOOK_ABI_MSVC
 static constexpr auto VMT_OFFSET = 0;
-#elif SAFETYHOOK_OS_LINUX
+#elif SAFETYHOOK_ABI_ITANIUM
 static constexpr auto VMT_OFFSET = 1;
 #endif
 

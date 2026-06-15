@@ -16,6 +16,14 @@
 #error "Unsupported compiler"
 #endif
 
+#if defined(_MSC_VER)
+#define SAFETYHOOK_ABI_MSVC 1
+#define SAFETYHOOK_ABI_ITANIUM 0
+#else
+#define SAFETYHOOK_ABI_MSVC 0
+#define SAFETYHOOK_ABI_ITANIUM 1
+#endif
+
 #if SAFETYHOOK_COMPILER_MSVC
 #if defined(_M_IX86)
 #define SAFETYHOOK_ARCH_X86_32 1
