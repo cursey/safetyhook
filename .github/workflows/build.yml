@@ -30,8 +30,7 @@ jobs:
 
       - name: Test
         run: |
-          ./build/${{matrix.build_type}}/test.exe
-          ./build/${{matrix.build_type}}/test-amalgamated.exe
+          ctest --test-dir build -C ${{matrix.build_type}} --output-on-failure
 
   amalgamated-dist:
     runs-on: windows-2022
