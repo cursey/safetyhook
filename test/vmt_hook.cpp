@@ -1,7 +1,10 @@
 #include <boost/ut.hpp>
 #include <safetyhook.hpp>
 
+#include "vmt_targets.hpp"
+
 using namespace boost::ut;
+using namespace safetyhook::test;
 
 #if SAFETYHOOK_ABI_MSVC
 static constexpr auto VMT_OFFSET = 0;
@@ -11,23 +14,14 @@ static constexpr auto VMT_OFFSET = 1;
 
 static suite<"vmt hook"> vmt_hook_tests = [] {
     "VMT hook an object instance"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
+        auto target = make_single_target();
 
         expect(target->add_42(0) == 42_i);
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -51,18 +45,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "Resetting the VMT hook removes all VM hooks for that object"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-            virtual int add_43(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-            SAFETYHOOK_NOINLINE int add_43(int a) override { return a + 43; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
+        auto target = make_dual_target();
 
         expect(target->add_42(0) == 42_i);
         expect(target->add_43(0) == 43_i);
@@ -71,7 +54,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         static SafetyHookVm add_42_hook{};
         static SafetyHookVm add_43_hook{};
 
-        struct Hook : Target {
+        struct Hook : DualTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
             int hooked_add_43(int a) { return add_43_hook.thiscall<int>(this, a) + 1337; }
         };
@@ -105,24 +88,15 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "VMT hooking an object maintains correct RTTI"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        auto target = std::make_unique<Target>();
+        auto target = make_single_target();
 
         expect(target->add_42(0) == 42_i);
-        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<SingleInterface*>(target.get()), nullptr));
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -139,27 +113,18 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         add_42_hook = std::move(*vm_result);
 
         expect(target->add_42(1) == 1380_i);
-        expect(neq(dynamic_cast<Interface*>(target.get()), nullptr));
+        expect(neq(dynamic_cast<SingleInterface*>(target.get()), nullptr));
     };
 
     "Can safely destroy VmtHook after object is deleted"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
+        auto target = make_single_target();
 
         expect(target->add_42(0) == 42_i);
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -182,26 +147,17 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "Can apply an existing VMT hook to more than one object"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
-        std::unique_ptr<Interface> target0 = std::make_unique<Target>();
-        std::unique_ptr<Interface> target1 = std::make_unique<Target>();
-        std::unique_ptr<Interface> target2 = std::make_unique<Target>();
+        auto target = make_single_target();
+        auto target0 = make_single_target();
+        auto target1 = make_single_target();
+        auto target2 = make_single_target();
 
         expect(target->add_42(0) == 42_i);
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -235,26 +191,17 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "Can remove an object that was previously VMT hooked"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
-        std::unique_ptr<Interface> target0 = std::make_unique<Target>();
-        std::unique_ptr<Interface> target1 = std::make_unique<Target>();
-        std::unique_ptr<Interface> target2 = std::make_unique<Target>();
+        auto target = make_single_target();
+        auto target0 = make_single_target();
+        auto target1 = make_single_target();
+        auto target2 = make_single_target();
 
         expect(target->add_42(0) == 42_i);
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -309,23 +256,14 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "VMT hook an object instance with easy API"_test = [] {
-        struct Interface {
-            virtual ~Interface() = default;
-            virtual int add_42(int a) = 0;
-        };
-
-        struct Target : Interface {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-        };
-
-        std::unique_ptr<Interface> target = std::make_unique<Target>();
+        auto target = make_single_target();
 
         expect(target->add_42(0) == 42_i);
 
         static SafetyHookVmt target_hook{};
         static SafetyHookVm add_42_hook{};
 
-        struct Hook : Target {
+        struct Hook : SingleTarget {
             int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
         };
 
@@ -340,29 +278,14 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
     };
 
     "VMT hook preserves dynamic_cast with cross-cast"_test = [] {
-        struct Base1 {
-            virtual ~Base1() = default;
-            virtual int add_42(int a) = 0;
-        };
+        auto target = make_cast_target();
 
-        struct Base2 {
-            virtual ~Base2() = default;
-            virtual int add_1337(int a) = 0;
-        };
-
-        struct Target : Base1, Base2 {
-            SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
-            SAFETYHOOK_NOINLINE int add_1337(int a) override { return a + 1337; }
-        };
-
-        auto target = std::make_unique<Target>();
-
-        Base2* base2 = target.get();
+        CastBase2* base2 = target.get();
 
         static SafetyHookVmt base2_hook{};
         static SafetyHookVm add_1337_hook{};
 
-        struct Hook : Target {
+        struct Hook : CastTarget {
             int hooked_add_1337(int a) { return add_1337_hook.thiscall<int>(this, a) + 42; }
         };
 
@@ -376,10 +299,10 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(base2->add_1337(1) == 1380_i);
 
-        // Cross-cast: Base2* -> Base1*
-        // Runtime reads offset-to-top from Base2's vptr[-2]
+        // Cross-cast: CastBase2* -> CastBase1*
+        // Runtime reads offset-to-top from CastBase2's vptr[-2]
         // Without the fix this is garbage and will crash or return wrong pointer
-        Base1* base1 = dynamic_cast<Base1*>(base2);
+        CastBase1* base1 = dynamic_cast<CastBase1*>(base2);
         expect(neq(base1, nullptr));
         expect(base1->add_42(1) == 43_i);
 

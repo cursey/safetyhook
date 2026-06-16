@@ -8,3 +8,4 @@ docs/html
 docs/latex
 docs/Doxyfile
 amalgamated-dist
+__build*
