@@ -8,30 +8,175 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    name: ${{matrix.os}} ${{matrix.arch}} ${{matrix.compiler}} ${{matrix.build_type}}
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        arch: [ x64, Win32 ]
-        build_type: [ Debug, Release ]
+        include:
+          - os: windows-2022
+            arch: x64
+            compiler: msvc
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A x64
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: msvc
+            build_type: Release
+            build_examples: ON
+            configure_args: -A x64
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: msvc
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A Win32
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: msvc
+            build_type: Release
+            build_examples: ON
+            configure_args: -A Win32
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: clang-cl
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A x64 -T ClangCL
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: clang-cl
+            build_type: Release
+            build_examples: ON
+            configure_args: -A x64 -T ClangCL
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: clang-cl
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A Win32 -T ClangCL
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: clang-cl
+            build_type: Release
+            build_examples: ON
+            configure_args: -A Win32 -T ClangCL
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: mingw
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: mingw
+            build_type: Release
+            build_examples: OFF
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: gcc
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: gcc
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: clang
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: clang
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            test_dir: ./build
+            test_ext: ""
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
 
+      - name: Set up MSYS2
+        if: matrix.compiler == 'mingw'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-python
+
       - name: Configure
+        if: matrix.compiler != 'mingw'
         run: |
-          mkdir build
-          cd build
-          cmake -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=ON -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON ..
+          cmake -B build ${{matrix.configure_args}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=${{matrix.build_examples}} -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON .
+
+      - name: Configure
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          cmake -B build ${{matrix.configure_args}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=${{matrix.build_examples}} -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON .
 
       - name: Build
+        if: matrix.compiler != 'mingw'
+        run: |
+          cmake --build build --config ${{matrix.build_type}} --parallel
+
+      - name: Build
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
         run: |
           cmake --build build --config ${{matrix.build_type}} --parallel
 
       - name: Test
+        if: matrix.compiler != 'mingw'
         run: |
-          ./build/${{matrix.build_type}}/test.exe
-          ./build/${{matrix.build_type}}/test-amalgamated.exe
+          ${{matrix.test_dir}}/test${{matrix.test_ext}}
+          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
+
+      - name: Test
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          ${{matrix.test_dir}}/test${{matrix.test_ext}}
+          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
 
   amalgamated-dist:
     runs-on: windows-2022
