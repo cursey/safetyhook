@@ -58,17 +58,18 @@ static suite<"inline hook (x64)"> inline_hook_x64_tests = [] {
         Xbyak::CodeGenerator cg{5'000'000'000}; // 5 GB
         Xbyak::Label start{};
 
-#if SAFETYHOOK_OS_WINDOWS
-        constexpr auto param = ecx;
-#elif SAFETYHOOK_OS_LINUX
-        constexpr auto param = edi;
-#endif
-
         cg.nop(2'500'000'000, false); // 2.5 GB
         cg.L(start);
-        cg.mov(dword[rsp + 8], param);
+
+#if SAFETYHOOK_OS_WINDOWS
+        cg.mov(dword[rsp + 8], ecx);
         cg.mov(eax, dword[rsp + 8]);
         cg.imul(eax, dword[rsp + 8]);
+#elif SAFETYHOOK_OS_LINUX
+        cg.mov(eax, edi);
+        cg.imul(eax, edi);
+#endif
+
         cg.ret();
 
         auto fn = reinterpret_cast<int (*)(int)>(const_cast<uint8_t*>(start.getAddress()));

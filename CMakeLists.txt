@@ -507,6 +507,7 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 		"test/main.cpp"
 		"test/mid_hook.cpp"
 		"test/vmt_hook.cpp"
+		"test/vmt_targets.cpp"
 		cmake.toml
 	)
 
@@ -544,6 +545,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 		"test/main.cpp"
 		"test/mid_hook.cpp"
 		"test/vmt_hook.cpp"
+		"test/vmt_targets.cpp"
 		"amalgamated-dist/safetyhook.cpp"
 		cmake.toml
 	)
