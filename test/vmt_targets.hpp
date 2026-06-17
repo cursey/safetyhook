@@ -1,5 +1,7 @@
 #pragma once
 
+#include <safetyhook.hpp>
+
 #include <memory>
 
 namespace safetyhook::test {
@@ -9,7 +11,7 @@ struct SingleInterface {
 };
 
 struct SingleTarget : SingleInterface {
-    int add_42(int a) override { return a + 42; }
+    SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
 };
 
 struct DualInterface {
@@ -19,8 +21,8 @@ struct DualInterface {
 };
 
 struct DualTarget : DualInterface {
-    int add_42(int a) override { return a + 42; }
-    int add_43(int a) override { return a + 43; }
+    SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+    SAFETYHOOK_NOINLINE int add_43(int a) override { return a + 43; }
 };
 
 struct CastBase1 {
@@ -34,8 +36,8 @@ struct CastBase2 {
 };
 
 struct CastTarget : CastBase1, CastBase2 {
-    int add_42(int a) override { return a + 42; }
-    int add_1337(int a) override { return a + 1337; }
+    SAFETYHOOK_NOINLINE int add_42(int a) override { return a + 42; }
+    SAFETYHOOK_NOINLINE int add_1337(int a) override { return a + 1337; }
 };
 
 std::unique_ptr<SingleInterface> make_single_target();
