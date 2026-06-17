@@ -42,6 +42,8 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         add_42_hook.reset();
 
         expect(target->add_42(2) == 44_i);
+
+        target_hook.reset();
     };
 
     "Resetting the VMT hook removes all VM hooks for that object"_test = [] {
@@ -85,6 +87,9 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(target->add_42(2) == 44_i);
         expect(target->add_43(2) == 45_i);
+
+        add_42_hook.reset();
+        add_43_hook.reset();
     };
 
     "VMT hooking an object maintains correct RTTI"_test = [] {
@@ -114,6 +119,9 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         expect(target->add_42(1) == 1380_i);
         expect(neq(dynamic_cast<SingleInterface*>(target.get()), nullptr));
+
+        add_42_hook.reset();
+        target_hook.reset();
     };
 
     "Can safely destroy VmtHook after object is deleted"_test = [] {
@@ -144,6 +152,7 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
 
         target.reset();
         target_hook.reset();
+        add_42_hook.reset();
     };
 
     "Can apply an existing VMT hook to more than one object"_test = [] {
@@ -188,6 +197,8 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         expect(target0->add_42(2) == 44_i);
         expect(target1->add_42(2) == 44_i);
         expect(target2->add_42(2) == 44_i);
+
+        target_hook.reset();
     };
 
     "Can remove an object that was previously VMT hooked"_test = [] {
@@ -253,6 +264,9 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         expect(target0->add_42(2) == 44_i);
         expect(target1->add_42(2) == 44_i);
         expect(target2->add_42(2) == 44_i);
+
+        add_42_hook.reset();
+        target_hook.reset();
     };
 
     "VMT hook an object instance with easy API"_test = [] {
@@ -275,6 +289,8 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         add_42_hook.reset();
 
         expect(target->add_42(2) == 44_i);
+
+        target_hook.reset();
     };
 
     "VMT hook preserves dynamic_cast with cross-cast"_test = [] {
