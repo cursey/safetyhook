@@ -103,8 +103,8 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     unsigned long end;
     char perms[5];
     unsigned long offset;
-    int dev_major;
-    int dev_minor;
+    unsigned int dev_major;
+    unsigned int dev_minor;
     unsigned long inode;
     char path[256];
     unsigned long last_end =
@@ -115,8 +115,10 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     while (fgets(line, sizeof(line), maps) != nullptr) {
         path[0] = '\0';
 
-        sscanf(line, "%lx-%lx %4s %lx %x:%x %lu %255[^\n]", &start, &end, perms, &offset, &dev_major, &dev_minor,
-            &inode, path);
+        if (sscanf(line, "%lx-%lx %4s %lx %x:%x %lu %255[^\n]", &start, &end, perms, &offset, &dev_major, &dev_minor,
+                &inode, path) < 7) {
+            continue;
+        }
 
         if (last_end < start && addr >= last_end && addr < start) {
             info = std::make_optional<VmBasicInfo>(

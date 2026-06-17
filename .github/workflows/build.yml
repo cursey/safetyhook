@@ -11,6 +11,7 @@ jobs:
     name: ${{matrix.os}} ${{matrix.arch}} ${{matrix.compiler}} ${{matrix.build_type}}
     runs-on: ${{matrix.os}}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-2022
