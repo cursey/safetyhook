@@ -207,7 +207,11 @@ static suite<"inline hook"> inline_hook_tests = [] {
 #if SAFETYHOOK_OS_WINDOWS
         constexpr auto param = ecx;
 #elif SAFETYHOOK_OS_LINUX
+#if SAFETYHOOK_ARCH_X86_64
         constexpr auto param = edi;
+#elif SAFETYHOOK_ARCH_X86_32
+        auto param = dword[esp + 4];
+#endif
 #endif
 
         "JB"_test = [&] {

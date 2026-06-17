@@ -25,7 +25,7 @@ static suite<"mid hook"> mid_hook_tests = [] {
 #if SAFETYHOOK_ARCH_X86_64
                 ctx.rdi = 1337 - 42;
 #elif SAFETYHOOK_ARCH_X86_32
-                ctx.edi = 1337 - 42;
+                *reinterpret_cast<int*>(ctx.esp + 4) = 1337 - 42;
 #endif
 #endif
             }
@@ -98,7 +98,7 @@ static suite<"mid hook"> mid_hook_tests = [] {
 #if SAFETYHOOK_ARCH_X86_64
                 ctx.rdi = 1337 - 42;
 #elif SAFETYHOOK_ARCH_X86_32
-                ctx.edi = 1337 - 42;
+                *reinterpret_cast<int*>(ctx.esp + 4) = 1337 - 42;
 #endif
 #endif
             }
