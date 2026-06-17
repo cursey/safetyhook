@@ -32,6 +32,9 @@ endif()
 
 get_filename_component(CPM_DOWNLOAD_LOCATION "${CPM_DOWNLOAD_LOCATION}" ABSOLUTE)
 
+cmake_path(GET CPM_DOWNLOAD_LOCATION PARENT_PATH CPM_DOWNLOAD_DIR)
+file(MAKE_DIRECTORY "${CPM_DOWNLOAD_DIR}")
+
 if(NOT EXISTS "${CPM_DOWNLOAD_LOCATION}")
     file(DOWNLOAD
         "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
