@@ -83,6 +83,8 @@ jobs:
             compiler: mingw
             build_type: Debug
             build_examples: OFF
+            msystem: MINGW64
+            mingw_package_prefix: mingw-w64-x86_64
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
             test_dir: ./build
             test_ext: .exe
@@ -91,6 +93,28 @@ jobs:
             compiler: mingw
             build_type: Release
             build_examples: OFF
+            msystem: MINGW64
+            mingw_package_prefix: mingw-w64-x86_64
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x86
+            compiler: mingw
+            build_type: Debug
+            build_examples: OFF
+            msystem: MINGW32
+            mingw_package_prefix: mingw-w64-i686
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x86
+            compiler: mingw
+            build_type: Release
+            build_examples: OFF
+            msystem: MINGW32
+            mingw_package_prefix: mingw-w64-i686
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
             test_dir: ./build
             test_ext: .exe
@@ -111,11 +135,43 @@ jobs:
             test_dir: ./build
             test_ext: ""
           - os: ubuntu-24.04
+            arch: x86
+            compiler: gcc
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: gcc
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
             arch: x64
             compiler: clang
             build_type: Debug
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: clang
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: clang
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
             test_dir: ./build
             test_ext: ""
           - os: ubuntu-24.04
@@ -135,20 +191,32 @@ jobs:
         if: matrix.compiler == 'mingw'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: ${{matrix.msystem}}
           update: true
           install: >-
             git
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-python
+            ${{matrix.mingw_package_prefix}}-cmake
+            ${{matrix.mingw_package_prefix}}-gcc
+            ${{matrix.mingw_package_prefix}}-ninja
+            ${{matrix.mingw_package_prefix}}-python
 
-      - name: Install libc++ for Clang
-        if: matrix.os == 'ubuntu-24.04' && matrix.compiler == 'clang'
+      - name: Install Linux x86 dependencies
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x86'
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
+
+      - name: Install libc++ for Clang x64
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x64' && matrix.compiler == 'clang'
         run: |
           sudo apt-get update
           sudo apt-get install -y libc++-dev libc++abi-dev
+
+      - name: Install libc++ for Clang x86
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x86' && matrix.compiler == 'clang'
+        run: |
+          sudo apt-get install -y clang libc++-dev:i386 libc++abi-dev:i386
 
       - name: Configure
         if: matrix.compiler != 'mingw'

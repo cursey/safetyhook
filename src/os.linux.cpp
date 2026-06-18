@@ -3,6 +3,7 @@
 #if SAFETYHOOK_OS_LINUX
 
 #include <cstdio>
+#include <limits>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -176,7 +177,11 @@ SystemInfo system_info() {
     info.page_size = page_size;
     info.allocation_granularity = page_size;
     info.min_address = reinterpret_cast<uint8_t*>(0x10000);
-    info.max_address = reinterpret_cast<uint8_t*>(1ull << 47);
+#if SAFETYHOOK_ARCH_X86_64
+    info.max_address = reinterpret_cast<uint8_t*>(uintptr_t{1} << 47);
+#elif SAFETYHOOK_ARCH_X86_32
+    info.max_address = reinterpret_cast<uint8_t*>(std::numeric_limits<uintptr_t>::max());
+#endif
 
     return info;
 }

@@ -22,7 +22,7 @@ TEST(MidHook, MidHookToChangeARegister) {
 #if SAFETYHOOK_ARCH_X86_64
             ctx.rdi = 1337 - 42;
 #elif SAFETYHOOK_ARCH_X86_32
-            ctx.edi = 1337 - 42;
+            *reinterpret_cast<int*>(ctx.esp + 4) = 1337 - 42;
 #endif
 #endif
         }
@@ -95,7 +95,7 @@ TEST(MidHook, MidHookEnableAndDisable) {
 #if SAFETYHOOK_ARCH_X86_64
             ctx.rdi = 1337 - 42;
 #elif SAFETYHOOK_ARCH_X86_32
-            ctx.edi = 1337 - 42;
+            *reinterpret_cast<int*>(ctx.esp + 4) = 1337 - 42;
 #endif
 #endif
         }
