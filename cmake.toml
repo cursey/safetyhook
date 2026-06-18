@@ -26,13 +26,15 @@ fetch-zydis = "SAFETYHOOK_FETCH_ZYDIS"
 find-zydis = "(NOT SAFETYHOOK_FETCH_ZYDIS)"
 build-module = "SAFETYHOOK_BUILD_MODULE"
 
-[fetch-content.ut]
+[fetch-content.googletest]
 condition = "build-test"
-git = "https://github.com/boost-ext/ut.git"
-tag = "v2.3.1"
+git = "https://github.com/google/googletest.git"
+tag = "v1.15.2"
 shallow = true
 cmake-before = """
-set(BOOST_UT_DISABLE_MODULE ON CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 """
 EXCLUDE_FROM_ALL = true
 
@@ -240,8 +242,7 @@ properties.CXX_SCAN_FOR_MODULES = true
 condition = "build-test"
 type = "executable"
 sources = ["test/*.cpp"]
-link-libraries = ["Boost::ut", "safetyhook::safetyhook", "xbyak::xbyak"]
-compile-definitions = ["BOOST_UT_DISABLE_MODULE"]
+link-libraries = ["GTest::gtest", "safetyhook::safetyhook", "xbyak::xbyak"]
 compile-features = ["cxx_std_23"]
 
 [target.test-amalgamated]
@@ -249,8 +250,7 @@ condition = "build-amalgamate-test"
 type = "executable"
 sources = ["test/*.cpp", "amalgamated-dist/safetyhook.cpp"]
 include-directories = ["amalgamated-dist/"]
-link-libraries = ["Zydis", "Boost::ut", "xbyak::xbyak"]
-compile-definitions = ["BOOST_UT_DISABLE_MODULE"]
+link-libraries = ["Zydis", "GTest::gtest", "xbyak::xbyak"]
 compile-features = ["cxx_std_23"]
 cmake-after = """
 add_dependencies(test-amalgamated Amalgamate)

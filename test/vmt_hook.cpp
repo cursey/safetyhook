@@ -1,9 +1,8 @@
-#include <boost/ut.hpp>
+#include <gtest/gtest.h>
 #include <safetyhook.hpp>
 
 #include "vmt_targets.hpp"
 
-using namespace boost::ut;
 using namespace safetyhook::test;
 
 #if SAFETYHOOK_ABI_MSVC
@@ -12,319 +11,315 @@ static constexpr auto VMT_OFFSET = 0;
 static constexpr auto VMT_OFFSET = 1;
 #endif
 
-void register_vmt_hook_tests() {
-suite<"vmt hook"> vmt_hook_tests = [] {
-    "VMT hook an object instance"_test = [] {
-        auto target = make_single_target();
+TEST(VmtHook, VMTHookAnObjectInstance) {
+    auto target = make_single_target();
 
-        expect(target->add_42(0) == 42_i);
+    EXPECT_EQ(target->add_42(0), 42);
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
-
-        auto vmt_result = SafetyHookVmt::create(target.get());
-
-        expect(vmt_result.has_value());
-
-        target_hook = std::move(*vmt_result);
-
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
-
-        expect(vm_result.has_value());
-
-        add_42_hook = std::move(*vm_result);
-
-        expect(target->add_42(1) == 1380_i);
-
-        add_42_hook.reset();
-
-        expect(target->add_42(2) == 44_i);
-
-        target_hook.reset();
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "Resetting the VMT hook removes all VM hooks for that object"_test = [] {
-        auto target = make_dual_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
-        expect(target->add_43(0) == 43_i);
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
-        static SafetyHookVm add_43_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : DualTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-            int hooked_add_43(int a) { return add_43_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        auto vmt_result = SafetyHookVmt::create(target.get());
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(vmt_result.has_value());
+    add_42_hook = std::move(*vm_result);
 
-        target_hook = std::move(*vmt_result);
+    EXPECT_EQ(target->add_42(1), 1380);
 
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+    add_42_hook.reset();
 
-        expect(vm_result.has_value());
+    EXPECT_EQ(target->add_42(2), 44);
 
-        add_42_hook = std::move(*vm_result);
+    target_hook.reset();
+}
 
-        expect(target->add_42(1) == 1380_i);
+TEST(VmtHook, ResettingTheVMTHookRemovesAllVMHooksForThatObject) {
+    auto target = make_dual_target();
 
-        vm_result = target_hook.hook_method(2 + VMT_OFFSET, &Hook::hooked_add_43);
+    EXPECT_EQ(target->add_42(0), 42);
+    EXPECT_EQ(target->add_43(0), 43);
 
-        expect(vm_result.has_value());
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+    static SafetyHookVm add_43_hook{};
 
-        add_43_hook = std::move(*vm_result);
-
-        expect(target->add_43(1) == 1381_i);
-
-        target_hook.reset();
-
-        expect(target->add_42(2) == 44_i);
-        expect(target->add_43(2) == 45_i);
-
-        add_42_hook.reset();
-        add_43_hook.reset();
+    struct Hook : DualTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
+        int hooked_add_43(int a) { return add_43_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "VMT hooking an object maintains correct RTTI"_test = [] {
-        auto target = make_single_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
-        expect(neq(dynamic_cast<SingleInterface*>(target.get()), nullptr));
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        auto vmt_result = SafetyHookVmt::create(target.get());
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(vmt_result.has_value());
+    add_42_hook = std::move(*vm_result);
 
-        target_hook = std::move(*vmt_result);
+    EXPECT_EQ(target->add_42(1), 1380);
 
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+    vm_result = target_hook.hook_method(2 + VMT_OFFSET, &Hook::hooked_add_43);
 
-        expect(vm_result.has_value());
+    ASSERT_TRUE(vm_result.has_value());
 
-        add_42_hook = std::move(*vm_result);
+    add_43_hook = std::move(*vm_result);
 
-        expect(target->add_42(1) == 1380_i);
-        expect(neq(dynamic_cast<SingleInterface*>(target.get()), nullptr));
+    EXPECT_EQ(target->add_43(1), 1381);
 
-        add_42_hook.reset();
-        target_hook.reset();
+    target_hook.reset();
+
+    EXPECT_EQ(target->add_42(2), 44);
+    EXPECT_EQ(target->add_43(2), 45);
+
+    add_42_hook.reset();
+    add_43_hook.reset();
+}
+
+TEST(VmtHook, VMTHookingAnObjectMaintainsCorrectRTTI) {
+    auto target = make_single_target();
+
+    EXPECT_EQ(target->add_42(0), 42);
+    EXPECT_NE(dynamic_cast<SingleInterface*>(target.get()), nullptr);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "Can safely destroy VmtHook after object is deleted"_test = [] {
-        auto target = make_single_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        auto vmt_result = SafetyHookVmt::create(target.get());
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(vmt_result.has_value());
+    add_42_hook = std::move(*vm_result);
 
-        target_hook = std::move(*vmt_result);
+    EXPECT_EQ(target->add_42(1), 1380);
+    EXPECT_NE(dynamic_cast<SingleInterface*>(target.get()), nullptr);
 
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+    add_42_hook.reset();
+    target_hook.reset();
+}
 
-        expect(vm_result.has_value());
+TEST(VmtHook, CanSafelyDestroyVmtHookAfterObjectIsDeleted) {
+    auto target = make_single_target();
 
-        add_42_hook = std::move(*vm_result);
+    EXPECT_EQ(target->add_42(0), 42);
 
-        expect(target->add_42(1) == 1380_i);
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
 
-        target.reset();
-        target_hook.reset();
-        add_42_hook.reset();
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "Can apply an existing VMT hook to more than one object"_test = [] {
-        auto target = make_single_target();
-        auto target0 = make_single_target();
-        auto target1 = make_single_target();
-        auto target2 = make_single_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        auto vmt_result = SafetyHookVmt::create(target.get());
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(vmt_result.has_value());
+    add_42_hook = std::move(*vm_result);
 
-        target_hook = std::move(*vmt_result);
+    EXPECT_EQ(target->add_42(1), 1380);
 
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+    target.reset();
+    target_hook.reset();
+    add_42_hook.reset();
+}
 
-        expect(vm_result.has_value());
+TEST(VmtHook, CanApplyAnExistingVMTHookToMoreThanOneObject) {
+    auto target = make_single_target();
+    auto target0 = make_single_target();
+    auto target1 = make_single_target();
+    auto target2 = make_single_target();
 
-        add_42_hook = std::move(*vm_result);
+    EXPECT_EQ(target->add_42(0), 42);
 
-        target_hook.apply(target0.get());
-        target_hook.apply(target1.get());
-        target_hook.apply(target2.get());
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
 
-        expect(target->add_42(1) == 1380_i);
-        expect(target0->add_42(1) == 1380_i);
-        expect(target1->add_42(1) == 1380_i);
-        expect(target2->add_42(1) == 1380_i);
-
-        add_42_hook.reset();
-
-        expect(target->add_42(2) == 44_i);
-        expect(target0->add_42(2) == 44_i);
-        expect(target1->add_42(2) == 44_i);
-        expect(target2->add_42(2) == 44_i);
-
-        target_hook.reset();
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "Can remove an object that was previously VMT hooked"_test = [] {
-        auto target = make_single_target();
-        auto target0 = make_single_target();
-        auto target1 = make_single_target();
-        auto target2 = make_single_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        auto vmt_result = SafetyHookVmt::create(target.get());
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(vmt_result.has_value());
+    add_42_hook = std::move(*vm_result);
 
-        target_hook = std::move(*vmt_result);
+    target_hook.apply(target0.get());
+    target_hook.apply(target1.get());
+    target_hook.apply(target2.get());
 
-        auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
+    EXPECT_EQ(target->add_42(1), 1380);
+    EXPECT_EQ(target0->add_42(1), 1380);
+    EXPECT_EQ(target1->add_42(1), 1380);
+    EXPECT_EQ(target2->add_42(1), 1380);
 
-        expect(vm_result.has_value());
+    add_42_hook.reset();
 
-        add_42_hook = std::move(*vm_result);
+    EXPECT_EQ(target->add_42(2), 44);
+    EXPECT_EQ(target0->add_42(2), 44);
+    EXPECT_EQ(target1->add_42(2), 44);
+    EXPECT_EQ(target2->add_42(2), 44);
 
-        target_hook.apply(target0.get());
-        target_hook.apply(target1.get());
-        target_hook.apply(target2.get());
+    target_hook.reset();
+}
 
-        expect(target->add_42(1) == 1380_i);
-        expect(target0->add_42(1) == 1380_i);
-        expect(target1->add_42(1) == 1380_i);
-        expect(target2->add_42(1) == 1380_i);
+TEST(VmtHook, CanRemoveAnObjectThatWasPreviouslyVMTHooked) {
+    auto target = make_single_target();
+    auto target0 = make_single_target();
+    auto target1 = make_single_target();
+    auto target2 = make_single_target();
 
-        target_hook.remove(target0.get());
+    EXPECT_EQ(target->add_42(0), 42);
 
-        expect(target->add_42(2) == 1381_i);
-        expect(target0->add_42(2) == 44_i);
-        expect(target1->add_42(2) == 1381_i);
-        expect(target2->add_42(2) == 1381_i);
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
 
-        target_hook.remove(target2.get());
-
-        expect(target->add_42(2) == 1381_i);
-        expect(target0->add_42(2) == 44_i);
-        expect(target1->add_42(2) == 1381_i);
-        expect(target2->add_42(2) == 44_i);
-
-        target_hook.remove(target.get());
-
-        expect(target->add_42(2) == 44_i);
-        expect(target0->add_42(2) == 44_i);
-        expect(target1->add_42(2) == 1381_i);
-        expect(target2->add_42(2) == 44_i);
-
-        target_hook.remove(target1.get());
-
-        expect(target->add_42(2) == 44_i);
-        expect(target0->add_42(2) == 44_i);
-        expect(target1->add_42(2) == 44_i);
-        expect(target2->add_42(2) == 44_i);
-
-        add_42_hook.reset();
-        target_hook.reset();
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "VMT hook an object instance with easy API"_test = [] {
-        auto target = make_single_target();
+    auto vmt_result = SafetyHookVmt::create(target.get());
 
-        expect(target->add_42(0) == 42_i);
+    ASSERT_TRUE(vmt_result.has_value());
 
-        static SafetyHookVmt target_hook{};
-        static SafetyHookVm add_42_hook{};
+    target_hook = std::move(*vmt_result);
 
-        struct Hook : SingleTarget {
-            int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
-        };
+    auto vm_result = target_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        target_hook = safetyhook::create_vmt(target.get());
-        add_42_hook = safetyhook::create_vm(target_hook, 1 + VMT_OFFSET, &Hook::hooked_add_42);
+    ASSERT_TRUE(vm_result.has_value());
 
-        expect(target->add_42(1) == 1380_i);
+    add_42_hook = std::move(*vm_result);
 
-        add_42_hook.reset();
+    target_hook.apply(target0.get());
+    target_hook.apply(target1.get());
+    target_hook.apply(target2.get());
 
-        expect(target->add_42(2) == 44_i);
+    EXPECT_EQ(target->add_42(1), 1380);
+    EXPECT_EQ(target0->add_42(1), 1380);
+    EXPECT_EQ(target1->add_42(1), 1380);
+    EXPECT_EQ(target2->add_42(1), 1380);
 
-        target_hook.reset();
+    target_hook.remove(target0.get());
+
+    EXPECT_EQ(target->add_42(2), 1381);
+    EXPECT_EQ(target0->add_42(2), 44);
+    EXPECT_EQ(target1->add_42(2), 1381);
+    EXPECT_EQ(target2->add_42(2), 1381);
+
+    target_hook.remove(target2.get());
+
+    EXPECT_EQ(target->add_42(2), 1381);
+    EXPECT_EQ(target0->add_42(2), 44);
+    EXPECT_EQ(target1->add_42(2), 1381);
+    EXPECT_EQ(target2->add_42(2), 44);
+
+    target_hook.remove(target.get());
+
+    EXPECT_EQ(target->add_42(2), 44);
+    EXPECT_EQ(target0->add_42(2), 44);
+    EXPECT_EQ(target1->add_42(2), 1381);
+    EXPECT_EQ(target2->add_42(2), 44);
+
+    target_hook.remove(target1.get());
+
+    EXPECT_EQ(target->add_42(2), 44);
+    EXPECT_EQ(target0->add_42(2), 44);
+    EXPECT_EQ(target1->add_42(2), 44);
+    EXPECT_EQ(target2->add_42(2), 44);
+
+    add_42_hook.reset();
+    target_hook.reset();
+}
+
+TEST(VmtHook, VMTHookAnObjectInstanceWithEasyAPI) {
+    auto target = make_single_target();
+
+    EXPECT_EQ(target->add_42(0), 42);
+
+    static SafetyHookVmt target_hook{};
+    static SafetyHookVm add_42_hook{};
+
+    struct Hook : SingleTarget {
+        int hooked_add_42(int a) { return add_42_hook.thiscall<int>(this, a) + 1337; }
     };
 
-    "VMT hook preserves dynamic_cast with cross-cast"_test = [] {
-        auto target = make_cast_target();
+    target_hook = safetyhook::create_vmt(target.get());
+    add_42_hook = safetyhook::create_vm(target_hook, 1 + VMT_OFFSET, &Hook::hooked_add_42);
 
-        CastBase2* base2 = target.get();
+    EXPECT_EQ(target->add_42(1), 1380);
 
-        static SafetyHookVmt base2_hook{};
-        static SafetyHookVm add_1337_hook{};
+    add_42_hook.reset();
 
-        struct Hook : CastTarget {
-            int hooked_add_1337(int a) { return add_1337_hook.thiscall<int>(this, a) + 42; }
-        };
+    EXPECT_EQ(target->add_42(2), 44);
 
-        auto vmt_result = SafetyHookVmt::create(base2);
-        expect(vmt_result.has_value());
-        base2_hook = std::move(*vmt_result);
+    target_hook.reset();
+}
 
-        auto vm_result = base2_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_1337);
-        expect(vm_result.has_value());
-        add_1337_hook = std::move(*vm_result);
+TEST(VmtHook, VMTHookPreservesDynamicCastWithCrossCast) {
+    auto target = make_cast_target();
 
-        expect(base2->add_1337(1) == 1380_i);
+    CastBase2* base2 = target.get();
 
-        // Cross-cast: CastBase2* -> CastBase1*
-        // Runtime reads offset-to-top from CastBase2's vptr[-2]
-        // Without the fix this is garbage and will crash or return wrong pointer
-        CastBase1* base1 = dynamic_cast<CastBase1*>(base2);
-        expect(neq(base1, nullptr));
-        expect(base1->add_42(1) == 43_i);
+    static SafetyHookVmt base2_hook{};
+    static SafetyHookVm add_1337_hook{};
 
-        add_1337_hook.reset();
-        base2_hook.reset();
+    struct Hook : CastTarget {
+        int hooked_add_1337(int a) { return add_1337_hook.thiscall<int>(this, a) + 42; }
     };
-};
+
+    auto vmt_result = SafetyHookVmt::create(base2);
+    ASSERT_TRUE(vmt_result.has_value());
+    base2_hook = std::move(*vmt_result);
+
+    auto vm_result = base2_hook.hook_method(1 + VMT_OFFSET, &Hook::hooked_add_1337);
+    ASSERT_TRUE(vm_result.has_value());
+    add_1337_hook = std::move(*vm_result);
+
+    EXPECT_EQ(base2->add_1337(1), 1380);
+
+    // Cross-cast: CastBase2* -> CastBase1*
+    // Runtime reads offset-to-top from CastBase2's vptr[-2]
+    // Without the fix this is garbage and will crash or return wrong pointer
+    CastBase1* base1 = dynamic_cast<CastBase1*>(base2);
+    EXPECT_NE(base1, nullptr);
+    EXPECT_EQ(base1->add_42(1), 43);
+
+    add_1337_hook.reset();
+    base2_hook.reset();
 }
