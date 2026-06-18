@@ -173,54 +173,7 @@ jobs:
           cmake --build build --config ${{matrix.build_type}} --parallel
 
       - name: Test
-        if: matrix.os == 'windows-2022' && matrix.compiler != 'mingw'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Continue'
-
-          function Invoke-TestBinary {
-            param(
-              [string] $Path,
-              [string] $Label
-            )
-
-            Write-Host "::group::$Label diagnostics"
-            Write-Host "pwd=$(Get-Location)"
-            Get-Item $Path | Format-List FullName,Length,LastWriteTime | Out-Host
-
-            Write-Host "$Label --list-tests"
-            & $Path --list-tests --use-colour no 2>&1 | Out-Host
-            Write-Host "$Label --list-tests exit=$LASTEXITCODE"
-
-            Write-Host "$Label --success --durations"
-            & $Path --success --durations --use-colour no 2>&1 | Out-Host
-            $exitCode = $LASTEXITCODE
-            Write-Host "$Label run exit=$exitCode"
-            Write-Host "::endgroup::"
-
-            return $exitCode
-          }
-
-          $testExit = Invoke-TestBinary "${{matrix.test_dir}}/test${{matrix.test_ext}}" "test"
-          $amalgamatedExit = Invoke-TestBinary "${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}" "test-amalgamated"
-
-          if ($amalgamatedExit -ne 0) {
-            Write-Host "::group::test-amalgamated failure details"
-            & "${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}" --list-reporters
-            Write-Host "list-reporters exit=$LASTEXITCODE"
-            & "${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}" --libidentify
-            Write-Host "libidentify exit=$LASTEXITCODE"
-            Write-Host "::endgroup::"
-          }
-
-          if ($testExit -ne 0) {
-            exit $testExit
-          }
-
-          exit $amalgamatedExit
-
-      - name: Test
-        if: matrix.os != 'windows-2022' && matrix.compiler != 'mingw'
+        if: matrix.compiler != 'mingw'
         run: |
           ${{matrix.test_dir}}/test${{matrix.test_ext}}
           ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}

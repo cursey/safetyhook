@@ -29,8 +29,11 @@ build-module = "SAFETYHOOK_BUILD_MODULE"
 [fetch-content.ut]
 condition = "build-test"
 git = "https://github.com/boost-ext/ut.git"
-tag = "v2.0.1"
+tag = "v2.3.1"
 shallow = true
+cmake-before = """
+set(BOOST_UT_DISABLE_MODULE ON CACHE BOOL "" FORCE)
+"""
 EXCLUDE_FROM_ALL = true
 
 [fetch-content.xbyak]

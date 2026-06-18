@@ -3,7 +3,8 @@
 
 using namespace boost::ut;
 
-static suite<"mid hook"> mid_hook_tests = [] {
+void register_mid_hook_tests() {
+suite<"mid hook"> mid_hook_tests = [] {
     "Mid hook to change a register"_test = [] {
         struct Target {
             SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL add_42(int a) { return a + 42; }
@@ -133,3 +134,4 @@ static suite<"mid hook"> mid_hook_tests = [] {
         expect(Target::add_42(2) == 44_i);
     };
 };
+}

@@ -16,7 +16,8 @@ void asciiz(Xbyak::CodeGenerator& cg, const char* str) {
     cg.db(0);
 }
 
-static suite<"inline hook (x64)"> inline_hook_x64_tests = [] {
+void register_inline_hook_x64_tests() {
+suite<"inline hook (x64)"> inline_hook_x64_tests = [] {
     "Function with RIP-relative operand is hooked"_test = [] {
         Xbyak::CodeGenerator cg{};
         Xbyak::Label str_label{};
@@ -101,5 +102,8 @@ static suite<"inline hook (x64)"> inline_hook_x64_tests = [] {
         expect(fn(4) == 16_i);
     };
 };
+}
 
+#else
+void register_inline_hook_x64_tests() {}
 #endif

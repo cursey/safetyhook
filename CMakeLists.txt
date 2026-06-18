@@ -38,12 +38,14 @@ project(safetyhook)
 include(FetchContent)
 
 if(SAFETYHOOK_BUILD_TEST) # build-test
-	message(STATUS "Fetching ut (v2.0.1)...")
+	set(BOOST_UT_DISABLE_MODULE ON CACHE BOOL "" FORCE)
+
+	message(STATUS "Fetching ut (v2.3.1)...")
 	FetchContent_Declare(ut
 		GIT_REPOSITORY
 			"https://github.com/boost-ext/ut.git"
 		GIT_TAG
-			v2.0.1
+			v2.3.1
 		GIT_SHALLOW
 			ON
 		EXCLUDE_FROM_ALL

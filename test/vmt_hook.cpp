@@ -12,7 +12,8 @@ static constexpr auto VMT_OFFSET = 0;
 static constexpr auto VMT_OFFSET = 1;
 #endif
 
-static suite<"vmt hook"> vmt_hook_tests = [] {
+void register_vmt_hook_tests() {
+suite<"vmt hook"> vmt_hook_tests = [] {
     "VMT hook an object instance"_test = [] {
         auto target = make_single_target();
 
@@ -326,3 +327,4 @@ static suite<"vmt hook"> vmt_hook_tests = [] {
         base2_hook.reset();
     };
 };
+}

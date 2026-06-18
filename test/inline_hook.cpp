@@ -8,7 +8,8 @@ using namespace std::literals;
 using namespace boost::ut;
 using namespace Xbyak::util;
 
-static suite<"inline hook"> inline_hook_tests = [] {
+void register_inline_hook_tests() {
+suite<"inline hook"> inline_hook_tests = [] {
     "Function hooked multiple times"_test = [] {
         struct Target {
             SAFETYHOOK_NOINLINE static std::string fn(std::string name) { return "hello " + name; }
@@ -671,3 +672,4 @@ static suite<"inline hook"> inline_hook_tests = [] {
         expect(Target::fn(3) == 6_i);
     };
 };
+}

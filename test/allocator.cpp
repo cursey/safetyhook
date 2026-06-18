@@ -3,7 +3,8 @@
 
 using namespace boost::ut;
 
-static suite<"allocator"> allocator_tests = [] {
+void register_allocator_tests() {
+suite<"allocator"> allocator_tests = [] {
     "Allocator reuses freed memory"_test = [] {
         const auto allocator = safetyhook::Allocator::create();
         auto first_allocation = allocator->allocate(128);
@@ -29,3 +30,4 @@ static suite<"allocator"> allocator_tests = [] {
         expect(eq(fourth_allocation->address(), third_allocation->address() + 64));
     };
 };
+}
