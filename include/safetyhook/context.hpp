@@ -36,6 +36,12 @@ union Fpu {
     uint32_t u32[2];
     uint64_t u64;
     uint64_t mm;
+
+    [[nodiscard]] float as_f32() const noexcept;
+    void set_f32(float value) noexcept;
+
+    [[nodiscard]] double as_f64() const noexcept;
+    void set_f64(double value) noexcept;
 };
 #pragma pack(pop)
 

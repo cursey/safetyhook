@@ -6,82 +6,6 @@
 using namespace boost::ut;
 using namespace Xbyak::util;
 
-#if SAFETYHOOK_ARCH_X86_32
-// Write a float value into an Fpu register (converts to 80-bit extended).
-using SetFpuFn = void (*)(safetyhook::Fpu&, float);
-
-auto make_set_fpu() {
-    static Xbyak::CodeGenerator cg{};
-
-    cg.reset();
-
-    cg.mov(eax, dword[esp + 4]);
-    cg.fld(dword[esp + 8]);
-    cg.db(0xDB); // fstp tbyte ptr [eax]
-    cg.db(0x38);
-    cg.ret();
-
-    return cg.getCode<SetFpuFn>();
-}
-
-// Read an Fpu register back as a float (converts from 80-bit extended).
-using GetFpuFn = float (*)(safetyhook::Fpu&);
-
-auto make_get_fpu() {
-    static Xbyak::CodeGenerator cg{};
-
-    cg.reset();
-
-    cg.mov(eax, dword[esp + 4]);
-    cg.db(0xDB); // fld tbyte ptr [eax]
-    cg.db(0x28);
-    cg.sub(esp, 4);
-    cg.fstp(dword[esp]);
-    cg.fld(dword[esp]);
-    cg.add(esp, 4);
-    cg.ret();
-
-    return cg.getCode<GetFpuFn>();
-}
-
-// Write a double value into an Fpu register (converts to 80-bit extended).
-using SetFpuFnD = void (*)(safetyhook::Fpu&, double);
-
-auto make_set_fpu_d() {
-    static Xbyak::CodeGenerator cg{};
-
-    cg.reset();
-
-    cg.mov(eax, dword[esp + 4]);
-    cg.fld(qword[esp + 8]);
-    cg.db(0xDB); // fstp tbyte ptr [eax]
-    cg.db(0x38);
-    cg.ret();
-
-    return cg.getCode<SetFpuFnD>();
-}
-
-// Read an Fpu register back as a double (converts from 80-bit extended).
-using GetFpuFnD = double (*)(safetyhook::Fpu&);
-
-auto make_get_fpu_d() {
-    static Xbyak::CodeGenerator cg{};
-
-    cg.reset();
-
-    cg.mov(eax, dword[esp + 4]);
-    cg.db(0xDB); // fld tbyte ptr [eax]
-    cg.db(0x28);
-    cg.sub(esp, 8);
-    cg.fstp(qword[esp]);
-    cg.fld(qword[esp]);
-    cg.add(esp, 8);
-    cg.ret();
-
-    return cg.getCode<GetFpuFnD>();
-}
-#endif
-
 static suite<"mid hook"> mid_hook_tests = [] {
     "Mid hook to change a register"_test = [] {
         struct Target {
@@ -248,8 +172,6 @@ static suite<"mid hook"> mid_hook_tests = [] {
 
         static float out[8]{};
         static float captured[8]{};
-        static auto get_st = make_get_fpu();
-        static auto set_st = make_set_fpu();
 
         // Unhooked sanity check.
         target(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, out);
@@ -261,14 +183,14 @@ static suite<"mid hook"> mid_hook_tests = [] {
         // Read st0..st7.
         struct ReadHook {
             static void fn(SafetyHookContext& ctx) {
-                captured[0] = get_st(ctx.st0);
-                captured[1] = get_st(ctx.st1);
-                captured[2] = get_st(ctx.st2);
-                captured[3] = get_st(ctx.st3);
-                captured[4] = get_st(ctx.st4);
-                captured[5] = get_st(ctx.st5);
-                captured[6] = get_st(ctx.st6);
-                captured[7] = get_st(ctx.st7);
+                captured[0] = ctx.st0.as_f32();
+                captured[1] = ctx.st1.as_f32();
+                captured[2] = ctx.st2.as_f32();
+                captured[3] = ctx.st3.as_f32();
+                captured[4] = ctx.st4.as_f32();
+                captured[5] = ctx.st5.as_f32();
+                captured[6] = ctx.st6.as_f32();
+                captured[7] = ctx.st7.as_f32();
             }
         };
 
@@ -292,14 +214,14 @@ static suite<"mid hook"> mid_hook_tests = [] {
         // Write st0..st7.
         struct WriteHook {
             static void fn(SafetyHookContext& ctx) {
-                set_st(ctx.st0, 100.0f);
-                set_st(ctx.st1, 200.0f);
-                set_st(ctx.st2, 300.0f);
-                set_st(ctx.st3, 400.0f);
-                set_st(ctx.st4, 500.0f);
-                set_st(ctx.st5, 600.0f);
-                set_st(ctx.st6, 700.0f);
-                set_st(ctx.st7, 800.0f);
+                ctx.st0.set_f32(100.0f);
+                ctx.st1.set_f32(200.0f);
+                ctx.st2.set_f32(300.0f);
+                ctx.st3.set_f32(400.0f);
+                ctx.st4.set_f32(500.0f);
+                ctx.st5.set_f32(600.0f);
+                ctx.st6.set_f32(700.0f);
+                ctx.st7.set_f32(800.0f);
             }
         };
 
@@ -353,8 +275,6 @@ static suite<"mid hook"> mid_hook_tests = [] {
 
         static double out[8]{};
         static double captured[8]{};
-        static auto get_st = make_get_fpu_d();
-        static auto set_st = make_set_fpu_d();
 
         // Unhooked sanity check.
         target(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, out);
@@ -366,14 +286,14 @@ static suite<"mid hook"> mid_hook_tests = [] {
         // Read st0..st7.
         struct ReadHook {
             static void fn(SafetyHookContext& ctx) {
-                captured[0] = get_st(ctx.st0);
-                captured[1] = get_st(ctx.st1);
-                captured[2] = get_st(ctx.st2);
-                captured[3] = get_st(ctx.st3);
-                captured[4] = get_st(ctx.st4);
-                captured[5] = get_st(ctx.st5);
-                captured[6] = get_st(ctx.st6);
-                captured[7] = get_st(ctx.st7);
+                captured[0] = ctx.st0.as_f64();
+                captured[1] = ctx.st1.as_f64();
+                captured[2] = ctx.st2.as_f64();
+                captured[3] = ctx.st3.as_f64();
+                captured[4] = ctx.st4.as_f64();
+                captured[5] = ctx.st5.as_f64();
+                captured[6] = ctx.st6.as_f64();
+                captured[7] = ctx.st7.as_f64();
             }
         };
 
@@ -397,14 +317,14 @@ static suite<"mid hook"> mid_hook_tests = [] {
         // Write st0..st7.
         struct WriteHook {
             static void fn(SafetyHookContext& ctx) {
-                set_st(ctx.st0, 100.0);
-                set_st(ctx.st1, 200.0);
-                set_st(ctx.st2, 300.0);
-                set_st(ctx.st3, 400.0);
-                set_st(ctx.st4, 500.0);
-                set_st(ctx.st5, 600.0);
-                set_st(ctx.st6, 700.0);
-                set_st(ctx.st7, 800.0);
+                ctx.st0.set_f64(100.0);
+                ctx.st1.set_f64(200.0);
+                ctx.st2.set_f64(300.0);
+                ctx.st3.set_f64(400.0);
+                ctx.st4.set_f64(500.0);
+                ctx.st5.set_f64(600.0);
+                ctx.st6.set_f64(700.0);
+                ctx.st7.set_f64(800.0);
             }
         };
 

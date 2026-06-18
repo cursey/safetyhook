@@ -107,6 +107,7 @@ endif()
 
 set(safetyhook_SOURCES
 	"src/allocator.cpp"
+	"src/context.cpp"
 	"src/easy.cpp"
 	"src/inline_hook.cpp"
 	"src/mid_hook.cpp"

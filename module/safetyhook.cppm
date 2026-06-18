@@ -15,6 +15,7 @@ export {
     using safetyhook::Context;
     using safetyhook::Context32;
     using safetyhook::Context64;
+    using safetyhook::Fpu;
     using safetyhook::Xmm;
 
     // easy.hpp
