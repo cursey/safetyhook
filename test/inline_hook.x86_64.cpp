@@ -1,3 +1,6 @@
+#include <cstdint>
+#include <string_view>
+
 #include <gtest/gtest.h>
 #include <safetyhook.hpp>
 #include <xbyak/xbyak.h>

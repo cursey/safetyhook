@@ -47,7 +47,7 @@ TEST(MidHook, MidHookToChangeAnXMMRegister) {
         SAFETYHOOK_NOINLINE static float SAFETYHOOK_FASTCALL add_42(float a) { return a + 0.42f; }
     };
 
-    EXPECT_FLOAT_EQ(Target::add_42(0.0f), 0.42);
+    EXPECT_FLOAT_EQ(Target::add_42(0.0f), 0.42f);
 
     static SafetyHookMid hook;
 
@@ -61,11 +61,11 @@ TEST(MidHook, MidHookToChangeAnXMMRegister) {
 
     hook = std::move(*hook_result);
 
-    EXPECT_FLOAT_EQ(Target::add_42(1.0f), 1337.0);
+    EXPECT_FLOAT_EQ(Target::add_42(1.0f), 1337.0f);
 
     hook.reset();
 
-    EXPECT_FLOAT_EQ(Target::add_42(2.0f), 2.42);
+    EXPECT_FLOAT_EQ(Target::add_42(2.0f), 2.42f);
 }
 #endif
 

@@ -1,5 +1,7 @@
 #include <atomic>
 #include <chrono>
+#include <string>
+#include <string_view>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -159,13 +161,27 @@ TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
         static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
     };
 
+    const auto stop_worker = [&] {
+        is_running.store(false, std::memory_order_relaxed);
+        pause_worker.store(false, std::memory_order_release);
+        if (t.joinable()) {
+            t.join();
+        }
+    };
+
     auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello, SafetyHookInline::StartDisabled);
 
-    ASSERT_TRUE(hook_result.has_value());
+    if (!hook_result.has_value()) {
+        stop_worker();
+        FAIL() << "Failed to create inline hook.";
+    }
 
     hook = std::move(*hook_result);
 
-    ASSERT_TRUE(hook.enable().has_value());
+    if (!hook.enable().has_value()) {
+        stop_worker();
+        FAIL() << "Failed to enable inline hook.";
+    }
     pause_worker.store(false, std::memory_order_release);
 
     EXPECT_EQ(Target::say_hello(0), "Hello #1337"sv);
@@ -180,9 +196,7 @@ TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
 
     hook.reset();
 
-    is_running.store(false, std::memory_order_relaxed);
-    pause_worker.store(false, std::memory_order_release);
-    t.join();
+    stop_worker();
 
     EXPECT_EQ(Target::say_hello(0), "Hello #0"sv);
     EXPECT_GT(count.load(std::memory_order_relaxed), 0);
