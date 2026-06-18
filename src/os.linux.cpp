@@ -3,6 +3,7 @@
 #if SAFETYHOOK_OS_LINUX
 
 #include <cstdio>
+#include <limits>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -103,8 +104,8 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     unsigned long end;
     char perms[5];
     unsigned long offset;
-    int dev_major;
-    int dev_minor;
+    unsigned int dev_major;
+    unsigned int dev_minor;
     unsigned long inode;
     char path[256];
     unsigned long last_end =
@@ -115,8 +116,10 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     while (fgets(line, sizeof(line), maps) != nullptr) {
         path[0] = '\0';
 
-        sscanf(line, "%lx-%lx %4s %lx %x:%x %lu %255[^\n]", &start, &end, perms, &offset, &dev_major, &dev_minor,
-            &inode, path);
+        if (sscanf(line, "%lx-%lx %4s %lx %x:%x %lu %255[^\n]", &start, &end, perms, &offset, &dev_major, &dev_minor,
+                &inode, path) < 7) {
+            continue;
+        }
 
         if (last_end < start && addr >= last_end && addr < start) {
             info = std::make_optional<VmBasicInfo>(
@@ -174,7 +177,11 @@ SystemInfo system_info() {
     info.page_size = page_size;
     info.allocation_granularity = page_size;
     info.min_address = reinterpret_cast<uint8_t*>(0x10000);
-    info.max_address = reinterpret_cast<uint8_t*>(1ull << 47);
+#if SAFETYHOOK_ARCH_X86_64
+    info.max_address = reinterpret_cast<uint8_t*>(uintptr_t{1} << 47);
+#elif SAFETYHOOK_ARCH_X86_32
+    info.max_address = reinterpret_cast<uint8_t*>(std::numeric_limits<uintptr_t>::max());
+#endif
 
     return info;
 }
