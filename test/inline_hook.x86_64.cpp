@@ -36,7 +36,7 @@ TEST(InlineHookX64, FunctionWithRIPRelativeOperandIsHooked) {
 
     EXPECT_EQ(fn(), "Hello"sv);
 
-    static SafetyHookInline hook;
+    SafetyHookInline hook;
 
     struct Hook {
         static const char* fn() { return "Hello, world!"; }
@@ -79,10 +79,12 @@ TEST(InlineHookX64, FunctionWithNoNearbyMemoryIsHooked) {
     EXPECT_EQ(fn(3), 9);
     EXPECT_EQ(fn(4), 16);
 
-    static SafetyHookInline hook;
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static int fn(int a) { return hook.call<int>(a) * a; }
+        static int fn(int a) { return hook_ptr->call<int>(a) * a; }
     };
 
     auto hook_result = SafetyHookInline::create(fn, Hook::fn);

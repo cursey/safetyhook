@@ -78,7 +78,7 @@
 #if SAFETYHOOK_COMPILER_MSVC
 #define SAFETYHOOK_NOINLINE __declspec(noinline)
 #elif SAFETYHOOK_COMPILER_GCC
-#define SAFETYHOOK_NOINLINE __attribute__((noinline, noipa))
+#define SAFETYHOOK_NOINLINE __attribute__((noinline))
 #elif SAFETYHOOK_COMPILER_CLANG
 #define SAFETYHOOK_NOINLINE __attribute__((noinline))
 #endif

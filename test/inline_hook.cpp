@@ -19,10 +19,12 @@ TEST(InlineHook, FunctionHookedMultipleTimes) {
     EXPECT_EQ(Target::fn("world"), "hello world"sv);
 
     // First hook.
-    static SafetyHookInline hook0;
+    static SafetyHookInline* hook0_ptr{};
+    SafetyHookInline hook0;
+    hook0_ptr = &hook0;
 
     struct Hook0 {
-        static std::string fn(std::string name) { return hook0.call<std::string>(name + " and bob"); }
+        static std::string fn(std::string name) { return hook0_ptr->call<std::string>(name + " and bob"); }
     };
 
     auto hook0_result = SafetyHookInline::create(Target::fn, Hook0::fn);
@@ -34,10 +36,12 @@ TEST(InlineHook, FunctionHookedMultipleTimes) {
     EXPECT_EQ(Target::fn("world"), "hello world and bob"sv);
 
     // Second hook.
-    static SafetyHookInline hook1;
+    static SafetyHookInline* hook1_ptr{};
+    SafetyHookInline hook1;
+    hook1_ptr = &hook1;
 
     struct Hook1 {
-        static std::string fn(std::string name) { return hook1.call<std::string>(name + " and alice"); }
+        static std::string fn(std::string name) { return hook1_ptr->call<std::string>(name + " and alice"); }
     };
 
     auto hook1_result = SafetyHookInline::create(Target::fn, Hook1::fn);
@@ -49,10 +53,12 @@ TEST(InlineHook, FunctionHookedMultipleTimes) {
     EXPECT_EQ(Target::fn("world"), "hello world and alice and bob"sv);
 
     // Third hook.
-    static SafetyHookInline hook2;
+    static SafetyHookInline* hook2_ptr{};
+    SafetyHookInline hook2;
+    hook2_ptr = &hook2;
 
     struct Hook2 {
-        static std::string fn(std::string name) { return hook2.call<std::string>(name + " and eve"); }
+        static std::string fn(std::string name) { return hook2_ptr->call<std::string>(name + " and eve"); }
     };
 
     auto hook2_result = SafetyHookInline::create(Target::fn, Hook2::fn);
@@ -64,10 +70,12 @@ TEST(InlineHook, FunctionHookedMultipleTimes) {
     EXPECT_EQ(Target::fn("world"), "hello world and eve and alice and bob"sv);
 
     // Fourth hook.
-    static SafetyHookInline hook3;
+    static SafetyHookInline* hook3_ptr{};
+    SafetyHookInline hook3;
+    hook3_ptr = &hook3;
 
     struct Hook3 {
-        static std::string fn(std::string name) { return hook3.call<std::string>(name + " and carol"); }
+        static std::string fn(std::string name) { return hook3_ptr->call<std::string>(name + " and carol"); }
     };
 
     auto hook3_result = SafetyHookInline::create(Target::fn, Hook3::fn);
@@ -90,12 +98,18 @@ TEST(InlineHook, FunctionWithMultipleArgsHooked) {
         SAFETYHOOK_NOINLINE static int add(int x, int y) { return x + y; }
     };
 
-    EXPECT_EQ(Target::add(2, 3), 5);
+    using AddFn = int (*)(int, int);
+    // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
+    AddFn volatile add = Target::add;
 
-    static SafetyHookInline add_hook;
+    EXPECT_EQ(add(2, 3), 5);
+
+    static SafetyHookInline* add_hook_ptr{};
+    SafetyHookInline add_hook;
+    add_hook_ptr = &add_hook;
 
     struct AddHook {
-        static int add(int x, int y) { return add_hook.call<int>(x * 2, y * 2); }
+        static int add(int x, int y) { return add_hook_ptr->call<int>(x * 2, y * 2); }
     };
 
     auto add_hook_result = SafetyHookInline::create(Target::add, AddHook::add);
@@ -104,11 +118,11 @@ TEST(InlineHook, FunctionWithMultipleArgsHooked) {
 
     add_hook = std::move(*add_hook_result);
 
-    EXPECT_EQ(Target::add(3, 4), 14);
+    EXPECT_EQ(add(3, 4), 14);
 
     add_hook.reset();
 
-    EXPECT_EQ(Target::add(5, 6), 11);
+    EXPECT_EQ(add(5, 6), 11);
 }
 
 #if SAFETYHOOK_OS_WINDOWS
@@ -155,10 +169,12 @@ TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
         std::this_thread::yield();
     }
 
-    static SafetyHookInline hook;
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
+        static std::string say_hello(int times [[maybe_unused]]) { return hook_ptr->call<std::string>(1337); }
     };
 
     const auto stop_worker = [&] {
@@ -204,10 +220,12 @@ TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
 #endif
 
 TEST(InlineHook, FunctionWithShortUnconditionalBranchIsHooked) {
-    static SafetyHookInline hook;
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static int SAFETYHOOK_FASTCALL fn() { return hook.fastcall<int>() + 42; };
+        static int SAFETYHOOK_FASTCALL fn() { return hook_ptr->fastcall<int>() + 42; };
     };
 
     Xbyak::CodeGenerator cg{};
@@ -235,10 +253,12 @@ TEST(InlineHook, FunctionWithShortUnconditionalBranchIsHooked) {
 }
 
 TEST(InlineHook, FunctionWithShortConditionalBranchIsHooked) {
-    static SafetyHookInline hook;
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static int SAFETYHOOK_FASTCALL fn(int x) { return hook.fastcall<int>(x) + 42; };
+        static int SAFETYHOOK_FASTCALL fn(int x) { return hook_ptr->fastcall<int>(x) + 42; };
     };
 
     Xbyak::CodeGenerator cg{};
@@ -679,10 +699,12 @@ TEST(InlineHook, FunctionWithShortJumpInsideTrampoline) {
 
     EXPECT_EQ(fn(), 42);
 
-    static SafetyHookInline hook;
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static int fn() { return hook.call<int>() + 1; }
+        static int fn() { return hook_ptr->call<int>() + 1; }
     };
 
     hook = safetyhook::create_inline(fn, Hook::fn);
@@ -702,14 +724,20 @@ TEST(InlineHook, FunctionHookCanBeEnableAndDisabled) {
         }
     };
 
-    EXPECT_EQ(Target::fn(1), 2);
-    EXPECT_EQ(Target::fn(2), 4);
-    EXPECT_EQ(Target::fn(3), 6);
+    using Fn = int (*)(int);
+    // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
+    Fn volatile fn = Target::fn;
 
-    static SafetyHookInline hook;
+    EXPECT_EQ(fn(1), 2);
+    EXPECT_EQ(fn(2), 4);
+    EXPECT_EQ(fn(3), 6);
+
+    static SafetyHookInline* hook_ptr{};
+    SafetyHookInline hook;
+    hook_ptr = &hook;
 
     struct Hook {
-        static int fn(int a) { return hook.call<int>(a + 1); }
+        static int fn(int a) { return hook_ptr->call<int>(a + 1); }
     };
 
     auto hook0_result = SafetyHookInline::create(Target::fn, Hook::fn, SafetyHookInline::StartDisabled);
@@ -718,25 +746,25 @@ TEST(InlineHook, FunctionHookCanBeEnableAndDisabled) {
 
     hook = std::move(*hook0_result);
 
-    EXPECT_EQ(Target::fn(1), 2);
-    EXPECT_EQ(Target::fn(2), 4);
-    EXPECT_EQ(Target::fn(3), 6);
+    EXPECT_EQ(fn(1), 2);
+    EXPECT_EQ(fn(2), 4);
+    EXPECT_EQ(fn(3), 6);
 
     ASSERT_TRUE(hook.enable().has_value());
 
-    EXPECT_EQ(Target::fn(1), 4);
-    EXPECT_EQ(Target::fn(2), 6);
-    EXPECT_EQ(Target::fn(3), 8);
+    EXPECT_EQ(fn(1), 4);
+    EXPECT_EQ(fn(2), 6);
+    EXPECT_EQ(fn(3), 8);
 
     ASSERT_TRUE(hook.disable().has_value());
 
-    EXPECT_EQ(Target::fn(1), 2);
-    EXPECT_EQ(Target::fn(2), 4);
-    EXPECT_EQ(Target::fn(3), 6);
+    EXPECT_EQ(fn(1), 2);
+    EXPECT_EQ(fn(2), 4);
+    EXPECT_EQ(fn(3), 6);
 
     hook.reset();
 
-    EXPECT_EQ(Target::fn(1), 2);
-    EXPECT_EQ(Target::fn(2), 4);
-    EXPECT_EQ(Target::fn(3), 6);
+    EXPECT_EQ(fn(1), 2);
+    EXPECT_EQ(fn(2), 4);
+    EXPECT_EQ(fn(3), 6);
 }

@@ -6,9 +6,13 @@ TEST(MidHook, MidHookToChangeARegister) {
         SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL add_42(int a) { return a + 42; }
     };
 
-    EXPECT_EQ(Target::add_42(0), 42);
+    using Add42Fn = int(SAFETYHOOK_FASTCALL*)(int);
+    // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
+    Add42Fn volatile add_42 = Target::add_42;
 
-    static SafetyHookMid hook;
+    EXPECT_EQ(add_42(0), 42);
+
+    SafetyHookMid hook;
 
     struct Hook {
         static void add_42(SafetyHookContext& ctx) {
@@ -34,11 +38,11 @@ TEST(MidHook, MidHookToChangeARegister) {
 
     hook = std::move(*hook_result);
 
-    EXPECT_EQ(Target::add_42(1), 1337);
+    EXPECT_EQ(add_42(1), 1337);
 
     hook.reset();
 
-    EXPECT_EQ(Target::add_42(2), 44);
+    EXPECT_EQ(add_42(2), 44);
 }
 
 #if SAFETYHOOK_ARCH_X86_64
@@ -47,9 +51,13 @@ TEST(MidHook, MidHookToChangeAnXMMRegister) {
         SAFETYHOOK_NOINLINE static float SAFETYHOOK_FASTCALL add_42(float a) { return a + 0.42f; }
     };
 
-    EXPECT_FLOAT_EQ(Target::add_42(0.0f), 0.42f);
+    using Add42Fn = float(SAFETYHOOK_FASTCALL*)(float);
+    // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
+    Add42Fn volatile add_42 = Target::add_42;
 
-    static SafetyHookMid hook;
+    EXPECT_FLOAT_EQ(add_42(0.0f), 0.42f);
+
+    SafetyHookMid hook;
 
     struct Hook {
         static void add_42(SafetyHookContext& ctx) { ctx.xmm0.f32[0] = 1337.0f - 0.42f; }
@@ -61,11 +69,11 @@ TEST(MidHook, MidHookToChangeAnXMMRegister) {
 
     hook = std::move(*hook_result);
 
-    EXPECT_FLOAT_EQ(Target::add_42(1.0f), 1337.0f);
+    EXPECT_FLOAT_EQ(add_42(1.0f), 1337.0f);
 
     hook.reset();
 
-    EXPECT_FLOAT_EQ(Target::add_42(2.0f), 2.42f);
+    EXPECT_FLOAT_EQ(add_42(2.0f), 2.42f);
 }
 #endif
 
@@ -77,11 +85,15 @@ TEST(MidHook, MidHookEnableAndDisable) {
         }
     };
 
-    EXPECT_EQ(Target::add_42(0), 42);
-    EXPECT_EQ(Target::add_42(1), 43);
-    EXPECT_EQ(Target::add_42(2), 44);
+    using Add42Fn = int(SAFETYHOOK_FASTCALL*)(int);
+    // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
+    Add42Fn volatile add_42 = Target::add_42;
 
-    static SafetyHookMid hook;
+    EXPECT_EQ(add_42(0), 42);
+    EXPECT_EQ(add_42(1), 43);
+    EXPECT_EQ(add_42(2), 44);
+
+    SafetyHookMid hook;
 
     struct Hook {
         static void add_42(SafetyHookContext& ctx) {
@@ -107,25 +119,25 @@ TEST(MidHook, MidHookEnableAndDisable) {
 
     hook = std::move(*hook_result);
 
-    EXPECT_EQ(Target::add_42(0), 42);
-    EXPECT_EQ(Target::add_42(1), 43);
-    EXPECT_EQ(Target::add_42(2), 44);
+    EXPECT_EQ(add_42(0), 42);
+    EXPECT_EQ(add_42(1), 43);
+    EXPECT_EQ(add_42(2), 44);
 
     ASSERT_TRUE(hook.enable().has_value());
 
-    EXPECT_EQ(Target::add_42(1), 1337);
-    EXPECT_EQ(Target::add_42(2), 1337);
-    EXPECT_EQ(Target::add_42(3), 1337);
+    EXPECT_EQ(add_42(1), 1337);
+    EXPECT_EQ(add_42(2), 1337);
+    EXPECT_EQ(add_42(3), 1337);
 
     ASSERT_TRUE(hook.disable().has_value());
 
-    EXPECT_EQ(Target::add_42(0), 42);
-    EXPECT_EQ(Target::add_42(1), 43);
-    EXPECT_EQ(Target::add_42(2), 44);
+    EXPECT_EQ(add_42(0), 42);
+    EXPECT_EQ(add_42(1), 43);
+    EXPECT_EQ(add_42(2), 44);
 
     hook.reset();
 
-    EXPECT_EQ(Target::add_42(0), 42);
-    EXPECT_EQ(Target::add_42(1), 43);
-    EXPECT_EQ(Target::add_42(2), 44);
+    EXPECT_EQ(add_42(0), 42);
+    EXPECT_EQ(add_42(1), 43);
+    EXPECT_EQ(add_42(2), 44);
 }
