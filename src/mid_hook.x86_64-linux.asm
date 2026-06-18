@@ -20,7 +20,7 @@ push r13
 push r14
 push r15
 pushfq
-sub rsp, 256
+sub rsp, 264
 movdqu [rsp+240], xmm15
 movdqu [rsp+224], xmm14
 movdqu [rsp+208], xmm13
@@ -37,11 +37,12 @@ movdqu [rsp+48], xmm3
 movdqu [rsp+32], xmm2
 movdqu [rsp+16], xmm1
 movdqu [rsp], xmm0
+stmxcsr [rsp+256]
 
 ; fix stored rsp.
-mov rdi, [rsp+384]
+mov rdi, [rsp+392]
 add rdi, 16
-mov [rsp+384], rdi
+mov [rsp+392], rdi
 
 ; set destination parameter
 lea rdi, [rsp]
@@ -58,6 +59,7 @@ call [rel destination]
 mov rsp, rbx
 
 ; restore context
+ldmxcsr [rsp+256]
 movdqu xmm0, [rsp]
 movdqu xmm1, [rsp+16]
 movdqu xmm2, [rsp+32]
@@ -74,7 +76,7 @@ movdqu xmm12, [rsp+192]
 movdqu xmm13, [rsp+208]
 movdqu xmm14, [rsp+224]
 movdqu xmm15, [rsp+240]
-add rsp, 256
+add rsp, 264
 popfq
 pop r15
 pop r14
