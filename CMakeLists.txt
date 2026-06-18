@@ -38,18 +38,22 @@ project(safetyhook)
 include(FetchContent)
 
 if(SAFETYHOOK_BUILD_TEST) # build-test
-	message(STATUS "Fetching ut (v2.0.1)...")
-	FetchContent_Declare(ut
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+	set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+
+	message(STATUS "Fetching googletest (v1.15.2)...")
+	FetchContent_Declare(googletest
 		GIT_REPOSITORY
-			"https://github.com/boost-ext/ut.git"
+			"https://github.com/google/googletest.git"
 		GIT_TAG
-			v2.0.1
+			v1.15.2
 		GIT_SHALLOW
 			ON
 		EXCLUDE_FROM_ALL
 			ON
 	)
-	FetchContent_MakeAvailable(ut)
+	FetchContent_MakeAvailable(googletest)
 
 endif()
 if(SAFETYHOOK_BUILD_TEST) # build-test
@@ -507,6 +511,7 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 		"test/main.cpp"
 		"test/mid_hook.cpp"
 		"test/vmt_hook.cpp"
+		"test/vmt_targets.cpp"
 		cmake.toml
 	)
 
@@ -515,16 +520,12 @@ if(SAFETYHOOK_BUILD_TEST) # build-test
 	target_sources(test PRIVATE ${test_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test_SOURCES})
 
-	target_compile_definitions(test PRIVATE
-		BOOST_UT_DISABLE_MODULE
-	)
-
 	target_compile_features(test PRIVATE
 		cxx_std_23
 	)
 
 	target_link_libraries(test PRIVATE
-		Boost::ut
+		GTest::gtest
 		safetyhook::safetyhook
 		xbyak::xbyak
 	)
@@ -544,6 +545,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 		"test/main.cpp"
 		"test/mid_hook.cpp"
 		"test/vmt_hook.cpp"
+		"test/vmt_targets.cpp"
 		"amalgamated-dist/safetyhook.cpp"
 		cmake.toml
 	)
@@ -552,10 +554,6 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 
 	target_sources(test-amalgamated PRIVATE ${test-amalgamated_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${test-amalgamated_SOURCES})
-
-	target_compile_definitions(test-amalgamated PRIVATE
-		BOOST_UT_DISABLE_MODULE
-	)
 
 	target_compile_features(test-amalgamated PRIVATE
 		cxx_std_23
@@ -567,7 +565,7 @@ if(SAFETYHOOK_BUILD_TEST AND SAFETYHOOK_AMALGAMATE) # build-amalgamate-test
 
 	target_link_libraries(test-amalgamated PRIVATE
 		Zydis
-		Boost::ut
+		GTest::gtest
 		xbyak::xbyak
 	)
 
