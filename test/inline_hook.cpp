@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <thread>
 
@@ -110,15 +111,31 @@ TEST(InlineHook, FunctionWithMultipleArgsHooked) {
 
 #if SAFETYHOOK_OS_WINDOWS
 TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
-    static int count = 0;
-    static bool is_running = true;
+    static std::atomic<int> count = 0;
+    static std::atomic<bool> is_running = true;
+    static std::atomic<bool> pause_worker = false;
+    static std::atomic<bool> worker_paused = false;
+
+    count.store(0, std::memory_order_relaxed);
+    is_running.store(true, std::memory_order_relaxed);
+    pause_worker.store(false, std::memory_order_relaxed);
+    worker_paused.store(false, std::memory_order_relaxed);
 
     struct Target {
         SAFETYHOOK_NOINLINE static std::string say_hello(int times) { return "Hello #" + std::to_string(times); }
 
         static void say_hello_infinitely() {
-            while (is_running) {
-                say_hello(count++);
+            while (is_running.load(std::memory_order_relaxed)) {
+                if (pause_worker.load(std::memory_order_acquire)) {
+                    worker_paused.store(true, std::memory_order_release);
+                    while (pause_worker.load(std::memory_order_acquire) && is_running.load(std::memory_order_relaxed)) {
+                        std::this_thread::yield();
+                    }
+                    worker_paused.store(false, std::memory_order_release);
+                    continue;
+                }
+
+                say_hello(count.fetch_add(1, std::memory_order_relaxed));
             }
         }
     };
@@ -127,28 +144,48 @@ TEST(InlineHook, ActiveFunctionIsHookedAndUnhooked) {
 
     std::this_thread::sleep_for(1s);
 
+    // This test hooks code in the same image as safetyhook, which makes trap_threads keep the page executable.
+    // Pause the worker while patching so the test does not race instruction writes. Hooking other images does not
+    // need this manual synchronization because thread trapping redirects execution during the patch window.
+    pause_worker.store(true, std::memory_order_release);
+
+    while (!worker_paused.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+
     static SafetyHookInline hook;
 
     struct Hook {
         static std::string say_hello(int times [[maybe_unused]]) { return hook.call<std::string>(1337); }
     };
 
-    auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello);
+    auto hook_result = SafetyHookInline::create(Target::say_hello, Hook::say_hello, SafetyHookInline::StartDisabled);
 
     ASSERT_TRUE(hook_result.has_value());
 
     hook = std::move(*hook_result);
 
+    ASSERT_TRUE(hook.enable().has_value());
+    pause_worker.store(false, std::memory_order_release);
+
     EXPECT_EQ(Target::say_hello(0), "Hello #1337"sv);
 
     std::this_thread::sleep_for(1s);
+
+    pause_worker.store(true, std::memory_order_release);
+
+    while (!worker_paused.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+
     hook.reset();
 
-    is_running = false;
+    is_running.store(false, std::memory_order_relaxed);
+    pause_worker.store(false, std::memory_order_release);
     t.join();
 
     EXPECT_EQ(Target::say_hello(0), "Hello #0"sv);
-    EXPECT_GT(count, 0);
+    EXPECT_GT(count.load(std::memory_order_relaxed), 0);
 }
 #endif
 
