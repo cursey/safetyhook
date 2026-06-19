@@ -18,31 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-if(SAFETYHOOK_FETCH_ZYDIS OR SAFETYHOOK_BUILD_TEST)
-    set(CPM_DOWNLOAD_VERSION 0.42.3)
-    set(CPM_HASH_SUM "a609e875fd532b067174250f6abbc3dac22fe2d64869783fb1e80bda1625c844")
-
-    if(CPM_SOURCE_CACHE)
-        set(CPM_DOWNLOAD_LOCATION "${CPM_SOURCE_CACHE}/cpm/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-    elseif(DEFINED ENV{CPM_SOURCE_CACHE})
-        set(CPM_DOWNLOAD_LOCATION "$ENV{CPM_SOURCE_CACHE}/cpm/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-    else()
-        set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-    endif()
-
-    get_filename_component(CPM_DOWNLOAD_LOCATION "${CPM_DOWNLOAD_LOCATION}" ABSOLUTE)
-    cmake_path(GET CPM_DOWNLOAD_LOCATION PARENT_PATH CPM_DOWNLOAD_DIR)
-    file(MAKE_DIRECTORY "${CPM_DOWNLOAD_DIR}")
-
-    file(DOWNLOAD
-        "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
-        "${CPM_DOWNLOAD_LOCATION}"
-        EXPECTED_HASH SHA256=${CPM_HASH_SUM}
-    )
-
-    include("${CPM_DOWNLOAD_LOCATION}")
-endif()
+include(cmake/CPM.cmake)
 
 # CPM.cmake shorthand syntax will add `EXCLUDE_FROM_ALL` and `SYSTEM` flag by default.
 
