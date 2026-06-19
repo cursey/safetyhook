@@ -10,9 +10,8 @@ fi
 clang_format_version=$(clang-format --version | sed -n 's/.*version \([0-9][0-9]*\).*/\1/p')
 
 if [ "$clang_format_version" != "22" ]; then
-    echo "error: clang-format 22 is required for this repository." >&2
+    echo "warning: clang-format 22 is used by CI for this repository." >&2
     echo "found: $(clang-format --version)" >&2
-    exit 1
 fi
 
 files=$(mktemp)
