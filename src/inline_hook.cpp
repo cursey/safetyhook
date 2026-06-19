@@ -282,16 +282,15 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
         const auto is_relative = (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) != 0;
 
-        if (
 #if SAFETYHOOK_ARCH_X86_32
-            auto thunk_reg = x86_get_pc_thunk_register(ip, ix);
-            thunk_reg
-        ) {
+        if (auto thunk_reg = x86_get_pc_thunk_register(ip, ix); thunk_reg) {
             emit_mov_r32_imm32(tramp_ip, *thunk_reg, ip + ix.length);
             tramp_ip += ix.length;
-        } else if (
+            continue;
+        }
 #endif
-            is_relative && ix.raw.disp.size == 32) {
+
+        if (is_relative && ix.raw.disp.size == 32) {
             std::copy_n(ip, ix.length, tramp_ip);
             const auto target_address = ip + ix.length + ix.raw.disp.value;
             const auto new_disp = target_address - (tramp_ip + ix.length);

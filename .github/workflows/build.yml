@@ -7,9 +7,29 @@ on:
       - v*
 
 jobs:
+  formatting:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Install clang-format 22
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm.sh -o llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 22
+          sudo apt-get install -y clang-format-22
+
+      - name: Check formatting
+        run: |
+          mapfile -t files < <(find src include test example module -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' -o -name '*.cppm' \))
+          clang-format-22 --dry-run --Werror -style=file "${files[@]}"
+
   build:
     name: ${{matrix.os}} ${{matrix.arch}} ${{matrix.compiler}} ${{matrix.build_type}}
     runs-on: ${{matrix.os}}
+    needs: formatting
     strategy:
       fail-fast: false
       matrix:

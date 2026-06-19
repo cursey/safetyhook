@@ -1,0 +1,68 @@
+#!/bin/sh
+
+set -eu
+
+if ! command -v clang-format >/dev/null 2>&1; then
+    echo "error: clang-format is required for this repository." >&2
+    exit 1
+fi
+
+clang_format_version=$(clang-format --version | sed -n 's/.*version \([0-9][0-9]*\).*/\1/p')
+
+if [ "$clang_format_version" != "22" ]; then
+    echo "warning: clang-format 22 is used by CI for this repository." >&2
+    echo "found: $(clang-format --version)" >&2
+fi
+
+files=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.files.XXXXXX")
+staged_file=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.staged.XXXXXX")
+formatted_file=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.formatted.XXXXXX")
+
+cleanup() {
+    rm -f "$files" "$staged_file" "$formatted_file"
+}
+
+trap cleanup EXIT HUP INT TERM
+
+git diff --cached --name-only --diff-filter=ACMR -- \
+    '*.c' '*.cc' '*.cpp' '*.cxx' \
+    '*.h' '*.hh' '*.hpp' '*.hxx' \
+    '*.cppm' >"$files"
+
+if [ ! -s "$files" ]; then
+    exit 0
+fi
+
+status=0
+
+while IFS= read -r file; do
+    if [ ! -f "$file" ]; then
+        continue
+    fi
+
+    git show ":$file" >"$staged_file"
+    clang-format -style=file --assume-filename="$file" <"$staged_file" >"$formatted_file"
+
+    if ! cmp -s "$staged_file" "$formatted_file"; then
+        echo "error: $file is not clang-formatted." >&2
+        status=1
+    fi
+done <"$files"
+
+if [ "$status" -ne 0 ]; then
+    cat >&2 <<'EOF'
+
+Format the files above with clang-format 22, then stage them again.
+
+bash:
+  find src include test example module -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' -o -name '*.cppm' \) -exec clang-format -i -style=file {} +
+
+pwsh:
+  Get-ChildItem src,include,test,example,module -Recurse -Include *.c,*.cc,*.cpp,*.cxx,*.h,*.hh,*.hpp,*.hxx,*.cppm | ForEach-Object { clang-format -i -style=file $_.FullName }
+
+cmd:
+  for %d in (src include test example module) do @for /r %d %f in (*.c *.cc *.cpp *.cxx *.h *.hh *.hpp *.hxx *.cppm) do @clang-format -i -style=file "%f"
+EOF
+fi
+
+exit "$status"
