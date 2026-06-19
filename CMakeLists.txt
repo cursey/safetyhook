@@ -19,19 +19,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(CPM_DOWNLOAD_VERSION 0.40.8)
-set(CPM_DOWNLOAD_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
+if(SAFETYHOOK_FETCH_ZYDIS OR SAFETYHOOK_BUILD_TEST)
+    set(CPM_DOWNLOAD_VERSION 0.40.8)
+    set(CPM_DOWNLOAD_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
 
-if(NOT EXISTS "${CPM_DOWNLOAD_LOCATION}")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cmake")
-    file(DOWNLOAD
-        "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
-        "${CPM_DOWNLOAD_LOCATION}"
-        EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
-    )
+    if(NOT EXISTS "${CPM_DOWNLOAD_LOCATION}")
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cmake")
+        file(DOWNLOAD
+            "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
+            "${CPM_DOWNLOAD_LOCATION}"
+            EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
+        )
+    endif()
+
+    include("${CPM_DOWNLOAD_LOCATION}")
 endif()
-
-include("${CPM_DOWNLOAD_LOCATION}")
 
 if(SAFETYHOOK_FETCH_ZYDIS)
     set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
