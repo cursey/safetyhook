@@ -8,49 +8,268 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    name: ${{matrix.os}} ${{matrix.arch}} ${{matrix.compiler}} ${{matrix.build_type}}
+    runs-on: ${{matrix.os}}
     strategy:
+      fail-fast: false
       matrix:
-        arch: [ x64, Win32 ]
-        build_type: [ Debug, Release ]
+        include:
+          - os: windows-2022
+            arch: x64
+            compiler: msvc
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A x64
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: msvc
+            build_type: Release
+            build_examples: ON
+            configure_args: -A x64
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: msvc
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A Win32
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: msvc
+            build_type: Release
+            build_examples: ON
+            configure_args: -A Win32
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: clang-cl
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A x64 -T ClangCL
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: clang-cl
+            build_type: Release
+            build_examples: ON
+            configure_args: -A x64 -T ClangCL
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: clang-cl
+            build_type: Debug
+            build_examples: ON
+            configure_args: -A Win32 -T ClangCL
+            test_dir: ./build/Debug
+            test_ext: .exe
+          - os: windows-2022
+            arch: Win32
+            compiler: clang-cl
+            build_type: Release
+            build_examples: ON
+            configure_args: -A Win32 -T ClangCL
+            test_dir: ./build/Release
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: mingw
+            build_type: Debug
+            build_examples: OFF
+            msystem: MINGW64
+            mingw_package_prefix: mingw-w64-x86_64
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x64
+            compiler: mingw
+            build_type: Release
+            build_examples: OFF
+            msystem: MINGW64
+            mingw_package_prefix: mingw-w64-x86_64
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x86
+            compiler: mingw
+            build_type: Debug
+            build_examples: OFF
+            msystem: MINGW32
+            mingw_package_prefix: mingw-w64-i686
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: windows-2022
+            arch: x86
+            compiler: mingw
+            build_type: Release
+            build_examples: OFF
+            msystem: MINGW32
+            mingw_package_prefix: mingw-w64-i686
+            configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: .exe
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: gcc
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: gcc
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: gcc
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: gcc
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: clang
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: clang
+            build_type: Debug
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x86
+            compiler: clang
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
+            test_dir: ./build
+            test_ext: ""
+          - os: ubuntu-24.04
+            arch: x64
+            compiler: clang
+            build_type: Release
+            build_examples: OFF
+            configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++
+            test_dir: ./build
+            test_ext: ""
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up MSYS2
+        if: matrix.compiler == 'mingw'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.msystem}}
+          update: true
+          install: >-
+            git
+            ${{matrix.mingw_package_prefix}}-cmake
+            ${{matrix.mingw_package_prefix}}-gcc
+            ${{matrix.mingw_package_prefix}}-ninja
+            ${{matrix.mingw_package_prefix}}-python
+
+      - name: Install Linux x86 dependencies
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x86'
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
+
+      - name: Install libc++ for Clang x64
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x64' && matrix.compiler == 'clang'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libc++-dev libc++abi-dev
+
+      - name: Install libc++ for Clang x86
+        if: matrix.os == 'ubuntu-24.04' && matrix.arch == 'x86' && matrix.compiler == 'clang'
+        run: |
+          sudo apt-get install -y clang libc++-dev:i386 libc++abi-dev:i386
 
       - name: Configure
+        if: matrix.compiler != 'mingw'
         run: |
-          mkdir build
-          cd build
-          cmake -A ${{matrix.arch}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=ON -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON ..
+          cmake -B build ${{matrix.configure_args}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=${{matrix.build_examples}} -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON .
+
+      - name: Configure
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          cmake -B build ${{matrix.configure_args}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DSAFETYHOOK_FETCH_ZYDIS=ON -DSAFETYHOOK_BUILD_EXAMPLES=${{matrix.build_examples}} -DSAFETYHOOK_BUILD_TEST=ON -DSAFETYHOOK_AMALGAMATE=ON .
 
       - name: Build
+        if: matrix.compiler != 'mingw'
+        run: |
+          cmake --build build --config ${{matrix.build_type}} --parallel
+
+      - name: Build
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
         run: |
           cmake --build build --config ${{matrix.build_type}} --parallel
 
       - name: Test
+        if: matrix.compiler != 'mingw'
         run: |
-          ctest --test-dir build -C ${{matrix.build_type}} --output-on-failure
+          ${{matrix.test_dir}}/test${{matrix.test_ext}}
+          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
+
+      - name: Test
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          ${{matrix.test_dir}}/test${{matrix.test_ext}}
+          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
 
   amalgamated-dist:
     runs-on: windows-2022
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.3
 
       - name: Amalgamate
         run: |
-          python3 amalgamate.py
+          python amalgamate.py
 
       - name: Compress amalgamated release
-        uses: vimtor/action-zip@v1.1
-        with:
-          files: amalgamated-dist/
-          dest: safetyhook-amalgamated.zip
+        run: |
+          Compress-Archive -Path amalgamated-dist -DestinationPath safetyhook-amalgamated.zip
 
       - name: Upload amalgamate
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: safetyhook-amalgamated
           path: amalgamated-dist/
@@ -63,19 +282,17 @@ jobs:
            @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\amalgamated-dist\Zydis.h
 
       - name: Compress amalgamated release with Zydis
-        uses: vimtor/action-zip@v1.1
-        with:
-          files: amalgamated-dist/
-          dest: safetyhook-amalgamated-zydis.zip
+        run: |
+          Compress-Archive -Path amalgamated-dist -DestinationPath safetyhook-amalgamated-zydis.zip
 
       - name: Upload amalgamate with Zydis
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: safetyhook-amalgamated-zydis
           path: amalgamated-dist/
 
       - name: Release
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v3.0.0
         if: startsWith(github.ref, 'refs/tags/')
         with:
           prerelease: ${{contains(github.ref, '-pre')}}

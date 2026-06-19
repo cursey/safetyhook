@@ -1,4 +1,5 @@
 #include <iterator>
+#include <optional>
 
 #if __has_include("Zydis/Zydis.h")
 #include "Zydis/Zydis.h"
@@ -113,6 +114,42 @@ static bool decode(ZydisDecodedInstruction* ix, uint8_t* ip) {
 
     return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, ip, 15, ix));
 }
+
+#if SAFETYHOOK_ARCH_X86_32
+static std::optional<uint8_t> x86_get_pc_thunk_register(uint8_t* ip, const ZydisDecodedInstruction& ix) {
+    if (ix.mnemonic != ZYDIS_MNEMONIC_CALL || ix.raw.imm[0].size != 32) {
+        return std::nullopt;
+    }
+
+    const auto* thunk_ip = ip + ix.length + static_cast<int32_t>(ix.raw.imm[0].value.s);
+    ZydisDecodedInstruction mov_ix{};
+    ZydisDecodedInstruction ret_ix{};
+
+    if (!decode(&mov_ix, const_cast<uint8_t*>(thunk_ip)) ||
+        !decode(&ret_ix, const_cast<uint8_t*>(thunk_ip + mov_ix.length))) {
+        return std::nullopt;
+    }
+
+    // GNU i386 PIC thunks have this body: mov r32, [esp]; ret.
+    if (mov_ix.mnemonic != ZYDIS_MNEMONIC_MOV || mov_ix.length != 3 || ret_ix.mnemonic != ZYDIS_MNEMONIC_RET ||
+        ret_ix.length != 1 || thunk_ip[0] != 0x8B || thunk_ip[2] != 0x24 || thunk_ip[mov_ix.length] != 0xC3) {
+        return std::nullopt;
+    }
+
+    const auto modrm = thunk_ip[1];
+
+    if ((modrm & 0xC7) != 0x04) {
+        return std::nullopt;
+    }
+
+    return (modrm >> 3) & 0x07;
+}
+
+static void emit_mov_r32_imm32(uint8_t* ip, uint8_t reg, uint8_t* value) {
+    *ip = static_cast<uint8_t>(0xB8 + reg);
+    store(ip + 1, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(value)));
+}
+#endif
 
 std::expected<InlineHook, InlineHook::Error> InlineHook::create(void* target, void* destination, Flags flags) {
     return create(Allocator::global(), target, destination, flags);
@@ -245,7 +282,16 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
         const auto is_relative = (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) != 0;
 
-        if (is_relative && ix.raw.disp.size == 32) {
+        if (
+#if SAFETYHOOK_ARCH_X86_32
+            auto thunk_reg = x86_get_pc_thunk_register(ip, ix);
+            thunk_reg
+        ) {
+            emit_mov_r32_imm32(tramp_ip, *thunk_reg, ip + ix.length);
+            tramp_ip += ix.length;
+        } else if (
+#endif
+            is_relative && ix.raw.disp.size == 32) {
             std::copy_n(ip, ix.length, tramp_ip);
             const auto target_address = ip + ix.length + ix.raw.disp.value;
             const auto new_disp = target_address - (tramp_ip + ix.length);

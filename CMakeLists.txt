@@ -64,9 +64,13 @@ if(SAFETYHOOK_BUILD_TEST)
     enable_testing()
 
     CPMAddPackage(
-        NAME ut
-        GITHUB_REPOSITORY boost-ext/ut
-        GIT_TAG v2.0.1
+        NAME googletest
+        GITHUB_REPOSITORY google/googletest
+        GIT_TAG v1.15.2
+        OPTIONS
+            "gtest_force_shared_crt ON"
+            "INSTALL_GTEST OFF"
+            "BUILD_GMOCK OFF"
         EXCLUDE_FROM_ALL YES
     )
 
