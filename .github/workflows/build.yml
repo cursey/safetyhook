@@ -20,64 +20,48 @@ jobs:
             build_type: Debug
             build_examples: ON
             configure_args: -A x64
-            test_dir: ./build/Debug
-            test_ext: .exe
           - os: windows-2022
             arch: x64
             compiler: msvc
             build_type: Release
             build_examples: ON
             configure_args: -A x64
-            test_dir: ./build/Release
-            test_ext: .exe
           - os: windows-2022
             arch: Win32
             compiler: msvc
             build_type: Debug
             build_examples: ON
             configure_args: -A Win32
-            test_dir: ./build/Debug
-            test_ext: .exe
           - os: windows-2022
             arch: Win32
             compiler: msvc
             build_type: Release
             build_examples: ON
             configure_args: -A Win32
-            test_dir: ./build/Release
-            test_ext: .exe
           - os: windows-2022
             arch: x64
             compiler: clang-cl
             build_type: Debug
             build_examples: ON
             configure_args: -A x64 -T ClangCL
-            test_dir: ./build/Debug
-            test_ext: .exe
           - os: windows-2022
             arch: x64
             compiler: clang-cl
             build_type: Release
             build_examples: ON
             configure_args: -A x64 -T ClangCL
-            test_dir: ./build/Release
-            test_ext: .exe
           - os: windows-2022
             arch: Win32
             compiler: clang-cl
             build_type: Debug
             build_examples: ON
             configure_args: -A Win32 -T ClangCL
-            test_dir: ./build/Debug
-            test_ext: .exe
           - os: windows-2022
             arch: Win32
             compiler: clang-cl
             build_type: Release
             build_examples: ON
             configure_args: -A Win32 -T ClangCL
-            test_dir: ./build/Release
-            test_ext: .exe
           - os: windows-2022
             arch: x64
             compiler: mingw
@@ -86,8 +70,6 @@ jobs:
             msystem: MINGW64
             mingw_package_prefix: mingw-w64-x86_64
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: .exe
           - os: windows-2022
             arch: x64
             compiler: mingw
@@ -96,8 +78,6 @@ jobs:
             msystem: MINGW64
             mingw_package_prefix: mingw-w64-x86_64
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: .exe
           - os: windows-2022
             arch: x86
             compiler: mingw
@@ -106,8 +86,6 @@ jobs:
             msystem: MINGW32
             mingw_package_prefix: mingw-w64-i686
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: .exe
           - os: windows-2022
             arch: x86
             compiler: mingw
@@ -116,72 +94,54 @@ jobs:
             msystem: MINGW32
             mingw_package_prefix: mingw-w64-i686
             configure_args: -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: .exe
           - os: ubuntu-24.04
             arch: x64
             compiler: gcc
             build_type: Debug
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x64
             compiler: gcc
             build_type: Release
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x86
             compiler: gcc
             build_type: Debug
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x86
             compiler: gcc
             build_type: Release
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_MODULE_LINKER_FLAGS=-m32
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x64
             compiler: clang
             build_type: Debug
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x86
             compiler: clang
             build_type: Debug
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x86
             compiler: clang
             build_type: Release
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS='-m32 -stdlib=libc++' -DCMAKE_EXE_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_SHARED_LINKER_FLAGS='-m32 -stdlib=libc++' -DCMAKE_MODULE_LINKER_FLAGS='-m32 -stdlib=libc++'
-            test_dir: ./build
-            test_ext: ""
           - os: ubuntu-24.04
             arch: x64
             compiler: clang
             build_type: Release
             build_examples: OFF
             configure_args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++
-            test_dir: ./build
-            test_ext: ""
 
     steps:
       - name: Checkout
@@ -243,15 +203,13 @@ jobs:
       - name: Test
         if: matrix.compiler != 'mingw'
         run: |
-          ${{matrix.test_dir}}/test${{matrix.test_ext}}
-          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
+          ctest --test-dir build -C ${{matrix.build_type}} --output-on-failure
 
       - name: Test
         if: matrix.compiler == 'mingw'
         shell: msys2 {0}
         run: |
-          ${{matrix.test_dir}}/test${{matrix.test_ext}}
-          ${{matrix.test_dir}}/test-amalgamated${{matrix.test_ext}}
+          ctest --test-dir build -C ${{matrix.build_type}} --output-on-failure
 
   amalgamated-dist:
     runs-on: windows-2022
