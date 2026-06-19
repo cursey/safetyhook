@@ -7,9 +7,27 @@ on:
       - v*
 
 jobs:
+  formatting:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          mapfile -t files < <(find src include test example module -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' -o -name '*.cppm' \))
+          clang-format --dry-run --Werror -style=file "${files[@]}"
+
   build:
     name: ${{matrix.os}} ${{matrix.arch}} ${{matrix.compiler}} ${{matrix.build_type}}
     runs-on: ${{matrix.os}}
+    needs: formatting
     strategy:
       fail-fast: false
       matrix:
