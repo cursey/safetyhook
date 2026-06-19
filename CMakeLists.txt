@@ -45,6 +45,7 @@ endif()
 
 if(SAFETYHOOK_AMALGAMATE)
     find_package(Python3 REQUIRED)
+    set(SAFETYHOOK_AMALGAMATED_DIR "${PROJECT_BINARY_DIR}/amalgamated-dist")
 endif()
 
 if(SAFETYHOOK_BUILD_TEST)

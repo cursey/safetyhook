@@ -16,10 +16,10 @@ add_test(NAME safetyhook COMMAND $<TARGET_FILE:safetyhook-test>)
 if(SAFETYHOOK_AMALGAMATE)
     add_executable(safetyhook-test-amalgamated
         ${SAFETYHOOK_TEST_SOURCES}
-        "${PROJECT_SOURCE_DIR}/amalgamated-dist/safetyhook.cpp"
+        "${SAFETYHOOK_AMALGAMATED_DIR}/safetyhook.cpp"
     )
     target_compile_features(safetyhook-test-amalgamated PRIVATE cxx_std_23)
-    target_include_directories(safetyhook-test-amalgamated PRIVATE "${PROJECT_SOURCE_DIR}/amalgamated-dist")
+    target_include_directories(safetyhook-test-amalgamated PRIVATE "${SAFETYHOOK_AMALGAMATED_DIR}")
     target_link_libraries(safetyhook-test-amalgamated PRIVATE Zydis GTest::gtest xbyak::xbyak)
     add_dependencies(safetyhook-test-amalgamated safetyhook-amalgamate)
     add_test(NAME safetyhook-amalgamated COMMAND $<TARGET_FILE:safetyhook-test-amalgamated>)

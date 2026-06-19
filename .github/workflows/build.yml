@@ -238,36 +238,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6.0.3
 
-      - name: Amalgamate
+      - name: Configure amalgamation
         run: |
-          python amalgamate.py
+          cmake -B build -DSAFETYHOOK_AMALGAMATE=ON -DSAFETYHOOK_FETCH_ZYDIS=ON .
+
+      - name: Build amalgamation
+        run: |
+          cmake --build build --target safetyhook-amalgamate --parallel
 
       - name: Compress amalgamated release
         run: |
-          Compress-Archive -Path amalgamated-dist -DestinationPath safetyhook-amalgamated.zip
+          Compress-Archive -Path build/amalgamated-dist -DestinationPath safetyhook-amalgamated.zip
 
       - name: Upload amalgamate
         uses: actions/upload-artifact@v7.0.1
         with:
           name: safetyhook-amalgamated
-          path: amalgamated-dist/
+          path: build/amalgamated-dist/
 
       - name: Download & extract Zydis
         run: |
           Invoke-WebRequest -Uri https://github.com/zyantific/zydis/releases/download/v4.1.0/zydis-amalgamated.zip -OutFile zydis.zip
-          Expand-Archive .\zydis.zip .
+          Expand-Archive .\zydis.zip .\build
           Remove-Item .\zydis.zip
-           @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\amalgamated-dist\Zydis.h
+          @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\build\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\build\amalgamated-dist\Zydis.h
 
       - name: Compress amalgamated release with Zydis
         run: |
-          Compress-Archive -Path amalgamated-dist -DestinationPath safetyhook-amalgamated-zydis.zip
+          Compress-Archive -Path build/amalgamated-dist -DestinationPath safetyhook-amalgamated-zydis.zip
 
       - name: Upload amalgamate with Zydis
         uses: actions/upload-artifact@v7.0.1
         with:
           name: safetyhook-amalgamated-zydis
-          path: amalgamated-dist/
+          path: build/amalgamated-dist/
 
       - name: Release
         uses: softprops/action-gh-release@v3.0.0
