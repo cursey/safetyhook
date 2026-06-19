@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import List, Set
 from glob import glob
-from shutil import rmtree
 from textwrap import dedent
 
 import os
@@ -183,11 +182,7 @@ def main():
     output_dir = args.output_dir.resolve()
     polyfill = args.polyfill is True
 
-    if output_dir.exists():
-        print('Output directory exists. Deleting.')
-        rmtree(output_dir)
-
-    output_dir.mkdir(parents=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     covered_headers = set()
     with open(output_dir / 'safetyhook.hpp', 'w') as f:
