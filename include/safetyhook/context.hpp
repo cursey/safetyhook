@@ -21,6 +21,8 @@ union Xmm {
     double f64[2];
 };
 
+#if SAFETYHOOK_ARCH_X86_32
+
 /// @brief 80-bit x87 extended-precision register (ST(n) slot from FNSAVE/FRSTOR).
 /// @note The explicit integer bit (bit 63) makes direct reinterpretation as
 /// double unsafe -- conversions go through as_f32/as_f64/set_f32/set_f64.
@@ -57,6 +59,8 @@ struct FpuEnv {
 };
 #pragma pack(pop)
 
+#endif
+
 /// @brief Context structure for 64-bit MidHook.
 /// @details This structure is used to pass the context of the hooked function to the destination allowing full access
 /// to the 64-bit registers at the moment the hook is called.
@@ -78,12 +82,15 @@ struct Context64 {
 /// always ST(0)). MXCSR is saved via stmxcsr. FRSTOR/ldmxcsr replay the saved image verbatim on return, so writes to
 /// st[n] or mxcsr take effect for the hooked code.
 struct Context32 {
+#if SAFETYHOOK_ARCH_X86_32
     FpuEnv fpu_env; ///< x87 operating environment (28 bytes).
     Fpu st[8];      ///< x87 ST(0)..ST(7), logical stack order (80 bytes).
     uint32_t mxcsr; ///< SSE control/status (saved via stmxcsr).
+#endif
     Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
     uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, trampoline_esp, eip;
 
+#if SAFETYHOOK_ARCH_X86_32
     /// @brief Pop ST(0): shift ST(1..7) down into ST(0..6) (cf. `fstp st(0)`).
     /// @note Only the register-slot bytes are rotated; fpu_env (TOP, FTW, etc.) is NOT
     /// re-derived to reflect the new logical stack. FRSTOR reinstates the captured env
@@ -102,6 +109,7 @@ struct Context32 {
     /// @note Same env caveat as st_pop: slot bytes are rotated but fpu_env is not updated.
     /// @param v The value to load as the new ST(0).
     void st_push_f64(double v) noexcept;
+#endif
 };
 
 /// @brief Context structure for MidHook.

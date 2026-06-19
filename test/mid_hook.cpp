@@ -311,6 +311,8 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
 
     EXPECT_FLOAT_EQ(out, 1.0f);
 
+    SafetyHookMid hook{};
+
     struct Hook {
         static void cb(SafetyHookContext& ctx) {
             EXPECT_FLOAT_EQ(ctx.st[0].as_f32(), 1.0f);
@@ -326,8 +328,6 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
             EXPECT_FLOAT_EQ(ctx.st[1].as_f32(), 1.0f);
         }
     };
-
-    SafetyHookMid hook{};
 
     auto hr = SafetyHookMid::create(reinterpret_cast<void*>(const_cast<uint8_t*>(cg.getCode() + nop_offset)), Hook::cb);
 

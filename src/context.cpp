@@ -138,8 +138,8 @@ void Context32::st_pop() noexcept {
     // Shift ST(1..7) down into ST(0..6).
     std::memmove(&st[0], &st[1], sizeof(Fpu) * 7);
 
-    // Vacated ST(7): clear defensively. The callback's set_f32/set_f64 will rewrite
-    // both the value and (implicitly, via FRSTOR replaying the captured env) the tag.
+    // Vacated ST(7): clear defensively. Only the slot bytes are overwritten; the
+    // captured fpu_env (including FTW) is replayed verbatim by FRSTOR on return.
     std::memset(&st[7], 0, sizeof(Fpu));
 }
 
