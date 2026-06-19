@@ -1,6 +1,7 @@
 build
 build32
 cmake-build*
+build-x86
 .idea
 .vscode
 .vs/

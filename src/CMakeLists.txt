@@ -1,5 +1,6 @@
 add_library(safetyhook
     allocator.cpp
+    context.cpp
     easy.cpp
     inline_hook.cpp
     mid_hook.cpp
