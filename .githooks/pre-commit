@@ -14,9 +14,9 @@ if [ "$clang_format_version" != "22" ]; then
     echo "found: $(clang-format --version)" >&2
 fi
 
-files=$(mktemp)
-staged_file=$(mktemp)
-formatted_file=$(mktemp)
+files=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.files.XXXXXX")
+staged_file=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.staged.XXXXXX")
+formatted_file=$(mktemp "${TMPDIR:-/tmp}/safetyhook-pre-commit.formatted.XXXXXX")
 
 cleanup() {
     rm -f "$files" "$staged_file" "$formatted_file"
