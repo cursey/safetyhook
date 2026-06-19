@@ -234,7 +234,7 @@ jobs:
 
       - name: Download & extract Zydis
         run: |
-          Invoke-WebRequest -Uri https://github.com/zyantific/zydis/releases/download/v4.0.0/zydis-amalgamated.zip -OutFile zydis.zip
+          Invoke-WebRequest -Uri https://github.com/zyantific/zydis/releases/download/v4.1.0/zydis-amalgamated.zip -OutFile zydis.zip
           Expand-Archive .\zydis.zip .
           Remove-Item .\zydis.zip
            @("#define ZYCORE_STATIC_BUILD", "#define ZYDIS_STATIC_BUILD") + (Get-Content -Raw .\amalgamated-dist\Zydis.h) | Set-Content -Encoding utf8 .\amalgamated-dist\Zydis.h
