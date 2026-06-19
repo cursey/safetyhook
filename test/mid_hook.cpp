@@ -155,18 +155,20 @@ TEST(MidHook, MidHookEnableAndDisable) {
 
 #if SAFETYHOOK_ARCH_X86_32
 
-// Round-trip every ST register: read+write ST0..ST7, verify via fstp out the modified values are what FRSTOR
-// reinstated.
-TEST(MidHookX87, ReadAndWriteAllStRegisters) {
-    constexpr float INPUT[8] = {128.0f, 64.0f, 32.0f, 16.0f, 8.0f, 4.0f, 2.0f, 1.0f};
-    constexpr float OUTPUT[8] = {0.0f, 10.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f};
+namespace st_test {
+constexpr float INPUT[8] = {128.0f, 64.0f, 32.0f, 16.0f, 8.0f, 4.0f, 2.0f, 1.0f};
+constexpr float OUTPUT[8] = {0.0f, 10.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f};
+} // namespace st_test
 
+// Round-trip every ST register: read+write ST0..ST7, verify via fstp the modified
+// values are what FRSTOR reinstated.
+TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     Xbyak::CodeGenerator cg{};
 
     cg.fninit();
 
     for (int i = 7; i >= 0; --i) {
-        cg.fld(dword[reinterpret_cast<uintptr_t>(&INPUT[i])]);
+        cg.fld(dword[reinterpret_cast<uintptr_t>(&st_test::INPUT[i])]);
     }
 
     auto nop_offset = cg.getSize();
@@ -187,7 +189,7 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     target(out);
 
     for (int i = 0; i < 8; ++i) {
-        EXPECT_FLOAT_EQ(out[i], INPUT[i]);
+        EXPECT_FLOAT_EQ(out[i], st_test::INPUT[i]);
     }
 
     SafetyHookMid hook{};
@@ -195,16 +197,16 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     struct Hook {
         static void cb(SafetyHookContext& ctx) {
             for (int i = 0; i < 8; ++i) {
-                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), INPUT[i]);
-                EXPECT_NEAR(ctx.st[i].as_f64(), static_cast<double>(INPUT[i]), 1e-6);
+                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), st_test::INPUT[i]);
+                EXPECT_NEAR(ctx.st[i].as_f64(), static_cast<double>(st_test::INPUT[i]), 1e-6);
             }
 
             for (int i = 0; i < 8; ++i) {
-                ctx.st[i].set_f32(OUTPUT[i]);
+                ctx.st[i].set_f32(st_test::OUTPUT[i]);
             }
 
             for (int i = 0; i < 8; ++i) {
-                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), OUTPUT[i]);
+                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), st_test::OUTPUT[i]);
             }
         }
     };
@@ -222,7 +224,7 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     target(out);
 
     for (int i = 0; i < 8; ++i) {
-        EXPECT_FLOAT_EQ(out[i], OUTPUT[i]);
+        EXPECT_FLOAT_EQ(out[i], st_test::OUTPUT[i]);
     }
 
     hook.reset();
@@ -234,7 +236,7 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     target(out);
 
     for (int i = 0; i < 8; ++i) {
-        EXPECT_FLOAT_EQ(out[i], INPUT[i]);
+        EXPECT_FLOAT_EQ(out[i], st_test::INPUT[i]);
     }
 }
 
