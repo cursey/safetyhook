@@ -284,9 +284,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 
         if (
 #if SAFETYHOOK_ARCH_X86_32
-            auto thunk_reg = x86_get_pc_thunk_register(ip, ix);
-            thunk_reg
-        ) {
+            auto thunk_reg = x86_get_pc_thunk_register(ip, ix); thunk_reg) {
             emit_mov_r32_imm32(tramp_ip, *thunk_reg, ip + ix.length);
             tramp_ip += ix.length;
         } else if (
