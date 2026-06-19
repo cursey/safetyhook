@@ -175,13 +175,15 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
 
     cg.nop(5);
 
+    cg.mov(eax, dword[esp + 4]);
+
     for (int i = 0; i < 8; ++i) {
-        cg.fstp(dword[ecx + i * 4]);
+        cg.fstp(dword[eax + i * 4]);
     }
 
     cg.ret();
 
-    using Fn = void(SAFETYHOOK_FASTCALL*)(float*);
+    using Fn = void(SAFETYHOOK_CCALL*)(float*);
 
     auto volatile target = cg.getCode<Fn>();
 
@@ -253,9 +255,9 @@ TEST(MidHookX87, ReadAndWriteMxcsr) {
 
     cg.nop(5);
     cg.cvtss2si(eax, dword[esp + 4]);
-    cg.ret(4);
+    cg.ret();
 
-    using Fn = int(SAFETYHOOK_FASTCALL*)(float);
+    using Fn = int(SAFETYHOOK_CCALL*)(float);
 
     auto volatile target = cg.getCode<Fn>();
 
@@ -296,10 +298,11 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
     auto nop_offset = cg.getSize();
 
     cg.nop(5);
-    cg.fstp(dword[ecx]);
-    cg.ret(4);
+    cg.mov(eax, dword[esp + 8]);
+    cg.fstp(dword[eax]);
+    cg.ret();
 
-    using Fn = void(SAFETYHOOK_FASTCALL*)(float, float*);
+    using Fn = void(SAFETYHOOK_CCALL*)(float, float*);
 
     auto volatile target = cg.getCode<Fn>();
 
@@ -307,8 +310,6 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
     target(0.0f, &out);
 
     EXPECT_FLOAT_EQ(out, 1.0f);
-
-    SafetyHookMid hook{};
 
     struct Hook {
         static void cb(SafetyHookContext& ctx) {
@@ -325,6 +326,8 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
             EXPECT_FLOAT_EQ(ctx.st[1].as_f32(), 1.0f);
         }
     };
+
+    SafetyHookMid hook{};
 
     auto hr = SafetyHookMid::create(reinterpret_cast<void*>(const_cast<uint8_t*>(cg.getCode() + nop_offset)), Hook::cb);
 
