@@ -18,33 +18,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(cmake/CPM.cmake)
 
-if(SAFETYHOOK_FETCH_ZYDIS OR SAFETYHOOK_BUILD_TEST)
-    set(CPM_DOWNLOAD_VERSION 0.40.8)
-    set(CPM_DOWNLOAD_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-
-    if(NOT EXISTS "${CPM_DOWNLOAD_LOCATION}")
-        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cmake")
-        file(DOWNLOAD
-            "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
-            "${CPM_DOWNLOAD_LOCATION}"
-            EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
-        )
-    endif()
-
-    include("${CPM_DOWNLOAD_LOCATION}")
-endif()
+# CPM.cmake shorthand syntax will add `EXCLUDE_FROM_ALL` and `SYSTEM` flag by default.
 
 if(SAFETYHOOK_FETCH_ZYDIS)
-    set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-    set(ZYDIS_BUILD_DOXYGEN OFF CACHE BOOL "" FORCE)
-
     CPMAddPackage(
-        NAME Zydis
-        GITHUB_REPOSITORY zyantific/zydis
-        GIT_TAG v4.1.0
-        EXCLUDE_FROM_ALL YES
+        URI "gh:zyantific/zydis@4.1.0"
+        OPTIONS
+            "ZYDIS_BUILD_EXAMPLES OFF"
+            "ZYDIS_BUILD_TOOLS OFF"
+            "ZYDIS_BUILD_DOXYGEN OFF"
+            "ZYDIS_BUILD_TESTS OFF"
     )
 else()
     find_package(Zydis REQUIRED CONFIG)
@@ -66,22 +51,14 @@ if(SAFETYHOOK_BUILD_TEST)
     enable_testing()
 
     CPMAddPackage(
-        NAME googletest
-        GITHUB_REPOSITORY google/googletest
-        GIT_TAG v1.15.2
+        URI "gh:google/googletest@1.17.0"
         OPTIONS
-            "gtest_force_shared_crt ON"
-            "INSTALL_GTEST OFF"
             "BUILD_GMOCK OFF"
-        EXCLUDE_FROM_ALL YES
+            "INSTALL_GTEST OFF"
+            "gtest_force_shared_crt ON"
     )
 
-    CPMAddPackage(
-        NAME xbyak
-        GITHUB_REPOSITORY herumi/xbyak
-        GIT_TAG v7.30
-        EXCLUDE_FROM_ALL YES
-    )
+    CPMAddPackage("gh:herumi/xbyak@7.37.3")
 endif()
 
 add_subdirectory(src)

@@ -1,9 +1,6 @@
 {
-  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "dependencies": [
-    "bddisasm"
-  ],
-  "description": "",
-  "name": "safetyhook",
-  "version-string": ""
+    "zydis"
+  ]
 }
