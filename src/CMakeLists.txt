@@ -29,8 +29,8 @@ if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
 endif()
 
-if(MSVC)
-    target_compile_options(safetyhook PRIVATE /permissive- /W4 /w14640 /wd4251)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(safetyhook PRIVATE -Wall -Wextra -Wshadow -Wnon-virtual-dtor -pedantic)
+if(WIN32)
+    target_compile_definitions(safetyhook PRIVATE NOMINMAX=1)
 endif()
+
+safetyhook_enable_strict_warnings(safetyhook PRIVATE)

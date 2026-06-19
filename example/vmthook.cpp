@@ -1,5 +1,5 @@
+#include <iostream>
 #include <memory>
-#include <print>
 
 #include <safetyhook.hpp>
 
@@ -25,7 +25,7 @@ public:
 int main() {
     auto target = std::make_unique<Target>();
 
-    std::println("unhooked target->add_42(1) = {}", target->add_42(1));
+    std::cout << "unhooked target->add_42(1) = " << target->add_42(1) << '\n';
 
     g_target_hook = safetyhook::create_vmt(target.get());
 
@@ -35,11 +35,11 @@ int main() {
     g_add_42_hook = safetyhook::create_vm(g_target_hook, 2, &Hook::hooked_add_42);
 #endif
 
-    std::println("hooked target->add_42(2) = {}", target->add_42(2));
+    std::cout << "hooked target->add_42(2) = " << target->add_42(2) << '\n';
 
     g_target_hook = {};
 
-    std::println("unhooked target->add_42(3) = {}", target->add_42(3));
+    std::cout << "unhooked target->add_42(3) = " << target->add_42(3) << '\n';
 
     return 0;
 }

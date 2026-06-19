@@ -7,7 +7,6 @@
 
 #if SAFETYHOOK_OS_WINDOWS
 
-#define NOMINMAX
 #if __has_include(<Windows.h>)
 #include <Windows.h>
 #elif __has_include(<windows.h>)

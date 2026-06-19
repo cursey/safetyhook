@@ -1,4 +1,4 @@
-#include <print>
+#include <iostream>
 #include <thread>
 
 #include <safetyhook.hpp>
@@ -6,7 +6,7 @@
 SafetyHookInline g_hook{};
 
 SAFETYHOOK_NOINLINE void SayHello(int times) {
-    std::println("Hello #{}", times);
+    std::cout << "Hello #" << times << '\n';
 }
 
 void Hooked_SayHello(int times [[maybe_unused]]) {
