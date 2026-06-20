@@ -66,9 +66,16 @@ public:
     /// @tparam Args The argument types of the method.
     /// @param args The arguments to pass to the method.
     /// @return The return value of the method.
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
     template <typename RetT = void, typename... Args> RetT thiscall(Args... args) {
         return original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...);
     }
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic pop
+#endif
 
     /// @brief Calls the original method with the __stdcall calling convention.
     /// @tparam RetT The return type of the method.

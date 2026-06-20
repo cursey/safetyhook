@@ -236,10 +236,17 @@ public:
     /// @param ...args The arguments to pass to the function.
     /// @return The result of calling the original function.
     /// @note This function will use the __thiscall calling convention.
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
     template <typename RetT = void, typename... Args> RetT thiscall(Args... args) {
         std::scoped_lock lock{m_mutex};
         return m_trampoline ? original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...) : RetT();
     }
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic pop
+#endif
 
     /// @brief Calls the original function.
     /// @tparam RetT The return type of the function.
@@ -295,9 +302,16 @@ public:
     /// @note This function will use the __thiscall calling convention.
     /// @note This function is unsafe because it doesn't lock the mutex. Only use this if you don't care about unhook
     /// safety or are worried about the performance cost of locking the mutex.
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
     template <typename RetT = void, typename... Args> RetT unsafe_thiscall(Args... args) {
         return original<RetT(SAFETYHOOK_THISCALL*)(Args...)>()(args...);
     }
+#if SAFETYHOOK_COMPILER_GCC
+#pragma GCC diagnostic pop
+#endif
 
     /// @brief Calls the original function.
     /// @tparam RetT The return type of the function.

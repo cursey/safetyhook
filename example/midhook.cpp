@@ -1,4 +1,4 @@
-#include <print>
+#include <iostream>
 
 #if __has_include("Zydis/Zydis.h")
 #include "Zydis/Zydis.h"
@@ -25,7 +25,7 @@ void hooked_add_42(SafetyHookContext& ctx) {
 SafetyHookMid g_hook{};
 
 int main() {
-    std::println("unhooked add_42(2) = {}", add_42(2));
+    std::cout << "unhooked add_42(2) = " << add_42(2) << '\n';
 
     // Let's disassemble add_42 and hook its RET.
     // NOTE: On Linux we should specify -falign-functions=32 to add some padding to the function otherwise we'll
@@ -55,11 +55,11 @@ int main() {
 
     g_hook = safetyhook::create_mid(ip, hooked_add_42);
 
-    std::println("hooked add_42(3) = {}", add_42(3));
+    std::cout << "hooked add_42(3) = " << add_42(3) << '\n';
 
     g_hook = {};
 
-    std::println("unhooked add_42(4) = {}", add_42(4));
+    std::cout << "unhooked add_42(4) = " << add_42(4) << '\n';
 
     return 0;
 }

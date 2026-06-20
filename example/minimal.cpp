@@ -1,4 +1,4 @@
-#include <print>
+#include <iostream>
 
 #include <safetyhook.hpp>
 
@@ -13,16 +13,16 @@ int hook_add(int x, int y) {
 }
 
 int main() {
-    std::println("unhooked add(2, 3) = {}", add(2, 3));
+    std::cout << "unhooked add(2, 3) = " << add(2, 3) << '\n';
 
     // Create a hook on add.
     g_add_hook = safetyhook::create_inline(reinterpret_cast<void*>(add), reinterpret_cast<void*>(hook_add));
 
-    std::println("hooked add(3, 4) = {}", add(3, 4));
+    std::cout << "hooked add(3, 4) = " << add(3, 4) << '\n';
 
     g_add_hook = {};
 
-    std::println("unhooked add(5, 6) = {}", add(5, 6));
+    std::cout << "unhooked add(5, 6) = " << add(5, 6) << '\n';
 
     return 0;
 }
