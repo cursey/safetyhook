@@ -6,6 +6,7 @@ function(add_safetyhook_example target source)
             safetyhook::safetyhook
             "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<BOOL:${MINGW}>>:stdc++exp>"
     )
+    safetyhook_enable_strict_warnings(${target} PRIVATE)
 endfunction()
 
 add_safetyhook_example(example-minimal minimal.cpp)
@@ -18,6 +19,7 @@ if(WIN32)
     add_library(example-dll SHARED dll.cpp)
     target_compile_features(example-dll PUBLIC cxx_std_23)
     target_link_libraries(example-dll PUBLIC safetyhook::safetyhook)
+    safetyhook_enable_strict_warnings(example-dll PRIVATE)
 endif()
 
 if(SAFETYHOOK_BUILD_MODULE)
