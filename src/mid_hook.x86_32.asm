@@ -36,7 +36,7 @@ movdqu [esp+32], xmm2
 movdqu [esp+16], xmm1
 movdqu [esp], xmm0
 sub esp, 112 ; FNSAVE image (108) + MXCSR (4).
-fnsave [esp] ; Writes 108-byte image at [esp+0..108].
+fnsave [esp] ; Writes 108-byte image at [esp+0..107].
 fwait
 stmxcsr [esp+108] ; Save MXCSR.
 

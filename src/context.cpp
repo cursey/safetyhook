@@ -85,13 +85,18 @@ constexpr std::array<uint8_t, 24> CONVERTER_CODE{{
 // clang-format on
 
 ConverterCode make_converter_code() {
-    auto mem = vm_allocate(nullptr, CONVERTER_CODE.size(), VM_ACCESS_RWX);
+    auto mem = vm_allocate(nullptr, CONVERTER_CODE.size(), VM_ACCESS_RW);
     if (!mem) {
         return {};
     }
 
     auto* code = mem.value();
     std::memcpy(code, CONVERTER_CODE.data(), CONVERTER_CODE.size());
+
+    // Code is immutable after copy; drop W to satisfy W^X.
+    if (!vm_protect(code, CONVERTER_CODE.size(), VM_ACCESS_RX)) {
+        return {};
+    }
 
     ConverterCode result{};
     result.fpu_to_double = reinterpret_cast<FpuToDoubleFn>(code);
