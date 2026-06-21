@@ -45,8 +45,9 @@ void Fpu::set_f32(float value) noexcept {
 #else
 
 // MSVC: long double == double, so no f80. Two __cdecl stubs bounce through the FPU; f32 routes through f64.
-using FpuToDoubleFn = void (*)(const Fpu* fpu, double& dest) noexcept;
-using DoubleToFpuFn = void (*)(double value, Fpu* fpu) noexcept;
+// SAFETYHOOK_CCALL pins __cdecl so /Gz (stdcall) / /Gr (fastcall) can't mismatch the stubs' ABI.
+using FpuToDoubleFn = void(SAFETYHOOK_CCALL*)(const Fpu* fpu, double& dest) noexcept;
+using DoubleToFpuFn = void(SAFETYHOOK_CCALL*)(double value, Fpu* fpu) noexcept;
 
 struct VmDeleter {
     void operator()(uint8_t* address) const noexcept {
@@ -61,6 +62,9 @@ struct ConverterCode {
     DoubleToFpuFn double_to_fpu{};
     std::unique_ptr<uint8_t, VmDeleter> memory{};
 };
+
+// First stub is 13 bytes (4 + 2 + 4 + 2 + 1). Named so code + FPU_TO_DOUBLE_LEN stays auditable.
+constexpr size_t FPU_TO_DOUBLE_LEN = 13;
 
 // __cdecl stubs (24 bytes total): fpu_to_double then double_to_fpu.
 // clang-format off
@@ -91,7 +95,7 @@ ConverterCode make_converter_code() {
 
     ConverterCode result{};
     result.fpu_to_double = reinterpret_cast<FpuToDoubleFn>(code);
-    result.double_to_fpu = reinterpret_cast<DoubleToFpuFn>(code + 13);
+    result.double_to_fpu = reinterpret_cast<DoubleToFpuFn>(code + FPU_TO_DOUBLE_LEN);
     result.memory = std::unique_ptr<uint8_t, VmDeleter>(code);
 
     return result;
@@ -139,7 +143,7 @@ void Fpu::set_f64(double value) noexcept {
 
 void Context32::st_pop() noexcept {
     std::memmove(&st0, &st1, sizeof(Fpu) * 7);
-    std::memset(&st7, 0, sizeof(Fpu));
+    st7 = Fpu{};
 }
 
 void Context32::st_push_f32(float value) noexcept {
