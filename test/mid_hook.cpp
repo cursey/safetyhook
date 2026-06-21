@@ -14,10 +14,8 @@ TEST(MidHook, MidHookToChangeARegister) {
         SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL add_42(int a) { return a + 42; }
     };
 
-    using Add42Fn = int(SAFETYHOOK_FASTCALL*)(int);
-
     // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
-    Add42Fn volatile add_42 = Target::add_42;
+    auto volatile add_42 = Target::add_42;
 
     EXPECT_EQ(add_42(0), 42);
 
@@ -60,10 +58,8 @@ TEST(MidHook, MidHookToChangeAnXMMRegister) {
         SAFETYHOOK_NOINLINE static float SAFETYHOOK_FASTCALL add_42(float a) { return a + 0.42f; }
     };
 
-    using Add42Fn = float(SAFETYHOOK_FASTCALL*)(float);
-
     // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
-    Add42Fn volatile add_42 = Target::add_42;
+    auto volatile add_42 = Target::add_42;
 
     EXPECT_FLOAT_EQ(add_42(0.0f), 0.42f);
 
@@ -95,10 +91,8 @@ TEST(MidHook, MidHookEnableAndDisable) {
         }
     };
 
-    using Add42Fn = int(SAFETYHOOK_FASTCALL*)(int);
-
     // Force a real indirect call so MinGW Release cannot optimize around runtime patching.
-    Add42Fn volatile add_42 = Target::add_42;
+    auto volatile add_42 = Target::add_42;
 
     EXPECT_EQ(add_42(0), 42);
     EXPECT_EQ(add_42(1), 43);
@@ -160,8 +154,7 @@ constexpr float INPUT[8] = {128.0f, 64.0f, 32.0f, 16.0f, 8.0f, 4.0f, 2.0f, 1.0f}
 constexpr float OUTPUT[8] = {0.0f, 10.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f};
 } // namespace st_test
 
-// Round-trip every ST register: read+write ST0..ST7, verify via fstp the modified
-// values are what FRSTOR reinstated.
+// Round-trip every ST register: read+write ST0..ST7, verify via fstp the modified values are what FRSTOR reinstated.
 TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     Xbyak::CodeGenerator cg{};
 
@@ -174,7 +167,6 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
     auto nop_offset = cg.getSize();
 
     cg.nop(5);
-
     cg.mov(eax, dword[esp + 4]);
 
     for (int i = 0; i < 8; ++i) {
@@ -198,17 +190,19 @@ TEST(MidHookX87, ReadAndWriteAllStRegisters) {
 
     struct Hook {
         static void cb(SafetyHookContext& ctx) {
+            safetyhook::Fpu* st[8] = {&ctx.st0, &ctx.st1, &ctx.st2, &ctx.st3, &ctx.st4, &ctx.st5, &ctx.st6, &ctx.st7};
+
             for (int i = 0; i < 8; ++i) {
-                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), st_test::INPUT[i]);
-                EXPECT_NEAR(ctx.st[i].as_f64(), static_cast<double>(st_test::INPUT[i]), 1e-6);
+                EXPECT_FLOAT_EQ(st[i]->as_f32(), st_test::INPUT[i]);
+                EXPECT_NEAR(st[i]->as_f64(), static_cast<double>(st_test::INPUT[i]), 1e-6);
             }
 
             for (int i = 0; i < 8; ++i) {
-                ctx.st[i].set_f32(st_test::OUTPUT[i]);
+                st[i]->set_f32(st_test::OUTPUT[i]);
             }
 
             for (int i = 0; i < 8; ++i) {
-                EXPECT_FLOAT_EQ(ctx.st[i].as_f32(), st_test::OUTPUT[i]);
+                EXPECT_FLOAT_EQ(st[i]->as_f32(), st_test::OUTPUT[i]);
             }
         }
     };
@@ -257,9 +251,7 @@ TEST(MidHookX87, ReadAndWriteMxcsr) {
     cg.cvtss2si(eax, dword[esp + 4]);
     cg.ret();
 
-    using Fn = int(SAFETYHOOK_CCALL*)(float);
-
-    auto volatile target = cg.getCode<Fn>();
+    auto volatile target = cg.getCode<int(SAFETYHOOK_CCALL*)(float)>();
 
     EXPECT_EQ(target(3.5f), 3);
 
@@ -302,9 +294,7 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
     cg.fstp(dword[eax]);
     cg.ret();
 
-    using Fn = void(SAFETYHOOK_CCALL*)(float, float*);
-
-    auto volatile target = cg.getCode<Fn>();
+    auto volatile target = cg.getCode<void(SAFETYHOOK_CCALL*)(float, float*)>();
 
     float out{};
     target(0.0f, &out);
@@ -315,17 +305,17 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
 
     struct Hook {
         static void cb(SafetyHookContext& ctx) {
-            EXPECT_FLOAT_EQ(ctx.st[0].as_f32(), 1.0f);
-            EXPECT_FLOAT_EQ(ctx.st[1].as_f32(), 1.0f);
+            EXPECT_FLOAT_EQ(ctx.st0.as_f32(), 1.0f);
+            EXPECT_FLOAT_EQ(ctx.st1.as_f32(), 1.0f);
 
             ctx.st_pop();
 
-            EXPECT_FLOAT_EQ(ctx.st[0].as_f32(), 1.0f);
+            EXPECT_FLOAT_EQ(ctx.st0.as_f32(), 1.0f);
 
             ctx.st_push_f32(42.0f);
 
-            EXPECT_FLOAT_EQ(ctx.st[0].as_f32(), 42.0f);
-            EXPECT_FLOAT_EQ(ctx.st[1].as_f32(), 1.0f);
+            EXPECT_FLOAT_EQ(ctx.st0.as_f32(), 42.0f);
+            EXPECT_FLOAT_EQ(ctx.st1.as_f32(), 1.0f);
         }
     };
 
@@ -347,5 +337,140 @@ TEST(MidHookX87, StPopAndPushHookMutatesLiveStack) {
 
     EXPECT_FLOAT_EQ(out, 1.0f);
 }
+
+TEST(MidHookX87, StProxyArithmeticOps) {
+    Xbyak::CodeGenerator cg{};
+
+    cg.fninit();
+    cg.fld1(); // ST0 = 1.0
+
+    auto nop_offset = cg.getSize();
+
+    cg.nop(5);
+    cg.mov(eax, dword[esp + 4]);
+    cg.fstp(dword[eax]);
+    cg.ret();
+
+    auto volatile target = cg.getCode<void(SAFETYHOOK_CCALL*)(float*)>();
+
+    float out{};
+    target(&out);
+
+    EXPECT_FLOAT_EQ(out, 1.0f);
+
+    SafetyHookMid hook{};
+
+    struct Hook {
+        static void cb(SafetyHookContext& ctx) {
+            constexpr auto ratio = 16.0f / 9.0f;
+
+            // `ctx.st0.f32() *= ratio;` -- read-modify-write via the FpuF32 proxy.
+            ctx.st0.f32() *= ratio;
+
+            EXPECT_FLOAT_EQ(ctx.st0.f32(), ratio);
+
+            // `ctx.st0.f32() = ctx.st0.f32() / ratio;` -- recovers 1.0f.
+            ctx.st0.f32() = ctx.st0.f32() / ratio;
+
+            EXPECT_FLOAT_EQ(ctx.st0.f32(), 1.0f);
+
+            // Assign and add via the proxy.
+            ctx.st0.f32() = 10.0f;
+            ctx.st0.f32() += 5.0f;
+            ctx.st0.f32() -= 2.0f;
+
+            EXPECT_FLOAT_EQ(ctx.st0.f32(), 13.0f);
+        }
+    };
+
+    auto hr = SafetyHookMid::create(reinterpret_cast<void*>(const_cast<uint8_t*>(cg.getCode() + nop_offset)), Hook::cb);
+
+    ASSERT_TRUE(hr.has_value());
+
+    hook = std::move(*hr);
+
+    out = 0.0f;
+    target(&out);
+
+    EXPECT_FLOAT_EQ(out, 13.0f);
+
+    hook.reset();
+
+    out = 0.0f;
+    target(&out);
+
+    EXPECT_FLOAT_EQ(out, 1.0f);
+}
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+namespace f80_test {
+// 1e-30L has a mantissa distinct from its double-rounded form, so as_f64() would lose precision, but as_f80() must
+// recover it bit-for-bit.
+constexpr long double PROBE = 1e-30L;
+constexpr long double REPLACEMENT = 3.141592653589793238L;
+} // namespace f80_test
+
+// Verify the f80 path is lossless: push PROBE, read it back exactly (which as_f64 cannot do), then mutate via the proxy
+// and observe it via fstp tbyte.
+TEST(MidHookX87, StF80LosslessRoundTrip) {
+    Xbyak::CodeGenerator cg{};
+
+    cg.fninit();
+    cg.db(0xDB); // fld tbyte [disp32]: DB /5 with mod=00 rm=101. Xbyak has no tbyte frame.
+    cg.db(0x2D);
+    cg.dd(reinterpret_cast<uint32_t>(&f80_test::PROBE));
+
+    auto nop_offset = cg.getSize();
+
+    cg.nop(5);
+    cg.mov(eax, dword[esp + 4]);
+    cg.db(0xDB); // fstp tbyte [eax]: DB /7 with mod=00 rm=000. No tbyte frame either.
+    cg.db(0x38);
+    cg.ret();
+
+    auto volatile target = cg.getCode<void(SAFETYHOOK_CCALL*)(long double*)>();
+
+    long double out{};
+    target(&out);
+
+    EXPECT_EQ(out, f80_test::PROBE);
+
+    SafetyHookMid hook{};
+
+    struct Hook {
+        static void cb(SafetyHookContext& ctx) {
+            // as_f64() would round here; as_f80() must be bit-exact.
+            EXPECT_EQ(ctx.st0.as_f80(), f80_test::PROBE);
+
+            ctx.st0.f80() = f80_test::REPLACEMENT;
+
+            EXPECT_EQ(ctx.st0.as_f80(), f80_test::REPLACEMENT);
+
+            // x87 +=/-= isn't bit-exact in general, so check against the recomputed value, not the original.
+            ctx.st0.f80() += 1.0L;
+
+            EXPECT_EQ(ctx.st0.as_f80(), f80_test::REPLACEMENT + 1.0L);
+        }
+    };
+
+    auto hr = SafetyHookMid::create(reinterpret_cast<void*>(const_cast<uint8_t*>(cg.getCode() + nop_offset)), Hook::cb);
+
+    ASSERT_TRUE(hr.has_value());
+
+    hook = std::move(*hr);
+
+    out = 0.0L;
+    target(&out);
+
+    EXPECT_EQ(out, f80_test::REPLACEMENT + 1.0L);
+
+    hook.reset();
+
+    out = 0.0L;
+    target(&out);
+
+    EXPECT_EQ(out, f80_test::PROBE);
+}
+#endif
 
 #endif

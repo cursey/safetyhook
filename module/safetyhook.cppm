@@ -17,6 +17,16 @@ export {
     using safetyhook::Context64;
     using safetyhook::Xmm;
 
+#if SAFETYHOOK_ARCH_X86_32
+    using safetyhook::Fpu;
+    using safetyhook::FpuEnv;
+    using safetyhook::FpuF32;
+    using safetyhook::FpuF64;
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+    using safetyhook::FpuF80;
+#endif
+#endif
+
     // easy.hpp
     using safetyhook::create_inline;
     using safetyhook::create_mid;

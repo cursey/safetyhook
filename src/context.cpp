@@ -11,8 +11,40 @@ namespace safetyhook {
 
 #if SAFETYHOOK_ARCH_X86_32
 
-using FpuToFloatFn = void (*)(const Fpu* fpu, float& dest) noexcept;
-using FloatToFpuFn = void (*)(float value, Fpu* fpu) noexcept;
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+// GCC/Clang: long double is 80-bit, bit-identical to Fpu::raw.
+// Compiler emits fld/fstp tbyte; no stubs needed.
+
+long double Fpu::as_f80() const noexcept {
+    long double result{};
+    std::memcpy(&result, raw, 10);
+
+    return result;
+}
+
+void Fpu::set_f80(long double value) noexcept {
+    std::memcpy(raw, &value, 10);
+}
+
+double Fpu::as_f64() const noexcept {
+    return static_cast<double>(as_f80());
+}
+
+void Fpu::set_f64(double value) noexcept {
+    set_f80(static_cast<long double>(value));
+}
+
+float Fpu::as_f32() const noexcept {
+    return static_cast<float>(as_f64());
+}
+
+void Fpu::set_f32(float value) noexcept {
+    set_f64(static_cast<double>(value));
+}
+
+#else
+
+// MSVC: long double == double, so no f80. Two __cdecl stubs bounce through the FPU; f32 routes through f64.
 using FpuToDoubleFn = void (*)(const Fpu* fpu, double& dest) noexcept;
 using DoubleToFpuFn = void (*)(double value, Fpu* fpu) noexcept;
 
@@ -25,41 +57,25 @@ struct VmDeleter {
 };
 
 struct ConverterCode {
-    FpuToFloatFn fpu_to_float{};
-    FloatToFpuFn float_to_fpu{};
     FpuToDoubleFn fpu_to_double{};
     DoubleToFpuFn double_to_fpu{};
     std::unique_ptr<uint8_t, VmDeleter> memory{};
 };
 
-// __cdecl stubs that bounce 80-bit extended floats through the FPU via fld/fstp.
-// Laid out as four contiguous routines; entry-point offsets are kept in sync with make_converter_code() below.
+// __cdecl stubs (24 bytes total): fpu_to_double then double_to_fpu.
 // clang-format off
-constexpr std::array<uint8_t, 48> CONVERTER_CODE{{
-    // void fpu_to_float(const Fpu* fpu, float& dest);
-    0x8B, 0x44, 0x24, 0x04, // mov eax, [esp+4] ; &fpu
-    0xDB, 0x28,             // fld tbyte [eax]  ; ST0 = *fpu (80-bit)
-    0x8B, 0x44, 0x24, 0x08, // mov eax, [esp+8] ; &dest
-    0xD9, 0x18,             // fstp dword [eax] ; *dest = ST0 (32-bit float)
+constexpr std::array<uint8_t, 24> CONVERTER_CODE{{
+    // fpu_to_double(const Fpu* fpu, double& dest)
+    0x8B, 0x44, 0x24, 0x04, // mov eax, [esp+4]
+    0xDB, 0x28,             // fld tbyte [eax]
+    0x8B, 0x44, 0x24, 0x08, // mov eax, [esp+8]
+    0xDD, 0x18,             // fstp qword [eax]
     0xC3,                   // ret
 
-    // void float_to_fpu(float value, Fpu* fpu);
-    0xD9, 0x44, 0x24, 0x04, // fld dword [esp+4] ; ST0 = value
-    0x8B, 0x44, 0x24, 0x08, // mov eax, [esp+8]  ; &fpu
-    0xDB, 0x38,             // fstp tbyte [eax]  ; *fpu = ST0 (80-bit)
-    0xC3,                   // ret
-
-    // void fpu_to_double(const Fpu* fpu, double& dest);
-    0x8B, 0x44, 0x24, 0x04, // mov eax, [esp+4] ; &fpu
-    0xDB, 0x28,             // fld tbyte [eax]  ; ST0 = *fpu (80-bit)
-    0x8B, 0x44, 0x24, 0x08, // mov eax, [esp+8] ; &dest
-    0xDD, 0x18,             // fstp qword [eax] ; *dest = ST0 (64-bit double)
-    0xC3,                   // ret
-
-    // void double_to_fpu(double value, Fpu* fpu);
-    0xDD, 0x44, 0x24, 0x04, // fld qword [esp+4] ; ST0 = value (8-byte double at [esp+4..12])
-    0x8B, 0x44, 0x24, 0x0C, // mov eax, [esp+12] ; &fpu
-    0xDB, 0x38,             // fstp tbyte [eax]  ; *fpu = ST0 (80-bit)
+    // double_to_fpu(double value, Fpu* fpu)
+    0xDD, 0x44, 0x24, 0x04, // fld qword [esp+4]
+    0x8B, 0x44, 0x24, 0x0C, // mov eax, [esp+12]
+    0xDB, 0x38,             // fstp tbyte [eax]
     0xC3,                   // ret
 }};
 // clang-format on
@@ -74,10 +90,8 @@ ConverterCode make_converter_code() {
     std::memcpy(code, CONVERTER_CODE.data(), CONVERTER_CODE.size());
 
     ConverterCode result{};
-    result.fpu_to_float = reinterpret_cast<FpuToFloatFn>(code + 0);
-    result.float_to_fpu = reinterpret_cast<FloatToFpuFn>(code + 13);
-    result.fpu_to_double = reinterpret_cast<FpuToDoubleFn>(code + 24);
-    result.double_to_fpu = reinterpret_cast<DoubleToFpuFn>(code + 37);
+    result.fpu_to_double = reinterpret_cast<FpuToDoubleFn>(code);
+    result.double_to_fpu = reinterpret_cast<DoubleToFpuFn>(code + 13);
     result.memory = std::unique_ptr<uint8_t, VmDeleter>(code);
 
     return result;
@@ -93,15 +107,7 @@ ConverterCode& get_converter_code() {
 }
 
 float Fpu::as_f32() const noexcept {
-    auto& code = get_converter_code();
-    if (code.fpu_to_float == nullptr) {
-        return 0.0f;
-    }
-
-    float out{};
-    code.fpu_to_float(this, out);
-
-    return out;
+    return static_cast<float>(as_f64());
 }
 
 double Fpu::as_f64() const noexcept {
@@ -110,50 +116,42 @@ double Fpu::as_f64() const noexcept {
         return 0.0;
     }
 
-    double out{};
-    code.fpu_to_double(this, out);
+    double result{};
+    code.fpu_to_double(this, result);
 
-    return out;
+    return result;
 }
 
-void Fpu::set_f32(float v) noexcept {
-    auto& code = get_converter_code();
-    if (code.float_to_fpu == nullptr) {
-        return;
-    }
-
-    code.float_to_fpu(v, this);
+void Fpu::set_f32(float value) noexcept {
+    set_f64(value);
 }
 
-void Fpu::set_f64(double v) noexcept {
+void Fpu::set_f64(double value) noexcept {
     auto& code = get_converter_code();
     if (code.double_to_fpu == nullptr) {
         return;
     }
 
-    code.double_to_fpu(v, this);
+    code.double_to_fpu(value, this);
 }
+
+#endif
 
 void Context32::st_pop() noexcept {
-    // Shift ST(1..7) down into ST(0..6).
-    std::memmove(&st[0], &st[1], sizeof(Fpu) * 7);
-
-    // Vacated ST(7): clear defensively. Only the slot bytes are overwritten; the
-    // captured fpu_env (including FTW) is replayed verbatim by FRSTOR on return.
-    std::memset(&st[7], 0, sizeof(Fpu));
+    std::memmove(&st0, &st1, sizeof(Fpu) * 7);
+    std::memset(&st7, 0, sizeof(Fpu));
 }
 
-void Context32::st_push_f32(float v) noexcept {
-    // Shift ST(0..6) up into ST(1..7), dropping old ST(7).
-    std::memmove(&st[1], &st[0], sizeof(Fpu) * 7);
+void Context32::st_push_f32(float value) noexcept {
+    std::memmove(&st1, &st0, sizeof(Fpu) * 7);
 
-    st[0].set_f32(v);
+    st0.set_f32(value);
 }
 
-void Context32::st_push_f64(double v) noexcept {
-    std::memmove(&st[1], &st[0], sizeof(Fpu) * 7);
+void Context32::st_push_f64(double value) noexcept {
+    std::memmove(&st1, &st0, sizeof(Fpu) * 7);
 
-    st[0].set_f64(v);
+    st0.set_f64(value);
 }
 
 #endif // SAFETYHOOK_ARCH_X86_32
