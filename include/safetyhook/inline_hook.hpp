@@ -355,6 +355,7 @@ private:
         FF,
     };
 
+    std::shared_ptr<Allocator> m_allocator{};
     uint8_t* m_target{};
     uint8_t* m_destination{};
     Allocation m_trampoline{};
@@ -364,13 +365,27 @@ private:
     bool m_enabled{};
     Type m_type{Type::Unset};
 
-    std::expected<void, Error> setup(
-        const std::shared_ptr<Allocator>& allocator, uint8_t* target, uint8_t* destination);
-    std::expected<void, Error> e9_hook(const std::shared_ptr<Allocator>& allocator);
+    // Slot a MidHook registers so we keep its stub pointed at the trampoline if it moves. Null for a plain InlineHook.
+    uint8_t** m_trampoline_address_slot{};
+
+    // retire_sink receives the old trampoline instead of freeing it (it may still be executing); freed on teardown.
+    std::expected<void, Error> setup(const std::shared_ptr<Allocator>& allocator, uint8_t* target, uint8_t* destination,
+        std::vector<Allocation>* retire_sink = nullptr);
+    std::expected<void, Error> e9_hook(
+        const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink);
 
 #if SAFETYHOOK_ARCH_X86_64
-    std::expected<void, Error> ff_hook(const std::shared_ptr<Allocator>& allocator);
+    std::expected<void, Error> ff_hook(
+        const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink);
 #endif
+
+    // Writes the jump at the target. Assumes m_mutex held and the trampoline built.
+    std::expected<void, Error> patch_enable();
+
+    // reinstall(): rebuild the trampoline (reusing it if it still fits) and write the jump. revert(): restore the
+    // saved bytes. Both lock m_mutex; chain bookkeeping is the caller's job.
+    std::expected<void, Error> reinstall(std::vector<Allocation>* retire_sink);
+    void revert();
 
     void destroy();
 };

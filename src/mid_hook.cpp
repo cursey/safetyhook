@@ -146,11 +146,15 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
     m_hook = std::move(*hook_result);
 
+    // Register the stub's trampoline slot so the inline hook keeps it current if the trampoline is ever relocated.
 #if SAFETYHOOK_ARCH_X86_64
-    store(m_stub.data() + sizeof(asm_data) - 8, m_hook.trampoline().data());
+    auto* trampoline_slot = m_stub.data() + sizeof(asm_data) - 8;
 #elif SAFETYHOOK_ARCH_X86_32
-    store(m_stub.data() + sizeof(asm_data) - 4, m_hook.trampoline().data());
+    auto* trampoline_slot = m_stub.data() + sizeof(asm_data) - 4;
 #endif
+
+    store(trampoline_slot, m_hook.trampoline().data());
+    m_hook.m_trampoline_address_slot = reinterpret_cast<uint8_t**>(trampoline_slot);
 
     return {};
 }

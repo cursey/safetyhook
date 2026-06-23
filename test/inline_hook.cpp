@@ -93,6 +93,80 @@ TEST(InlineHook, FunctionHookedMultipleTimes) {
     hook0.reset();
 }
 
+namespace {
+SafetyHookInline *bob_slot, *alice_slot, *eve_slot, *carol_slot;
+std::string bob(std::string n) {
+    return bob_slot->call<std::string>(n + " and bob");
+}
+std::string alice(std::string n) {
+    return alice_slot->call<std::string>(n + " and alice");
+}
+std::string eve(std::string n) {
+    return eve_slot->call<std::string>(n + " and eve");
+}
+std::string carol(std::string n) {
+    return carol_slot->call<std::string>(n + " and carol");
+}
+} // namespace
+
+TEST(InlineHook, MiddleHookRemovedFromChain) {
+    struct Target {
+        SAFETYHOOK_NOINLINE static std::string fn(std::string name) { return "hello " + name; }
+    };
+
+    SafetyHookInline a, b, c;
+    bob_slot = &a;
+    alice_slot = &b;
+    eve_slot = &c;
+    a = safetyhook::create_inline(Target::fn, bob);   // bottom
+    b = safetyhook::create_inline(Target::fn, alice); // middle
+    c = safetyhook::create_inline(Target::fn, eve);   // top
+
+    EXPECT_EQ(Target::fn("world"), "hello world and eve and alice and bob"sv);
+
+    // Remove the middle hook; the others must remain.
+    b.reset();
+    for (int i = 0; i < 16; ++i) {
+        EXPECT_EQ(Target::fn("world"), "hello world and eve and bob"sv);
+    }
+
+    c.reset();
+    EXPECT_EQ(Target::fn("world"), "hello world and bob"sv);
+
+    a.reset();
+    EXPECT_EQ(Target::fn("world"), "hello world"sv);
+}
+
+TEST(InlineHook, HooksRemovedInArbitraryOrder) {
+    struct Target {
+        SAFETYHOOK_NOINLINE static std::string fn(std::string name) { return "hello " + name; }
+    };
+
+    SafetyHookInline a, b, c, d;
+    bob_slot = &a;
+    alice_slot = &b;
+    eve_slot = &c;
+    carol_slot = &d;
+    a = safetyhook::create_inline(Target::fn, bob);
+    b = safetyhook::create_inline(Target::fn, alice);
+    c = safetyhook::create_inline(Target::fn, eve);
+    d = safetyhook::create_inline(Target::fn, carol);
+
+    EXPECT_EQ(Target::fn("world"), "hello world and carol and eve and alice and bob"sv);
+
+    b.reset(); // middle (alice)
+    EXPECT_EQ(Target::fn("world"), "hello world and carol and eve and bob"sv);
+
+    a.reset(); // bottom (bob)
+    EXPECT_EQ(Target::fn("world"), "hello world and carol and eve"sv);
+
+    d.reset(); // top (carol)
+    EXPECT_EQ(Target::fn("world"), "hello world and eve"sv);
+
+    c.reset(); // last (eve)
+    EXPECT_EQ(Target::fn("world"), "hello world"sv);
+}
+
 TEST(InlineHook, FunctionWithMultipleArgsHooked) {
     struct Target {
         SAFETYHOOK_NOINLINE static int add(int x, int y) { return x + y; }

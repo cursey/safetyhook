@@ -1,5 +1,9 @@
+#include <algorithm>
 #include <iterator>
+#include <map>
+#include <mutex>
 #include <optional>
+#include <vector>
 
 #if __has_include("Zydis/Zydis.h")
 #include "Zydis/Zydis.h"
@@ -17,6 +21,21 @@
 #include "safetyhook/inline_hook.hpp"
 
 namespace safetyhook {
+
+// Per-target chain of stacked hooks: a hook can be removed from any position by rebuilding the ones above it.
+namespace {
+std::mutex g_chain_mutex{};
+
+struct HookChain {
+    std::vector<InlineHook*> hooks{};  // enabled hooks on a target, bottom -> top.
+    std::vector<Allocation> retired{}; // trampolines replaced during a rebuild; freed when the chain empties.
+};
+
+std::map<uint8_t*, HookChain>& hook_chains() {
+    static std::map<uint8_t*, HookChain> chains;
+    return chains;
+}
+} // namespace
 
 #pragma pack(push, 1)
 struct JmpE9 {
@@ -159,13 +178,16 @@ std::expected<InlineHook, InlineHook::Error> InlineHook::create(
     const std::shared_ptr<Allocator>& allocator, void* target, void* destination, Flags flags) {
     InlineHook hook{};
 
-    if (const auto setup_result =
-            hook.setup(allocator, reinterpret_cast<uint8_t*>(target), reinterpret_cast<uint8_t*>(destination));
-        !setup_result) {
-        return std::unexpected{setup_result.error()};
-    }
+    hook.m_allocator = allocator;
+    hook.m_target = reinterpret_cast<uint8_t*>(target);
+    hook.m_destination = reinterpret_cast<uint8_t*>(destination);
 
-    if (!(flags & StartDisabled)) {
+    if ((flags & StartDisabled) != 0) {
+        // Build the trampoline now so original() works while disabled.
+        if (auto setup_result = hook.setup(allocator, hook.m_target, hook.m_destination); !setup_result) {
+            return std::unexpected{setup_result.error()};
+        }
+    } else {
         if (auto enable_result = hook.enable(); !enable_result) {
             return std::unexpected{enable_result.error()};
         }
@@ -182,8 +204,10 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
     if (this != &other) {
         destroy();
 
+        std::scoped_lock chain_lock{g_chain_mutex};
         std::scoped_lock lock{m_mutex, other.m_mutex};
 
+        m_allocator = std::move(other.m_allocator);
         m_target = other.m_target;
         m_destination = other.m_destination;
         m_trampoline = std::move(other.m_trampoline);
@@ -191,12 +215,24 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
         m_original_bytes = std::move(other.m_original_bytes);
         m_enabled = other.m_enabled;
         m_type = other.m_type;
+        m_trampoline_address_slot = other.m_trampoline_address_slot;
+
+        // Re-point the chain entry from `other` to us.
+        if (m_enabled) {
+            if (auto it = hook_chains().find(m_target); it != hook_chains().end()) {
+                auto& hooks = it->second.hooks;
+                if (auto pos = std::find(hooks.begin(), hooks.end(), &other); pos != hooks.end()) {
+                    *pos = this;
+                }
+            }
+        }
 
         other.m_target = nullptr;
         other.m_destination = nullptr;
         other.m_trampoline_size = 0;
         other.m_enabled = false;
         other.m_type = Type::Unset;
+        other.m_trampoline_address_slot = nullptr;
     }
 
     return *this;
@@ -210,14 +246,15 @@ void InlineHook::reset() {
     *this = {};
 }
 
-std::expected<void, InlineHook::Error> InlineHook::setup(
-    const std::shared_ptr<Allocator>& allocator, uint8_t* target, uint8_t* destination) {
+std::expected<void, InlineHook::Error> InlineHook::setup(const std::shared_ptr<Allocator>& allocator, uint8_t* target,
+    uint8_t* destination, std::vector<Allocation>* retire_sink) {
+    m_allocator = allocator;
     m_target = target;
     m_destination = destination;
 
-    if (auto e9_result = e9_hook(allocator); !e9_result) {
+    if (auto e9_result = e9_hook(allocator, retire_sink); !e9_result) {
 #if SAFETYHOOK_ARCH_X86_64
-        if (auto ff_result = ff_hook(allocator); !ff_result) {
+        if (auto ff_result = ff_hook(allocator, retire_sink); !ff_result) {
             return ff_result;
         }
 #elif SAFETYHOOK_ARCH_X86_32
@@ -225,10 +262,16 @@ std::expected<void, InlineHook::Error> InlineHook::setup(
 #endif
     }
 
+    // Keep an external consumer (a MidHook stub) pointed at the trampoline if it moved.
+    if (m_trampoline_address_slot != nullptr) {
+        *m_trampoline_address_slot = m_trampoline.data();
+    }
+
     return {};
 }
 
-std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr<Allocator>& allocator) {
+std::expected<void, InlineHook::Error> InlineHook::e9_hook(
+    const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueE9);
 
@@ -266,17 +309,29 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
         }
     }
 
-    auto trampoline_allocation = allocator->allocate_near(desired_addresses, m_trampoline_size);
+    // Reuse the trampoline if it still fits; otherwise allocate a new one and retire (don't free) the old.
+    bool allocated_new = false;
 
-    if (!trampoline_allocation) {
-        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
+    if (!(m_trampoline && m_trampoline.size() >= m_trampoline_size)) {
+        auto trampoline_allocation = allocator->allocate_near(desired_addresses, m_trampoline_size);
+
+        if (!trampoline_allocation) {
+            return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
+        }
+
+        if (m_trampoline && retire_sink != nullptr) {
+            retire_sink->push_back(std::move(m_trampoline));
+        }
+
+        m_trampoline = std::move(*trampoline_allocation);
+        allocated_new = true;
     }
-
-    m_trampoline = std::move(*trampoline_allocation);
 
     for (auto ip = m_target, tramp_ip = m_trampoline.data(); ip < m_target + m_original_bytes.size(); ip += ix.length) {
         if (!decode(&ix, ip)) {
-            m_trampoline.free();
+            if (allocated_new) {
+                m_trampoline.free(); // only free a buffer we allocated this call, never a reused/cached one.
+            }
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
         }
 
@@ -366,7 +421,8 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(const std::shared_ptr
 }
 
 #if SAFETYHOOK_ARCH_X86_64
-std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr<Allocator>& allocator) {
+std::expected<void, InlineHook::Error> InlineHook::ff_hook(
+    const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueFF);
     ZydisDecodedInstruction ix{};
@@ -387,13 +443,20 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
         m_trampoline_size += ix.length;
     }
 
-    auto trampoline_allocation = allocator->allocate(m_trampoline_size);
+    // Reuse the trampoline if it still fits; otherwise allocate a new one and retire (don't free) the old.
+    if (!(m_trampoline && m_trampoline.size() >= m_trampoline_size)) {
+        auto trampoline_allocation = allocator->allocate(m_trampoline_size);
 
-    if (!trampoline_allocation) {
-        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
+        if (!trampoline_allocation) {
+            return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
+        }
+
+        if (m_trampoline && retire_sink != nullptr) {
+            retire_sink->push_back(std::move(m_trampoline));
+        }
+
+        m_trampoline = std::move(*trampoline_allocation);
     }
-
-    m_trampoline = std::move(*trampoline_allocation);
 
     std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_trampoline.data());
 
@@ -415,13 +478,7 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(const std::shared_ptr
 }
 #endif
 
-std::expected<void, InlineHook::Error> InlineHook::enable() {
-    std::scoped_lock lock{m_mutex};
-
-    if (m_enabled) {
-        return {};
-    }
-
+std::expected<void, InlineHook::Error> InlineHook::patch_enable() {
     std::optional<Error> error;
 
     // jmp from original to trampoline.
@@ -451,22 +508,128 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
         return std::unexpected{*error};
     }
 
-    m_enabled = true;
+    return {};
+}
+
+std::expected<void, InlineHook::Error> InlineHook::reinstall(std::vector<Allocation>* retire_sink) {
+    std::scoped_lock lock{m_mutex};
+
+    // Rebuild only if the target bytes changed; otherwise keep the trampoline (its address stays stable for MidHook).
+    bool trampoline_valid = m_trampoline && !m_original_bytes.empty() &&
+                            std::equal(m_original_bytes.begin(), m_original_bytes.end(), m_target);
+
+    if (!trampoline_valid) {
+        if (auto setup_result = setup(m_allocator, m_target, m_destination, retire_sink); !setup_result) {
+            return std::unexpected{setup_result.error()};
+        }
+    }
+
+    return patch_enable();
+}
+
+void InlineHook::revert() {
+    std::scoped_lock lock{m_mutex};
+
+    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
+        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
+}
+
+std::expected<void, InlineHook::Error> InlineHook::enable() {
+    std::scoped_lock chain_lock{g_chain_mutex};
+
+    {
+        std::scoped_lock lock{m_mutex};
+
+        if (m_enabled) {
+            return {};
+        }
+    }
+
+    auto& chains = hook_chains();
+    auto& chain = chains[m_target];
+
+    // Stack on top; a grow retires the old buffer into the chain instead of freeing a possibly-cached one.
+    if (auto result = reinstall(&chain.retired); !result) {
+        if (chain.hooks.empty()) {
+            chains.erase(m_target); // drop the entry we may have just created (also frees any retired trampoline).
+        }
+
+        return result;
+    }
+
+    {
+        std::scoped_lock lock{m_mutex};
+        m_enabled = true;
+    }
+
+    chain.hooks.push_back(this);
 
     return {};
 }
 
 std::expected<void, InlineHook::Error> InlineHook::disable() {
-    std::scoped_lock lock{m_mutex};
+    std::scoped_lock chain_lock{g_chain_mutex};
 
-    if (!m_enabled) {
+    {
+        std::scoped_lock lock{m_mutex};
+
+        if (!m_enabled) {
+            return {};
+        }
+
+        m_enabled = false;
+    }
+
+    auto& chains = hook_chains();
+    auto chain_it = chains.find(m_target);
+
+    if (chain_it == chains.end() ||
+        std::find(chain_it->second.hooks.begin(), chain_it->second.hooks.end(), this) == chain_it->second.hooks.end()) {
+        // Not tracked (shouldn't happen) - fall back to a plain unpatch.
+        revert();
         return {};
     }
 
-    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
-        [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
+    auto& chain = chain_it->second;
+    auto& hooks = chain.hooks;
 
-    m_enabled = false;
+    // Lift the hooks above off the target, drop this one, then reinstall the rest so they re-chain.
+    std::vector<InlineHook*> above{std::find(hooks.begin(), hooks.end(), this) + 1, hooks.end()};
+
+    for (auto it = above.rbegin(); it != above.rend(); ++it) {
+        (*it)->revert();
+    }
+
+    revert();
+    hooks.erase(std::find(hooks.begin(), hooks.end(), this));
+
+    std::optional<Error> error;
+
+    for (auto* hook : above) {
+        if (auto result = hook->reinstall(&chain.retired); result) {
+            continue;
+        } else if (!error) {
+            error = result.error();
+        }
+
+        // Reinstall failed: drop this hook so a later disable()/destroy() won't write stale bytes over a live patch.
+        {
+            std::scoped_lock lock{hook->m_mutex};
+            hook->m_enabled = false;
+        }
+
+        if (auto pos = std::find(hooks.begin(), hooks.end(), hook); pos != hooks.end()) {
+            hooks.erase(pos);
+        }
+    }
+
+    if (hooks.empty()) {
+        chains.erase(chain_it); // also frees the retired trampolines: the target is fully restored, so none is live.
+    }
+
+    if (error) {
+        return std::unexpected{*error};
+    }
 
     return {};
 }
