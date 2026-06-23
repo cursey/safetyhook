@@ -1,6 +1,72 @@
 #include <gtest/gtest.h>
 #include <safetyhook.hpp>
 
+namespace {
+void set_first_int_arg(SafetyHookContext& ctx, int value) {
+#if SAFETYHOOK_OS_WINDOWS
+#if SAFETYHOOK_ARCH_X86_64
+    ctx.rcx = static_cast<uintptr_t>(value);
+#elif SAFETYHOOK_ARCH_X86_32
+    ctx.ecx = static_cast<uintptr_t>(value);
+#endif
+#elif SAFETYHOOK_OS_LINUX
+#if SAFETYHOOK_ARCH_X86_64
+    ctx.rdi = static_cast<uintptr_t>(value);
+#elif SAFETYHOOK_ARCH_X86_32
+    *reinterpret_cast<int*>(ctx.esp + 4) = value;
+#endif
+#endif
+}
+} // namespace
+
+TEST(MidHook, MidHookAboveInlineHookOnSameTargetSurvivesLowerRemoval) {
+    struct Target {
+        SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL get(int a) {
+            volatile int b = a;
+            return b;
+        }
+    };
+
+    using GetFn = int(SAFETYHOOK_FASTCALL*)(int);
+    GetFn volatile get = Target::get;
+
+    EXPECT_EQ(get(5), 5);
+
+    // Bottom: passthrough inline hook.
+    static SafetyHookInline* inline_ptr{};
+    SafetyHookInline inline_hook;
+    inline_ptr = &inline_hook;
+
+    struct Passthrough {
+        static int SAFETYHOOK_FASTCALL get(int a) { return inline_ptr->fastcall<int>(a); }
+    };
+
+    inline_hook = safetyhook::create_inline(Target::get, Passthrough::get);
+
+    EXPECT_EQ(get(5), 5);
+
+    // Top: mid hook on the same target, forcing the arg to 1337.
+    SafetyHookMid mid_hook;
+
+    struct Mid {
+        static void get(SafetyHookContext& ctx) { set_first_int_arg(ctx, 1337); }
+    };
+
+    mid_hook = safetyhook::create_mid(Target::get, Mid::get);
+
+    EXPECT_EQ(get(5), 1337);
+
+    // Remove the lower hook; the mid hook must keep working.
+    inline_hook.reset();
+
+    for (int i = 0; i < 16; ++i) {
+        EXPECT_EQ(get(5), 1337);
+    }
+
+    mid_hook.reset();
+    EXPECT_EQ(get(5), 5);
+}
+
 TEST(MidHook, MidHookToChangeARegister) {
     struct Target {
         SAFETYHOOK_NOINLINE static int SAFETYHOOK_FASTCALL add_42(int a) { return a + 42; }
