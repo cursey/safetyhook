@@ -127,11 +127,18 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
     std::copy(asm_data.begin(), asm_data.end(), m_stub.data());
 
+    // Stub-tail layout: the MidHookFn pointer and the trampoline-address slot sit at fixed offsets from the end.
 #if SAFETYHOOK_ARCH_X86_64
-    store(m_stub.data() + sizeof(asm_data) - 16, m_destination);
+    constexpr size_t destination_offset = 16;
+    constexpr size_t trampoline_slot_offset = 8;
 #elif SAFETYHOOK_ARCH_X86_32
-    store(m_stub.data() + sizeof(asm_data) - 8, m_destination);
+    constexpr size_t destination_offset = 8;
+    constexpr size_t trampoline_slot_offset = 4;
+#endif
 
+    store(m_stub.data() + sizeof(asm_data) - destination_offset, m_destination);
+
+#if SAFETYHOOK_ARCH_X86_32
     // 32-bit has some relocations we need to fix up as well.
     store(m_stub.data() + 0x02, m_stub.data() + m_stub.size() - 4);
     store(m_stub.data() + 0x59, m_stub.data() + m_stub.size() - 8);
@@ -147,11 +154,7 @@ std::expected<void, MidHook::Error> MidHook::setup(
     m_hook = std::move(*hook_result);
 
     // Register the stub's trampoline slot so the inline hook keeps it current if the trampoline is ever relocated.
-#if SAFETYHOOK_ARCH_X86_64
-    auto* trampoline_slot = m_stub.data() + sizeof(asm_data) - 8;
-#elif SAFETYHOOK_ARCH_X86_32
-    auto* trampoline_slot = m_stub.data() + sizeof(asm_data) - 4;
-#endif
+    auto* trampoline_slot = m_stub.data() + sizeof(asm_data) - trampoline_slot_offset;
 
     store(trampoline_slot, m_hook.trampoline().data());
     m_hook.m_trampoline_address_slot = reinterpret_cast<uint8_t**>(trampoline_slot);

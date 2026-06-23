@@ -24,16 +24,20 @@ namespace safetyhook {
 
 // Per-target chain of stacked hooks: a hook can be removed from any position by rebuilding the ones above it.
 namespace {
-std::mutex g_chain_mutex{};
-
 struct HookChain {
     std::vector<InlineHook*> hooks{};  // enabled hooks on a target, bottom -> top.
     std::vector<Allocation> retired{}; // trampolines replaced during a rebuild; freed when the chain empties.
 };
 
+// Leaked intentionally so they outlive the destructors of any static/global hooks (avoids teardown-order UB).
+std::mutex& chain_mutex() {
+    static auto* mutex = new std::mutex{};
+    return *mutex;
+}
+
 std::map<uint8_t*, HookChain>& hook_chains() {
-    static std::map<uint8_t*, HookChain> chains;
-    return chains;
+    static auto* chains = new std::map<uint8_t*, HookChain>{};
+    return *chains;
 }
 } // namespace
 
@@ -134,6 +138,15 @@ static bool decode(ZydisDecodedInstruction* ix, uint8_t* ip) {
     return ZYAN_SUCCESS(ZydisDecoderDecodeInstruction(&decoder, nullptr, ip, 15, ix));
 }
 
+#if SAFETYHOOK_ARCH_X86_64
+// A lower stacked hook installs `jmp qword ptr [rip+0]` followed by an absolute 8-byte destination. e9_hook can't
+// relocate it (the pointer lives in bytes the upper patch overwrites), but ff_hook copies it verbatim with its pointer.
+static bool is_stacked_ff_jmp(const ZydisDecodedInstruction& ix) {
+    return ix.mnemonic == ZYDIS_MNEMONIC_JMP && ix.length == sizeof(JmpFF) && ix.raw.disp.size == 32 &&
+           ix.raw.disp.value == 0;
+}
+#endif
+
 #if SAFETYHOOK_ARCH_X86_32
 static std::optional<uint8_t> x86_get_pc_thunk_register(uint8_t* ip, const ZydisDecodedInstruction& ix) {
     if (ix.mnemonic != ZYDIS_MNEMONIC_CALL || ix.raw.imm[0].size != 32) {
@@ -184,7 +197,7 @@ std::expected<InlineHook, InlineHook::Error> InlineHook::create(
 
     if ((flags & StartDisabled) != 0) {
         // Build the trampoline now so original() works while disabled.
-        if (auto setup_result = hook.setup(allocator, hook.m_target, hook.m_destination); !setup_result) {
+        if (auto setup_result = hook.setup(); !setup_result) {
             return std::unexpected{setup_result.error()};
         }
     } else {
@@ -204,7 +217,7 @@ InlineHook& InlineHook::operator=(InlineHook&& other) noexcept {
     if (this != &other) {
         destroy();
 
-        std::scoped_lock chain_lock{g_chain_mutex};
+        std::scoped_lock chain_lock{chain_mutex()};
         std::scoped_lock lock{m_mutex, other.m_mutex};
 
         m_allocator = std::move(other.m_allocator);
@@ -246,15 +259,24 @@ void InlineHook::reset() {
     *this = {};
 }
 
-std::expected<void, InlineHook::Error> InlineHook::setup(const std::shared_ptr<Allocator>& allocator, uint8_t* target,
-    uint8_t* destination, std::vector<Allocation>* retire_sink) {
-    m_allocator = allocator;
-    m_target = target;
-    m_destination = destination;
+void InlineHook::adopt_trampoline(Allocation&& fresh, std::vector<Allocation>* retire_sink) {
+    // Retire (keep alive) the old trampoline rather than free it -- a thread may still be executing inside it. The
+    // free branch only runs on a first build, where m_trampoline is empty and the if below is skipped.
+    if (m_trampoline) {
+        if (retire_sink != nullptr) {
+            retire_sink->push_back(std::move(m_trampoline));
+        } else {
+            m_trampoline.free();
+        }
+    }
 
-    if (auto e9_result = e9_hook(allocator, retire_sink); !e9_result) {
+    m_trampoline = std::move(fresh);
+}
+
+std::expected<void, InlineHook::Error> InlineHook::setup(std::vector<Allocation>* retire_sink) {
+    if (auto e9_result = e9_hook(retire_sink); !e9_result) {
 #if SAFETYHOOK_ARCH_X86_64
-        if (auto ff_result = ff_hook(allocator, retire_sink); !ff_result) {
+        if (auto ff_result = ff_hook(retire_sink); !ff_result) {
             return ff_result;
         }
 #elif SAFETYHOOK_ARCH_X86_32
@@ -264,14 +286,13 @@ std::expected<void, InlineHook::Error> InlineHook::setup(const std::shared_ptr<A
 
     // Keep an external consumer (a MidHook stub) pointed at the trampoline if it moved.
     if (m_trampoline_address_slot != nullptr) {
-        *m_trampoline_address_slot = m_trampoline.data();
+        store(reinterpret_cast<uint8_t*>(m_trampoline_address_slot), m_trampoline.data());
     }
 
     return {};
 }
 
-std::expected<void, InlineHook::Error> InlineHook::e9_hook(
-    const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink) {
+std::expected<void, InlineHook::Error> InlineHook::e9_hook(std::vector<Allocation>* retire_sink) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueE9);
 
@@ -282,6 +303,14 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(
         if (!decode(&ix, ip)) {
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
         }
+
+#if SAFETYHOOK_ARCH_X86_64
+        // Defer a lower stacked hook's self-contained absolute jump to ff_hook, which copies it verbatim; relocating
+        // it by displacement here would point it back at bytes the upper patch overwrites.
+        if (is_stacked_ff_jmp(ix)) {
+            return std::unexpected{Error::ip_relative_instruction_out_of_range(ip)};
+        }
+#endif
 
         m_trampoline_size += ix.length;
         m_original_bytes.insert(m_original_bytes.end(), ip, ip + ix.length);
@@ -309,29 +338,19 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(
         }
     }
 
-    // Reuse the trampoline if it still fits; otherwise allocate a new one and retire (don't free) the old.
-    bool allocated_new = false;
+    // Always build into a fresh trampoline: a content-changing rebuild must never rewrite a buffer a thread may
+    // still be executing inside. The previous buffer is retired (kept alive) until the chain empties.
+    auto trampoline_allocation = m_allocator->allocate_near(desired_addresses, m_trampoline_size);
 
-    if (!(m_trampoline && m_trampoline.size() >= m_trampoline_size)) {
-        auto trampoline_allocation = allocator->allocate_near(desired_addresses, m_trampoline_size);
-
-        if (!trampoline_allocation) {
-            return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
-        }
-
-        if (m_trampoline && retire_sink != nullptr) {
-            retire_sink->push_back(std::move(m_trampoline));
-        }
-
-        m_trampoline = std::move(*trampoline_allocation);
-        allocated_new = true;
+    if (!trampoline_allocation) {
+        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
+
+    adopt_trampoline(std::move(*trampoline_allocation), retire_sink);
 
     for (auto ip = m_target, tramp_ip = m_trampoline.data(); ip < m_target + m_original_bytes.size(); ip += ix.length) {
         if (!decode(&ix, ip)) {
-            if (allocated_new) {
-                m_trampoline.free(); // only free a buffer we allocated this call, never a reused/cached one.
-            }
+            m_trampoline.free(); // free the buffer we just allocated; the previous one (if any) was retired.
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
         }
 
@@ -421,8 +440,7 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(
 }
 
 #if SAFETYHOOK_ARCH_X86_64
-std::expected<void, InlineHook::Error> InlineHook::ff_hook(
-    const std::shared_ptr<Allocator>& allocator, std::vector<Allocation>* retire_sink) {
+std::expected<void, InlineHook::Error> InlineHook::ff_hook(std::vector<Allocation>* retire_sink) {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueFF);
     ZydisDecodedInstruction ix{};
@@ -432,9 +450,16 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
         }
 
-        // We can't support any instruction that is IP relative here because
-        // ff_hook should only be called if e9_hook failed indicating that
-        // we're likely outside the +- 2GB range.
+        // Copy a lower stacked hook's self-contained absolute jump (and its 8-byte pointer) verbatim, then stop --
+        // the rest of the window is that pointer's bytes.
+        if (is_stacked_ff_jmp(ix)) {
+            m_original_bytes.insert(m_original_bytes.end(), ip, ip + sizeof(JmpFF) + sizeof(uintptr_t));
+            m_trampoline_size += sizeof(JmpFF) + sizeof(uintptr_t);
+            break;
+        }
+
+        // We can't support any other instruction that is IP relative here because ff_hook should only be called if
+        // e9_hook failed indicating that we're likely outside the +- 2GB range.
         if (ix.attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
             return std::unexpected{Error::ip_relative_instruction_out_of_range(ip)};
         }
@@ -443,20 +468,15 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(
         m_trampoline_size += ix.length;
     }
 
-    // Reuse the trampoline if it still fits; otherwise allocate a new one and retire (don't free) the old.
-    if (!(m_trampoline && m_trampoline.size() >= m_trampoline_size)) {
-        auto trampoline_allocation = allocator->allocate(m_trampoline_size);
+    // Always build into a fresh trampoline: a content-changing rebuild must never rewrite a buffer a thread may
+    // still be executing inside. The previous buffer is retired (kept alive) until the chain empties.
+    auto trampoline_allocation = m_allocator->allocate(m_trampoline_size);
 
-        if (!trampoline_allocation) {
-            return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
-        }
-
-        if (m_trampoline && retire_sink != nullptr) {
-            retire_sink->push_back(std::move(m_trampoline));
-        }
-
-        m_trampoline = std::move(*trampoline_allocation);
+    if (!trampoline_allocation) {
+        return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
+
+    adopt_trampoline(std::move(*trampoline_allocation), retire_sink);
 
     std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_trampoline.data());
 
@@ -519,7 +539,7 @@ std::expected<void, InlineHook::Error> InlineHook::reinstall(std::vector<Allocat
                             std::equal(m_original_bytes.begin(), m_original_bytes.end(), m_target);
 
     if (!trampoline_valid) {
-        if (auto setup_result = setup(m_allocator, m_target, m_destination, retire_sink); !setup_result) {
+        if (auto setup_result = setup(retire_sink); !setup_result) {
             return std::unexpected{setup_result.error()};
         }
     }
@@ -535,7 +555,7 @@ void InlineHook::revert() {
 }
 
 std::expected<void, InlineHook::Error> InlineHook::enable() {
-    std::scoped_lock chain_lock{g_chain_mutex};
+    std::scoped_lock chain_lock{chain_mutex()};
 
     {
         std::scoped_lock lock{m_mutex};
@@ -568,7 +588,7 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
 }
 
 std::expected<void, InlineHook::Error> InlineHook::disable() {
-    std::scoped_lock chain_lock{g_chain_mutex};
+    std::scoped_lock chain_lock{chain_mutex()};
 
     {
         std::scoped_lock lock{m_mutex};
@@ -624,7 +644,10 @@ std::expected<void, InlineHook::Error> InlineHook::disable() {
     }
 
     if (hooks.empty()) {
-        chains.erase(chain_it); // also frees the retired trampolines: the target is fully restored, so none is live.
+        // Frees the retired trampolines too. No new call can enter via the now-restored target, though a thread
+        // already executing inside a trampoline body is not relocated -- the same best-effort bound as the rest of
+        // teardown.
+        chains.erase(chain_it);
     }
 
     if (error) {
