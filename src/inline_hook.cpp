@@ -425,7 +425,7 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
     std::optional<Error> error;
 
     // jmp from original to trampoline.
-    trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error] {
+    const auto trap_result = trap_threads(m_target, m_trampoline.data(), m_original_bytes.size(), [this, &error] {
         if (m_type == Type::E9) {
             auto trampoline_epilogue = reinterpret_cast<TrampolineEpilogueE9*>(
                 m_trampoline.address() + m_trampoline_size - sizeof(TrampolineEpilogueE9));
@@ -447,6 +447,10 @@ std::expected<void, InlineHook::Error> InlineHook::enable() {
 #endif
     });
 
+    if (!trap_result) {
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
+    }
+
     if (error) {
         return std::unexpected{*error};
     }
@@ -463,8 +467,12 @@ std::expected<void, InlineHook::Error> InlineHook::disable() {
         return {};
     }
 
-    trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
+    const auto trap_result = trap_threads(m_trampoline.data(), m_target, m_original_bytes.size(),
         [this] { std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_target); });
+
+    if (!trap_result) {
+        return std::unexpected{Error::failed_to_unprotect(m_target)};
+    }
 
     m_enabled = false;
 

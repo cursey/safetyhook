@@ -1,3 +1,4 @@
+#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -10,7 +11,6 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-
 #if __has_include(<Windows.h>)
 #include <Windows.h>
 #elif __has_include(<windows.h>)
@@ -226,6 +226,10 @@ public:
         m_traps.insert_or_assign(from, std::move(info));
     }
 
+    void remove_trap(uint8_t* from) { m_traps.erase(from); }
+
+    [[nodiscard]] bool valid() const { return m_trap_veh != nullptr; }
+
 private:
     std::map<uint8_t*, TrapInfo> m_traps;
     PVOID m_trap_veh{};
@@ -239,6 +243,10 @@ private:
 
         std::scoped_lock lock{mutex};
         auto* faulting_address = reinterpret_cast<uint8_t*>(exp->ExceptionRecord->ExceptionInformation[1]);
+        if (instance == nullptr) {
+            return EXCEPTION_CONTINUE_SEARCH;
+        }
+
         auto* trap = instance->find_trap(faulting_address);
 
         if (trap == nullptr) {
@@ -268,17 +276,16 @@ void find_me() {
 
 static std::mutex virtual_protect_mutex;
 
-void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
+std::expected<void, OsError> trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
     MEMORY_BASIC_INFORMATION find_me_mbi{};
     MEMORY_BASIC_INFORMATION from_mbi{};
     MEMORY_BASIC_INFORMATION to_mbi{};
 
-    VirtualQuery(reinterpret_cast<void*>(find_me), &find_me_mbi, sizeof(find_me_mbi));
-    VirtualQuery(from, &from_mbi, sizeof(from_mbi));
-    VirtualQuery(to, &to_mbi, sizeof(to_mbi));
-
-    if (to_mbi.State != MEM_COMMIT) {
-        return;
+    if (VirtualQuery(reinterpret_cast<void*>(find_me), &find_me_mbi, sizeof(find_me_mbi)) != sizeof(find_me_mbi) ||
+        VirtualQuery(from, &from_mbi, sizeof(from_mbi)) != sizeof(from_mbi) ||
+        VirtualQuery(to, &to_mbi, sizeof(to_mbi)) != sizeof(to_mbi) || from_mbi.State != MEM_COMMIT ||
+        to_mbi.State != MEM_COMMIT) {
+        return std::unexpected{OsError::FAILED_TO_QUERY};
     }
 
     auto new_protect = PAGE_READWRITE;
@@ -297,31 +304,70 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
         new_protect = PAGE_EXECUTE_READWRITE;
     }
 
-    if (!TrapManager::is_destructed) {
+    // Make sure we aren't working on a different address in the same memory page on a different thread.
+    std::scoped_lock vp_lock{virtual_protect_mutex};
+
+    {
         std::scoped_lock lock{TrapManager::mutex};
+        if (TrapManager::is_destructed) {
+            return std::unexpected{OsError::FAILED_TO_PROTECT};
+        }
 
         if (TrapManager::instance == nullptr) {
             TrapManager::instance = std::make_unique<TrapManager>();
         }
 
+        if (!TrapManager::instance->valid()) {
+            return std::unexpected{OsError::FAILED_TO_PROTECT};
+        }
+
         TrapManager::instance->add_trap(from, to, len);
     }
 
-    // Make sure we aren't working on a different address in the same memory page on a different thread.
-    std::scoped_lock vp_lock{virtual_protect_mutex};
+    const auto remove_trap = [from] {
+        std::scoped_lock lock{TrapManager::mutex};
+        if (TrapManager::instance != nullptr) {
+            TrapManager::instance->remove_trap(from);
+        }
+    };
 
-    DWORD from_protect;
-    DWORD to_protect;
-
-    VirtualProtect(from, len, new_protect, &from_protect);
-    VirtualProtect(to, len, new_protect, &to_protect);
-
-    if (run_fn) {
-        run_fn();
+    DWORD from_protect{};
+    DWORD to_protect{};
+    if (VirtualProtect(from, len, new_protect, &from_protect) == FALSE) {
+        remove_trap();
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
     }
 
-    VirtualProtect(to, len, to_protect, &to_protect);
-    VirtualProtect(from, len, from_protect, &from_protect);
+    if (VirtualProtect(to, len, new_protect, &to_protect) == FALSE) {
+        DWORD ignored{};
+        (void)VirtualProtect(from, len, from_protect, &ignored);
+        remove_trap();
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
+    }
+
+    std::exception_ptr run_error;
+    try {
+        if (run_fn) {
+            run_fn();
+        }
+    } catch (...) {
+        run_error = std::current_exception();
+    }
+
+    DWORD ignored{};
+    const auto restored_to = VirtualProtect(to, len, to_protect, &ignored) != FALSE;
+    const auto restored_from = VirtualProtect(from, len, from_protect, &ignored) != FALSE;
+    remove_trap();
+
+    if (run_error) {
+        std::rethrow_exception(run_error);
+    }
+
+    if (!restored_to || !restored_from) {
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
+    }
+
+    return {};
 }
 
 void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {

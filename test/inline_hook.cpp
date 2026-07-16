@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -7,6 +9,10 @@
 #include <gtest/gtest.h>
 #include <safetyhook.hpp>
 #include <xbyak/xbyak.h>
+
+#if SAFETYHOOK_OS_WINDOWS
+#include <windows.h>
+#endif
 
 using namespace std::literals;
 using namespace Xbyak::util;
@@ -768,3 +774,61 @@ TEST(InlineHook, FunctionHookCanBeEnableAndDisabled) {
     EXPECT_EQ(fn(2), 4);
     EXPECT_EQ(fn(3), 6);
 }
+
+#if SAFETYHOOK_OS_WINDOWS
+TEST(InlineHook, DisableReportsAnInaccessibleTarget) {
+    const auto release_page = [](uint8_t* page) noexcept {
+        if (page != nullptr) {
+            (void)VirtualFree(page, 0, MEM_RELEASE);
+        }
+    };
+    auto* target =
+        static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    std::unique_ptr<uint8_t, decltype(release_page)> target_guard{target, release_page};
+    ASSERT_NE(target, nullptr);
+    std::fill_n(target, 0x1000, static_cast<uint8_t>(0x90));
+    target[0] = 0xB8;
+    target[1] = 0x01;
+    target[5] = 0xC3;
+
+    struct Hook {
+        static int fn() { return 2; }
+    };
+
+    auto hook_result = SafetyHookInline::create(target, Hook::fn);
+    ASSERT_TRUE(hook_result.has_value());
+    auto hook = std::move(*hook_result);
+
+    ASSERT_NE(VirtualFree(target, 0, MEM_RELEASE), FALSE);
+    (void)target_guard.release();
+    EXPECT_FALSE(hook.disable().has_value());
+}
+
+TEST(InlineHook, EnableReportsAnInaccessibleTarget) {
+    const auto release_page = [](uint8_t* page) noexcept {
+        if (page != nullptr) {
+            (void)VirtualFree(page, 0, MEM_RELEASE);
+        }
+    };
+    auto* target =
+        static_cast<uint8_t*>(VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    std::unique_ptr<uint8_t, decltype(release_page)> target_guard{target, release_page};
+    ASSERT_NE(target, nullptr);
+    std::fill_n(target, 0x1000, static_cast<uint8_t>(0x90));
+    target[0] = 0xB8;
+    target[1] = 0x01;
+    target[5] = 0xC3;
+
+    struct Hook {
+        static int fn() { return 2; }
+    };
+
+    auto hook_result = SafetyHookInline::create(target, Hook::fn, SafetyHookInline::StartDisabled);
+    ASSERT_TRUE(hook_result.has_value());
+    auto hook = std::move(*hook_result);
+
+    ASSERT_NE(VirtualFree(target, 0, MEM_RELEASE), FALSE);
+    (void)target_guard.release();
+    EXPECT_FALSE(hook.enable().has_value());
+}
+#endif

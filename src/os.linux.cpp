@@ -3,6 +3,7 @@
 #if SAFETYHOOK_OS_LINUX
 
 #include <cstdio>
+#include <exception>
 #include <limits>
 
 #include <sys/mman.h>
@@ -186,13 +187,39 @@ SystemInfo system_info() {
     return info;
 }
 
-void trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to, [[maybe_unused]] size_t len,
-    const std::function<void()>& run_fn) {
-    auto from_protect = vm_protect(from, len, VM_ACCESS_RWX).value_or(0);
-    auto to_protect = vm_protect(to, len, VM_ACCESS_RWX).value_or(0);
-    run_fn();
-    vm_protect(to, len, to_protect);
-    vm_protect(from, len, from_protect);
+std::expected<void, OsError> trap_threads([[maybe_unused]] uint8_t* from, [[maybe_unused]] uint8_t* to,
+    [[maybe_unused]] size_t len, const std::function<void()>& run_fn) {
+    const auto from_protect = vm_protect(from, len, VM_ACCESS_RWX);
+    if (!from_protect) {
+        return std::unexpected{from_protect.error()};
+    }
+
+    const auto to_protect = vm_protect(to, len, VM_ACCESS_RWX);
+    if (!to_protect) {
+        (void)vm_protect(from, len, *from_protect);
+        return std::unexpected{to_protect.error()};
+    }
+
+    std::exception_ptr run_error;
+    try {
+        if (run_fn) {
+            run_fn();
+        }
+    } catch (...) {
+        run_error = std::current_exception();
+    }
+
+    const auto restored_to = vm_protect(to, len, *to_protect);
+    const auto restored_from = vm_protect(from, len, *from_protect);
+    if (run_error) {
+        std::rethrow_exception(run_error);
+    }
+
+    if (!restored_to || !restored_from) {
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
+    }
+
+    return {};
 }
 
 void fix_ip([[maybe_unused]] ThreadContext ctx, [[maybe_unused]] uint8_t* old_ip, [[maybe_unused]] uint8_t* new_ip) {
