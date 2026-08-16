@@ -234,7 +234,7 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
 
         mbi = result.value();
 
-        if (!mbi.is_free) {
+        if (!mbi.is_free || mbi.size < size) {
             continue;
         }
 
@@ -244,7 +244,8 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
     }
 
     // Search forwards from the desired_address.
-    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance); p += mbi.size) {
+    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance);
+        p += align_up(mbi.size, si.allocation_granularity)) {
         auto result = vm_query(p);
 
         if (!result) {
@@ -253,7 +254,7 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
 
         mbi = result.value();
 
-        if (!mbi.is_free) {
+        if (!mbi.is_free || mbi.size < size) {
             continue;
         }
 
