@@ -4,6 +4,7 @@
 #pragma once
 
 #ifndef SAFETYHOOK_USE_CXXMODULES
+#include <atomic>
 #include <cstdint>
 #include <expected>
 #include <memory>
@@ -366,7 +367,7 @@ private:
     Type m_type{Type::Unset};
 
     // Slot a MidHook registers so we keep its stub pointed at the trampoline if it moves. Null for a plain InlineHook.
-    uint8_t** m_trampoline_address_slot{};
+    std::atomic<uint8_t*>* m_trampoline_address_slot{};
 
     // retire_sink receives the old trampoline instead of freeing it (it may still be executing); freed on teardown.
     std::expected<void, Error> setup(std::vector<Allocation>* retire_sink = nullptr);

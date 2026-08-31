@@ -11,14 +11,12 @@
 
 namespace safetyhook {
 
-using AtomicTrampolineSlot = std::atomic_ref<uint8_t*>;
-
 struct StubTail {
     MidHookFn destination;
-    alignas(AtomicTrampolineSlot::required_alignment) uint8_t* trampoline;
+    std::atomic<uint8_t*> trampoline;
 };
 
-static_assert(AtomicTrampolineSlot::is_always_lock_free);
+static_assert(std::atomic<uint8_t*>::is_always_lock_free);
 static_assert(sizeof(StubTail) == sizeof(uintptr_t) * 2);
 
 #if SAFETYHOOK_ARCH_X86_64
@@ -142,8 +140,8 @@ std::expected<void, MidHook::Error> MidHook::setup(
     auto* stub_entry = align_up(m_stub.data(), alignof(StubTail));
 
     std::copy(asm_data.begin(), asm_data.end(), stub_entry);
-    auto* tail = std::construct_at(reinterpret_cast<StubTail*>(stub_entry + sizeof(asm_data) - sizeof(StubTail)),
-        StubTail{m_destination, nullptr});
+    auto* tail = std::construct_at(
+        reinterpret_cast<StubTail*>(stub_entry + sizeof(asm_data) - sizeof(StubTail)), m_destination, nullptr);
 
 #if SAFETYHOOK_ARCH_X86_32
     // 32-bit has some relocations we need to fix up as well.
@@ -160,7 +158,7 @@ std::expected<void, MidHook::Error> MidHook::setup(
 
     m_hook = std::move(*hook_result);
 
-    tail->trampoline = m_hook.trampoline().data();
+    tail->trampoline.store(m_hook.trampoline().data(), std::memory_order_release);
     m_hook.m_trampoline_address_slot = &tail->trampoline;
 
     return {};

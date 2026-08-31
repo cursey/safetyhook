@@ -290,7 +290,7 @@ std::expected<void, InlineHook::Error> InlineHook::setup(std::vector<Allocation>
 
     // A MidHook stub may read this slot concurrently.
     if (m_trampoline_address_slot != nullptr) {
-        std::atomic_ref<uint8_t*>{*m_trampoline_address_slot}.store(m_trampoline.data(), std::memory_order_release);
+        m_trampoline_address_slot->store(m_trampoline.data(), std::memory_order_release);
     }
 
     return {};
