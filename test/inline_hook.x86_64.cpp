@@ -104,4 +104,63 @@ TEST(InlineHookX64, FunctionWithNoNearbyMemoryIsHooked) {
     EXPECT_EQ(fn(4), 16);
 }
 
+TEST(InlineHookX64, StackedHooksOnFarFunctionRemovedFromMiddle) {
+    Xbyak::CodeGenerator cg{5'000'000'000}; // 5 GB
+    Xbyak::Label start{};
+
+    cg.nop(2'500'000'000, false); // 2.5 GB so the target is out of e9 range and uses the FF trampoline.
+    cg.L(start);
+
+#if SAFETYHOOK_OS_WINDOWS
+    cg.mov(dword[rsp + 8], ecx);
+    cg.mov(eax, dword[rsp + 8]);
+    cg.imul(eax, dword[rsp + 8]);
+#elif SAFETYHOOK_OS_LINUX
+    cg.mov(eax, edi);
+    cg.imul(eax, edi);
+#endif
+
+    cg.ret();
+
+    auto fn = reinterpret_cast<int (*)(int)>(const_cast<uint8_t*>(start.getAddress()));
+
+    EXPECT_EQ(fn(3), 9);
+
+    static SafetyHookInline* bottom_ptr{};
+    static SafetyHookInline* middle_ptr{};
+    static SafetyHookInline* top_ptr{};
+
+    SafetyHookInline bottom;
+    SafetyHookInline middle;
+    SafetyHookInline top;
+    bottom_ptr = &bottom;
+    middle_ptr = &middle;
+    top_ptr = &top;
+
+    struct Hooks {
+        static int bottom(int a) { return bottom_ptr->call<int>(a) + 1; }
+        static int middle(int a) { return middle_ptr->call<int>(a) + 10; }
+        static int top(int a) { return top_ptr->call<int>(a) + 100; }
+    };
+
+    bottom = safetyhook::create_inline(fn, Hooks::bottom);
+    middle = safetyhook::create_inline(fn, Hooks::middle);
+    top = safetyhook::create_inline(fn, Hooks::top);
+
+    EXPECT_EQ(fn(3), 9 + 111);
+
+    // Remove the middle hook of the FF-trampoline chain; the rest must re-chain through fresh trampolines.
+    middle.reset();
+
+    for (int i = 0; i < 16; ++i) {
+        EXPECT_EQ(fn(3), 9 + 101);
+    }
+
+    top.reset();
+    EXPECT_EQ(fn(3), 9 + 1);
+
+    bottom.reset();
+    EXPECT_EQ(fn(3), 9);
+}
+
 #endif

@@ -54,6 +54,7 @@ lea esp, [esp+4] ; skip original esp
 pop esp
 ret
 
+align 4, db 0xCC ; Align the atomically updated trampoline pointer.
 destination:
 dd 0
 trampoline:

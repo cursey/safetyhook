@@ -95,6 +95,7 @@ lea rsp, [rsp+8] ; skip original rsp
 pop rsp
 ret
 
+align 8, db 0xCC ; Align the atomically updated trampoline pointer.
 destination:
 dq 0
 trampoline:
