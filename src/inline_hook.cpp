@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <iterator>
 #include <map>
 #include <mutex>
@@ -259,9 +260,24 @@ void InlineHook::reset() {
     *this = {};
 }
 
-void InlineHook::adopt_trampoline(Allocation&& fresh, std::vector<Allocation>* retire_sink) {
-    // Retire (keep alive) the old trampoline rather than free it -- a thread may still be executing inside it. The
-    // free branch only runs on a first build, where m_trampoline is empty and the if below is skipped.
+std::expected<void, InlineHook::Error> InlineHook::setup(std::vector<Allocation>* retire_sink) {
+    auto previous_original_bytes = std::move(m_original_bytes);
+    const auto previous_trampoline_size = m_trampoline_size;
+    auto fresh = e9_hook();
+
+#if SAFETYHOOK_ARCH_X86_64
+    if (!fresh) {
+        fresh = ff_hook();
+    }
+#endif
+
+    if (!fresh) {
+        m_original_bytes = std::move(previous_original_bytes);
+        m_trampoline_size = previous_trampoline_size;
+        return std::unexpected{fresh.error()};
+    }
+
+    // Keep the old trampoline alive until no hook in the chain can still be using it.
     if (m_trampoline) {
         if (retire_sink != nullptr) {
             retire_sink->push_back(std::move(m_trampoline));
@@ -270,29 +286,17 @@ void InlineHook::adopt_trampoline(Allocation&& fresh, std::vector<Allocation>* r
         }
     }
 
-    m_trampoline = std::move(fresh);
-}
+    m_trampoline = std::move(*fresh);
 
-std::expected<void, InlineHook::Error> InlineHook::setup(std::vector<Allocation>* retire_sink) {
-    if (auto e9_result = e9_hook(retire_sink); !e9_result) {
-#if SAFETYHOOK_ARCH_X86_64
-        if (auto ff_result = ff_hook(retire_sink); !ff_result) {
-            return ff_result;
-        }
-#elif SAFETYHOOK_ARCH_X86_32
-        return e9_result;
-#endif
-    }
-
-    // Keep an external consumer (a MidHook stub) pointed at the trampoline if it moved.
+    // A MidHook stub may read this slot concurrently.
     if (m_trampoline_address_slot != nullptr) {
-        store(reinterpret_cast<uint8_t*>(m_trampoline_address_slot), m_trampoline.data());
+        std::atomic_ref<uint8_t*>{*m_trampoline_address_slot}.store(m_trampoline.data(), std::memory_order_release);
     }
 
     return {};
 }
 
-std::expected<void, InlineHook::Error> InlineHook::e9_hook(std::vector<Allocation>* retire_sink) {
+std::expected<Allocation, InlineHook::Error> InlineHook::e9_hook() {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueE9);
 
@@ -338,19 +342,17 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(std::vector<Allocatio
         }
     }
 
-    // Always build into a fresh trampoline: a content-changing rebuild must never rewrite a buffer a thread may
-    // still be executing inside. The previous buffer is retired (kept alive) until the chain empties.
+    // Never rewrite a trampoline that another thread may still be executing.
     auto trampoline_allocation = m_allocator->allocate_near(desired_addresses, m_trampoline_size);
 
     if (!trampoline_allocation) {
         return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
 
-    adopt_trampoline(std::move(*trampoline_allocation), retire_sink);
+    auto& fresh = *trampoline_allocation;
 
-    for (auto ip = m_target, tramp_ip = m_trampoline.data(); ip < m_target + m_original_bytes.size(); ip += ix.length) {
+    for (auto ip = m_target, tramp_ip = fresh.data(); ip < m_target + m_original_bytes.size(); ip += ix.length) {
         if (!decode(&ix, ip)) {
-            m_trampoline.free(); // free the buffer we just allocated; the previous one (if any) was retired.
             return std::unexpected{Error::failed_to_decode_instruction(ip)};
         }
 
@@ -407,8 +409,8 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(std::vector<Allocatio
         }
     }
 
-    auto trampoline_epilogue = reinterpret_cast<TrampolineEpilogueE9*>(
-        m_trampoline.address() + m_trampoline_size - sizeof(TrampolineEpilogueE9));
+    auto trampoline_epilogue =
+        reinterpret_cast<TrampolineEpilogueE9*>(fresh.address() + m_trampoline_size - sizeof(TrampolineEpilogueE9));
 
     // jmp from trampoline to original.
     auto src = reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_original);
@@ -436,11 +438,11 @@ std::expected<void, InlineHook::Error> InlineHook::e9_hook(std::vector<Allocatio
 
     m_type = Type::E9;
 
-    return {};
+    return std::move(fresh);
 }
 
 #if SAFETYHOOK_ARCH_X86_64
-std::expected<void, InlineHook::Error> InlineHook::ff_hook(std::vector<Allocation>* retire_sink) {
+std::expected<Allocation, InlineHook::Error> InlineHook::ff_hook() {
     m_original_bytes.clear();
     m_trampoline_size = sizeof(TrampolineEpilogueFF);
     ZydisDecodedInstruction ix{};
@@ -468,20 +470,18 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(std::vector<Allocatio
         m_trampoline_size += ix.length;
     }
 
-    // Always build into a fresh trampoline: a content-changing rebuild must never rewrite a buffer a thread may
-    // still be executing inside. The previous buffer is retired (kept alive) until the chain empties.
     auto trampoline_allocation = m_allocator->allocate(m_trampoline_size);
 
     if (!trampoline_allocation) {
         return std::unexpected{Error::bad_allocation(trampoline_allocation.error())};
     }
 
-    adopt_trampoline(std::move(*trampoline_allocation), retire_sink);
+    auto& fresh = *trampoline_allocation;
 
-    std::copy(m_original_bytes.begin(), m_original_bytes.end(), m_trampoline.data());
+    std::copy(m_original_bytes.begin(), m_original_bytes.end(), fresh.data());
 
     const auto trampoline_epilogue =
-        reinterpret_cast<TrampolineEpilogueFF*>(m_trampoline.data() + m_trampoline_size - sizeof(TrampolineEpilogueFF));
+        reinterpret_cast<TrampolineEpilogueFF*>(fresh.data() + m_trampoline_size - sizeof(TrampolineEpilogueFF));
 
     // jmp from trampoline to original.
     auto src = reinterpret_cast<uint8_t*>(&trampoline_epilogue->jmp_to_original);
@@ -494,7 +494,7 @@ std::expected<void, InlineHook::Error> InlineHook::ff_hook(std::vector<Allocatio
 
     m_type = Type::FF;
 
-    return {};
+    return std::move(fresh);
 }
 #endif
 

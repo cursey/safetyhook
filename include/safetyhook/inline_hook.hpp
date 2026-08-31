@@ -369,15 +369,12 @@ private:
     uint8_t** m_trampoline_address_slot{};
 
     // retire_sink receives the old trampoline instead of freeing it (it may still be executing); freed on teardown.
-    // All three build from m_allocator/m_target/m_destination, which the caller sets before invoking.
     std::expected<void, Error> setup(std::vector<Allocation>* retire_sink = nullptr);
-    std::expected<void, Error> e9_hook(std::vector<Allocation>* retire_sink);
+    std::expected<Allocation, Error> e9_hook();
 
 #if SAFETYHOOK_ARCH_X86_64
-    std::expected<void, Error> ff_hook(std::vector<Allocation>* retire_sink);
+    std::expected<Allocation, Error> ff_hook();
 #endif
-
-    void adopt_trampoline(Allocation&& fresh, std::vector<Allocation>* retire_sink);
 
     // Writes the jump at the target. Assumes m_mutex held and the trampoline built.
     std::expected<void, Error> patch_enable();
