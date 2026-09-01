@@ -13,6 +13,7 @@ option(SAFETYHOOK_AMALGAMATE "Build the amalgamated source" OFF)
 option(SAFETYHOOK_FETCH_ZYDIS "Fetch Zydis with CPM" ON)
 option(SAFETYHOOK_USE_CXXMODULES "Expose the C++ module define to consumers" OFF)
 option(SAFETYHOOK_BUILD_MODULE "Build the C++ module target" OFF)
+option(SAFETYHOOK_USE_NT_API "Use ntdll Nt* APIs on Windows instead of kernel32" OFF)
 
 if(DEFINED ENV{CI})
     set(SAFETYHOOK_WARNINGS_AS_ERRORS_DEFAULT ON)

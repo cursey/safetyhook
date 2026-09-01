@@ -21,6 +21,100 @@
 
 #include "safetyhook/os.hpp"
 
+#if SAFETYHOOK_USE_NT_API
+
+#include <winternl.h>
+
+namespace {
+inline HANDLE nt_current_process() {
+    return reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+}
+
+// clang-format off
+using NtAllocateVirtualMemory_t =
+    NTSTATUS NTAPI(
+        HANDLE ProcessHandle,
+        PVOID* BaseAddress,
+        ULONG_PTR ZeroBits,
+        PSIZE_T RegionSize,
+        ULONG AllocationType,
+        ULONG Protect
+    );
+using NtFreeVirtualMemory_t =
+    NTSTATUS NTAPI(
+        HANDLE ProcessHandle,
+        PVOID* BaseAddress,
+        PSIZE_T RegionSize,
+        ULONG FreeType
+    );
+using NtProtectVirtualMemory_t =
+    NTSTATUS NTAPI(
+        HANDLE ProcessHandle,
+        PVOID* BaseAddress,
+        PSIZE_T RegionSize,
+        ULONG NewProtect,
+        PULONG OldProtect
+    );
+using NtQueryVirtualMemory_t =
+    NTSTATUS NTAPI(
+        HANDLE ProcessHandle,
+        PVOID BaseAddress,
+        ULONG MemoryInformationClass,
+        PVOID MemoryInformation,
+        SIZE_T MemoryInformationLength,
+        PSIZE_T ReturnLength
+    );
+using RtlAddVectoredExceptionHandler_t =
+    PVOID NTAPI(
+        ULONG FirstHandler,
+        PVECTORED_EXCEPTION_HANDLER VectoredHandler
+    );
+using RtlRemoveVectoredExceptionHandler_t =
+    ULONG NTAPI(
+        PVOID VectoredHandlerHandle
+    );
+// clang-format on
+
+// MemoryBasicInformation class for NtQueryVirtualMemory.
+constexpr ULONG NT_MEMORY_BASIC_INFORMATION = 0;
+
+struct NtApi {
+    NtAllocateVirtualMemory_t* allocate;
+    NtFreeVirtualMemory_t* free;
+    NtProtectVirtualMemory_t* protect;
+    NtQueryVirtualMemory_t* query;
+    RtlAddVectoredExceptionHandler_t* add_veh;
+    RtlRemoveVectoredExceptionHandler_t* remove_veh;
+};
+
+// GetProcAddress returns a generic FARPROC; reinterpreting it to the concrete
+// ntdll export type is the standard idiom here.
+template <typename T> T resolve(HMODULE module, const char* name) {
+    return reinterpret_cast<T>(reinterpret_cast<void*>(GetProcAddress(module, name)));
+}
+
+// Lazily resolved once; ntdll is always present in a live process.
+const NtApi& nt() {
+    static const NtApi api = [] {
+        NtApi a{};
+
+        if (auto* ntdll = GetModuleHandleW(L"ntdll.dll")) {
+            a.allocate = resolve<NtAllocateVirtualMemory_t*>(ntdll, "NtAllocateVirtualMemory");
+            a.free = resolve<NtFreeVirtualMemory_t*>(ntdll, "NtFreeVirtualMemory");
+            a.protect = resolve<NtProtectVirtualMemory_t*>(ntdll, "NtProtectVirtualMemory");
+            a.query = resolve<NtQueryVirtualMemory_t*>(ntdll, "NtQueryVirtualMemory");
+            a.add_veh = resolve<RtlAddVectoredExceptionHandler_t*>(ntdll, "RtlAddVectoredExceptionHandler");
+            a.remove_veh = resolve<RtlRemoveVectoredExceptionHandler_t*>(ntdll, "RtlRemoveVectoredExceptionHandler");
+        }
+
+        return a;
+    }();
+
+    return api;
+}
+} // namespace
+#endif
+
 namespace safetyhook {
 std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAccess access) {
     DWORD protect = 0;
@@ -37,7 +131,20 @@ std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAc
         return std::unexpected{OsError::FAILED_TO_ALLOCATE};
     }
 
+#if SAFETYHOOK_USE_NT_API
+    if (nt().allocate == nullptr) {
+        return std::unexpected{OsError::FAILED_TO_ALLOCATE};
+    }
+
+    PVOID result = address;
+    SIZE_T region_size = size;
+
+    if (!NT_SUCCESS(nt().allocate(nt_current_process(), &result, 0, &region_size, MEM_COMMIT | MEM_RESERVE, protect))) {
+        return std::unexpected{OsError::FAILED_TO_ALLOCATE};
+    }
+#else
     auto* result = VirtualAlloc(address, size, MEM_COMMIT | MEM_RESERVE, protect);
+#endif
 
     if (result == nullptr) {
         return std::unexpected{OsError::FAILED_TO_ALLOCATE};
@@ -47,7 +154,15 @@ std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAc
 }
 
 void vm_free(uint8_t* address) {
+#if SAFETYHOOK_USE_NT_API
+    if (nt().free != nullptr) {
+        PVOID base = address;
+        SIZE_T region_size = 0;
+        nt().free(nt_current_process(), &base, &region_size, MEM_RELEASE);
+    }
+#else
     VirtualFree(address, 0, MEM_RELEASE);
+#endif
 }
 
 std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, VmAccess access) {
@@ -71,20 +186,46 @@ std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, VmAcc
 std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, uint32_t protect) {
     DWORD old_protect = 0;
 
+#if SAFETYHOOK_USE_NT_API
+    if (nt().protect == nullptr) {
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
+    }
+
+    PVOID base = address;
+    SIZE_T region_size = size;
+
+    if (!NT_SUCCESS(nt().protect(nt_current_process(), &base, &region_size, protect, &old_protect))) {
+        return std::unexpected{OsError::FAILED_TO_PROTECT};
+    }
+#else
     if (VirtualProtect(address, size, protect, &old_protect) == FALSE) {
         return std::unexpected{OsError::FAILED_TO_PROTECT};
     }
+#endif
 
     return old_protect;
 }
 
 std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     MEMORY_BASIC_INFORMATION mbi{};
-    auto result = VirtualQuery(address, &mbi, sizeof(mbi));
 
-    if (result == 0) {
+#if SAFETYHOOK_USE_NT_API
+    if (nt().query == nullptr) {
         return std::unexpected{OsError::FAILED_TO_QUERY};
     }
+
+    SIZE_T return_length = 0;
+
+    if (!NT_SUCCESS(nt().query(
+            nt_current_process(), address, NT_MEMORY_BASIC_INFORMATION, &mbi, sizeof(mbi), &return_length)) ||
+        return_length == 0) {
+        return std::unexpected{OsError::FAILED_TO_QUERY};
+    }
+#else
+    if (VirtualQuery(address, &mbi, sizeof(mbi)) == 0) {
+        return std::unexpected{OsError::FAILED_TO_QUERY};
+    }
+#endif
 
     VmAccess access{};
     access.read = (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
@@ -101,11 +242,23 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
 }
 
 bool vm_is_readable(uint8_t* address, size_t size) {
+#if SAFETYHOOK_USE_NT_API
+    (void)size;
+    auto info = vm_query(address);
+    return info.has_value() && !info->is_free && info->access.read;
+#else
     return IsBadReadPtr(address, size) == FALSE;
+#endif
 }
 
 bool vm_is_writable(uint8_t* address, size_t size) {
+#if SAFETYHOOK_USE_NT_API
+    (void)size;
+    auto info = vm_query(address);
+    return info.has_value() && !info->is_free && info->access.write;
+#else
     return IsBadWritePtr(address, size) == FALSE;
+#endif
 }
 
 bool vm_is_executable(uint8_t* address) {
@@ -173,10 +326,22 @@ public:
     static std::unique_ptr<TrapManager> instance;
     static bool is_destructed;
 
-    TrapManager() { m_trap_veh = AddVectoredExceptionHandler(1, trap_handler); }
+    TrapManager() {
+#if SAFETYHOOK_USE_NT_API
+        m_trap_veh = nt().add_veh != nullptr ? nt().add_veh(1, trap_handler) : nullptr;
+#else
+        m_trap_veh = AddVectoredExceptionHandler(1, trap_handler);
+#endif
+    }
     ~TrapManager() {
         if (m_trap_veh != nullptr) {
+#if SAFETYHOOK_USE_NT_API
+            if (nt().remove_veh != nullptr) {
+                nt().remove_veh(m_trap_veh);
+            }
+#else
             RemoveVectoredExceptionHandler(m_trap_veh);
+#endif
         }
         is_destructed = true;
     }
@@ -268,14 +433,40 @@ void find_me() {
 
 static std::mutex virtual_protect_mutex;
 
+// Backend-aware wrappers so trap_threads bypasses kernel32 when the Nt API is enabled.
+static void trap_query(void* address, MEMORY_BASIC_INFORMATION& mbi) {
+#if SAFETYHOOK_USE_NT_API
+    SIZE_T return_length = 0;
+    if (nt().query != nullptr) {
+        nt().query(nt_current_process(), address, NT_MEMORY_BASIC_INFORMATION, &mbi, sizeof(mbi), &return_length);
+    }
+#else
+    VirtualQuery(address, &mbi, sizeof(mbi));
+#endif
+}
+
+static void trap_protect(void* address, size_t size, DWORD new_protect, DWORD& old_protect) {
+#if SAFETYHOOK_USE_NT_API
+    if (nt().protect != nullptr) {
+        PVOID base = address;
+        SIZE_T region_size = size;
+        ULONG previous = 0;
+        nt().protect(nt_current_process(), &base, &region_size, new_protect, &previous);
+        old_protect = previous;
+    }
+#else
+    VirtualProtect(address, size, new_protect, &old_protect);
+#endif
+}
+
 void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<void()>& run_fn) {
     MEMORY_BASIC_INFORMATION find_me_mbi{};
     MEMORY_BASIC_INFORMATION from_mbi{};
     MEMORY_BASIC_INFORMATION to_mbi{};
 
-    VirtualQuery(reinterpret_cast<void*>(find_me), &find_me_mbi, sizeof(find_me_mbi));
-    VirtualQuery(from, &from_mbi, sizeof(from_mbi));
-    VirtualQuery(to, &to_mbi, sizeof(to_mbi));
+    trap_query(reinterpret_cast<void*>(find_me), find_me_mbi);
+    trap_query(from, from_mbi);
+    trap_query(to, to_mbi);
 
     if (to_mbi.State != MEM_COMMIT) {
         return;
@@ -290,7 +481,13 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     auto si = system_info();
     auto* from_page_start = align_down(from, si.page_size);
     auto* from_page_end = align_up(from + len, si.page_size);
+    // Guard the address of the protection function actually used below, so we never
+    // remove protection from the very page we are about to call into.
+#if SAFETYHOOK_USE_NT_API
+    auto* vp_start = reinterpret_cast<uint8_t*>(nt().protect);
+#else
     auto* vp_start = reinterpret_cast<uint8_t*>(&VirtualProtect);
+#endif
     auto* vp_end = vp_start + 0x20;
 
     if (!(from_page_end < vp_start || vp_end < from_page_start)) {
@@ -313,15 +510,15 @@ void trap_threads(uint8_t* from, uint8_t* to, size_t len, const std::function<vo
     DWORD from_protect;
     DWORD to_protect;
 
-    VirtualProtect(from, len, new_protect, &from_protect);
-    VirtualProtect(to, len, new_protect, &to_protect);
+    trap_protect(from, len, new_protect, from_protect);
+    trap_protect(to, len, new_protect, to_protect);
 
     if (run_fn) {
         run_fn();
     }
 
-    VirtualProtect(to, len, to_protect, &to_protect);
-    VirtualProtect(from, len, from_protect, &from_protect);
+    trap_protect(to, len, to_protect, to_protect);
+    trap_protect(from, len, from_protect, from_protect);
 }
 
 void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {

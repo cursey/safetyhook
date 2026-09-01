@@ -29,6 +29,10 @@ if(SAFETYHOOK_USE_CXXMODULES)
     target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_USE_CXXMODULES)
 endif()
 
+if(SAFETYHOOK_USE_NT_API)
+    target_compile_definitions(safetyhook PRIVATE SAFETYHOOK_USE_NT_API=1)
+endif()
+
 if(WIN32)
     target_compile_definitions(safetyhook PRIVATE NOMINMAX=1)
 endif()
