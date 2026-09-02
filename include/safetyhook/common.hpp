@@ -56,6 +56,13 @@
 #error "Unsupported OS"
 #endif
 
+// When enabled, the Windows backend calls ntdll's Nt*/Rtl* exports instead of the
+// kernel32/kernelbase wrappers. Defaults to off; the build system or an amalgamated
+// consumer defines it to 1 to opt in.
+#ifndef SAFETYHOOK_USE_NT_API
+#define SAFETYHOOK_USE_NT_API 0
+#endif
+
 #if SAFETYHOOK_OS_WINDOWS
 #if SAFETYHOOK_COMPILER_MSVC
 #define SAFETYHOOK_CCALL __cdecl
