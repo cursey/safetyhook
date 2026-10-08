@@ -257,7 +257,16 @@ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
             continue;
         }
 
-        if (auto allocation_address = attempt_allocation(p); allocation_address != nullptr) {
+        // A free region can start anywhere on a page boundary, but allocations start on the allocation
+        // granularity: try the first such address inside the region.
+        auto candidate = align_up(p, si.allocation_granularity);
+
+        if (candidate < p || static_cast<size_t>(candidate - p) >= mbi.size ||
+            static_cast<size_t>(p + mbi.size - candidate) < size) {
+            continue;
+        }
+
+        if (auto allocation_address = attempt_allocation(candidate); allocation_address != nullptr) {
             return allocation_address;
         }
     }

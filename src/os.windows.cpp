@@ -92,7 +92,8 @@ std::expected<VmBasicInfo, OsError> vm_query(uint8_t* address) {
     access.execute = (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
 
     VmBasicInfo info{};
-    info.address = static_cast<uint8_t*>(mbi.AllocationBase);
+    // Free memory has no allocation base; report where the free region starts.
+    info.address = static_cast<uint8_t*>(mbi.State == MEM_FREE ? mbi.BaseAddress : mbi.AllocationBase);
     info.size = mbi.RegionSize;
     info.access = access;
     info.is_free = mbi.State == MEM_FREE;
