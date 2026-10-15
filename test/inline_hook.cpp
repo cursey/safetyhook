@@ -1,5 +1,6 @@
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -7,6 +8,10 @@
 #include <gtest/gtest.h>
 #include <safetyhook.hpp>
 #include <xbyak/xbyak.h>
+
+#if SAFETYHOOK_OS_WINDOWS
+#include <windows.h>
+#endif
 
 using namespace std::literals;
 using namespace Xbyak::util;
@@ -715,6 +720,38 @@ TEST(InlineHook, FunctionWithShortJumpInsideTrampoline) {
 
     EXPECT_EQ(fn(), 42);
 }
+
+#if SAFETYHOOK_OS_WINDOWS
+TEST(InlineHook, VirtualProtectHookCanBeDisabled) {
+    ASSERT_EXIT(
+        {
+            // A protection regression can trap the thread indefinitely. Bound the child lifetime.
+            std::thread([] {
+                std::this_thread::sleep_for(5s);
+                std::_Exit(1);
+            }).detach();
+
+            static SafetyHookInline* hook_ptr{};
+            SafetyHookInline hook;
+            hook_ptr = &hook;
+
+            struct Hook {
+                static BOOL WINAPI fn(LPVOID address, SIZE_T size, DWORD protect, PDWORD old_protect) {
+                    return hook_ptr->original<decltype(&VirtualProtect)>()(address, size, protect, old_protect);
+                }
+            };
+
+            auto result = SafetyHookInline::create(&VirtualProtect, Hook::fn, SafetyHookInline::StartDisabled);
+            ASSERT_TRUE(result.has_value());
+            hook = std::move(*result);
+            ASSERT_TRUE(hook.enable().has_value());
+            ASSERT_TRUE(hook.disable().has_value());
+            hook.reset();
+            std::_Exit(0);
+        },
+        testing::ExitedWithCode(0), "");
+}
+#endif
 
 TEST(InlineHook, FunctionHookCanBeEnableAndDisabled) {
     struct Target {
