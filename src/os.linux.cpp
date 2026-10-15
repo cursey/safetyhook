@@ -4,6 +4,8 @@
 
 #include <cstdio>
 #include <limits>
+#include <mutex>
+#include <unordered_map>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -13,6 +15,19 @@
 #include "safetyhook/os.hpp"
 
 namespace safetyhook {
+namespace {
+struct VmAllocations {
+    std::mutex mutex;
+    std::unordered_map<uint8_t*, size_t> sizes;
+};
+
+VmAllocations& vm_allocations() {
+    // Global hooks may release allocations during static destruction.
+    static auto* allocations = new VmAllocations;
+    return *allocations;
+}
+} // namespace
+
 std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAccess access) {
     int prot = 0;
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -35,11 +50,18 @@ std::expected<uint8_t*, OsError> vm_allocate(uint8_t* address, size_t size, VmAc
         return std::unexpected{OsError::FAILED_TO_ALLOCATE};
     }
 
-    return static_cast<uint8_t*>(result);
+    auto* address_result = static_cast<uint8_t*>(result);
+    auto& allocations = vm_allocations();
+    std::scoped_lock lock{allocations.mutex};
+    allocations.sizes.emplace(address_result, size);
+    return address_result;
 }
 
 void vm_free(uint8_t* address) {
-    munmap(address, 0);
+    auto& allocations = vm_allocations();
+    std::scoped_lock lock{allocations.mutex};
+    munmap(address, allocations.sizes.at(address));
+    allocations.sizes.erase(address);
 }
 
 std::expected<uint32_t, OsError> vm_protect(uint8_t* address, size_t size, VmAccess access) {
