@@ -1,5 +1,33 @@
+#include <cerrno>
+
 #include <gtest/gtest.h>
 #include <safetyhook.hpp>
+
+#if SAFETYHOOK_OS_LINUX
+#include <sys/mman.h>
+#include <unistd.h>
+
+TEST(Allocator, DestructionUnmapsOnlyItsOwnMemory) {
+    const auto page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    auto other_allocator = safetyhook::Allocator::create();
+    auto other_allocation = other_allocator->allocate(page_size);
+    ASSERT_TRUE(other_allocation.has_value());
+
+    uint8_t* address{};
+    {
+        auto allocator = safetyhook::Allocator::create();
+        auto allocation = allocator->allocate(page_size);
+        ASSERT_TRUE(allocation.has_value());
+        address = allocation->data();
+    }
+
+    unsigned char residency{};
+    errno = 0;
+    EXPECT_EQ(mincore(address, page_size, &residency), -1);
+    EXPECT_EQ(errno, ENOMEM);
+    EXPECT_EQ(mincore(other_allocation->data(), page_size, &residency), 0);
+}
+#endif
 
 TEST(Allocator, AllocatorReusesFreedMemory) {
     const auto allocator = safetyhook::Allocator::create();
